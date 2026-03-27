@@ -8,9 +8,16 @@ export function App() {
   usePtyEvents();
 
   return (
-    <div className="flex h-screen bg-[#1a1b26] text-[#c0caf5] overflow-hidden">
-      <Sidebar />
-      <MainArea />
+    <div className="flex flex-col h-screen bg-[#1a1b26] text-[#c0caf5] overflow-hidden">
+      {/* macOS traffic-light area — full-width drag region */}
+      <div
+        data-tauri-drag-region
+        className="flex-shrink-0 h-8 bg-[#16161e] border-b border-[#1f2335]"
+      />
+      <div className="flex flex-1 overflow-hidden">
+        <Sidebar />
+        <MainArea />
+      </div>
     </div>
   );
 }
