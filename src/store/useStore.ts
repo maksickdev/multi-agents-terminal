@@ -14,6 +14,8 @@ export interface Agent {
 interface AppStore {
   projects: Project[];
   agents: Record<string, Agent>;
+  /** Ordered list of agent IDs per project — drives tab order. */
+  agentOrder: Record<string, string[]>;
   selectedProjectId: string | null;
   activeAgentId: Record<string, string | null>;
 
@@ -24,6 +26,8 @@ interface AppStore {
 
   // Agent actions
   addAgent: (agent: Agent) => void;
+  renameAgent: (agentId: string, name: string) => void;
+  reorderAgents: (projectId: string, orderedIds: string[]) => void;
   updateAgentStatus: (agentId: string, status: AgentStatus, exitCode?: number) => void;
   removeAgent: (agentId: string) => void;
 
@@ -38,6 +42,7 @@ interface AppStore {
 export const useStore = create<AppStore>((set, get) => ({
   projects: [],
   agents: {},
+  agentOrder: {},
   selectedProjectId: null,
   activeAgentId: {},
 
@@ -56,7 +61,26 @@ export const useStore = create<AppStore>((set, get) => ({
   addAgent: (agent) =>
     set((s) => ({
       agents: { ...s.agents, [agent.id]: agent },
+      agentOrder: {
+        ...s.agentOrder,
+        [agent.projectId]: [
+          ...(s.agentOrder[agent.projectId] ?? []),
+          agent.id,
+        ],
+      },
       activeAgentId: { ...s.activeAgentId, [agent.projectId]: agent.id },
+    })),
+
+  renameAgent: (agentId, name) =>
+    set((s) => {
+      const agent = s.agents[agentId];
+      if (!agent) return s;
+      return { agents: { ...s.agents, [agentId]: { ...agent, name } } };
+    }),
+
+  reorderAgents: (projectId, orderedIds) =>
+    set((s) => ({
+      agentOrder: { ...s.agentOrder, [projectId]: orderedIds },
     })),
 
   updateAgentStatus: (agentId, status, exitCode) =>
@@ -77,16 +101,27 @@ export const useStore = create<AppStore>((set, get) => ({
       const newAgents = { ...s.agents };
       delete newAgents[agentId];
 
+      const newAgentOrder = { ...s.agentOrder };
+      if (agent) {
+        newAgentOrder[agent.projectId] = (
+          newAgentOrder[agent.projectId] ?? []
+        ).filter((id) => id !== agentId);
+      }
+
       const newActiveAgentId = { ...s.activeAgentId };
       if (agent && newActiveAgentId[agent.projectId] === agentId) {
-        const remaining = Object.values(newAgents).filter(
-          (a) => a.projectId === agent.projectId
-        );
+        const remaining = (newAgentOrder[agent.projectId] ?? [])
+          .map((id) => newAgents[id])
+          .filter(Boolean);
         newActiveAgentId[agent.projectId] =
           remaining.length > 0 ? remaining[remaining.length - 1].id : null;
       }
 
-      return { agents: newAgents, activeAgentId: newActiveAgentId };
+      return {
+        agents: newAgents,
+        agentOrder: newAgentOrder,
+        activeAgentId: newActiveAgentId,
+      };
     }),
 
   selectProject: (projectId) => set({ selectedProjectId: projectId }),
@@ -96,8 +131,11 @@ export const useStore = create<AppStore>((set, get) => ({
       activeAgentId: { ...s.activeAgentId, [projectId]: agentId },
     })),
 
-  getProjectAgents: (projectId) =>
-    Object.values(get().agents)
-      .filter((a) => a.projectId === projectId)
-      .sort((a, b) => a.createdAt - b.createdAt),
+  /** Returns agents in explicit tab order (agentOrder), not by createdAt. */
+  getProjectAgents: (projectId) => {
+    const { agents, agentOrder } = get();
+    return (agentOrder[projectId] ?? [])
+      .map((id) => agents[id])
+      .filter(Boolean) as Agent[];
+  },
 }));

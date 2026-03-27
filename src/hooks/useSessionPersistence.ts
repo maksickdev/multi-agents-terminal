@@ -13,37 +13,27 @@ import * as ptyManager from "../lib/ptyManager";
 
 /**
  * Handles full session persistence:
- *  - Loads projects and agents from disk on mount
+ *  - Loads projects and agents (in saved order) from disk on mount
  *  - Replays scrollback into each terminal before the new PTY starts
- *  - Saves projects and agents whenever they change
+ *  - Saves projects and agents (in tab order) whenever they change
  */
 export function useSessionPersistence() {
-  const {
-    projects,
-    agents,
-    setProjects,
-    addAgent,
-  } = useStore();
-
+  const { projects, agents, agentOrder, setProjects, addAgent } = useStore();
   const restored = useRef(false);
 
-  // ── Restore on mount ──────────────────────────────────────────────────────
+  // ── Restore on mount ───────────────────────────────────────────────────────
   useEffect(() => {
     async function restore() {
-      // 1. Load projects
       const savedProjects = await loadProjects();
       setProjects(savedProjects);
 
       const projectIds = new Set(savedProjects.map((p) => p.id));
+      const savedAgents = await loadAgents(); // array order = tab order
 
-      // 2. Load persisted agents
-      const savedAgents = await loadAgents();
-
-      // 3. Restore each agent whose project still exists
       for (const meta of savedAgents) {
         if (!projectIds.has(meta.project_id)) continue;
 
-        // 3a. Load and stage scrollback before the terminal mounts
+        // Stage scrollback so it replays when the terminal mounts
         try {
           const b64 = await loadScrollback(meta.id);
           if (b64) {
@@ -54,7 +44,7 @@ export function useSessionPersistence() {
           console.warn("[session] failed to load scrollback for", meta.id, e);
         }
 
-        // 3b. Spawn a fresh PTY with the same agent ID
+        // Spawn a fresh PTY reusing the same agent ID
         try {
           await spawnAgent(meta.project_id, meta.cwd, undefined, undefined, meta.id);
         } catch (e) {
@@ -62,7 +52,7 @@ export function useSessionPersistence() {
           continue;
         }
 
-        // 3c. Add agent to store (triggers TerminalPane mount → scrollback replayed)
+        // Add to store — addAgent appends to agentOrder, preserving array order
         const agent: Agent = {
           id: meta.id,
           projectId: meta.project_id,
@@ -80,26 +70,33 @@ export function useSessionPersistence() {
     restore().catch(console.error);
   }, []);
 
-  // ── Persist projects on change ────────────────────────────────────────────
+  // ── Persist projects ───────────────────────────────────────────────────────
   useEffect(() => {
     if (!restored.current) return;
     saveProjects(projects).catch(console.error);
   }, [projects]);
 
-  // ── Persist agents on change ──────────────────────────────────────────────
+  // ── Persist agents in tab order ────────────────────────────────────────────
+  // Watch both `agents` (name / status changes) and `agentOrder` (reorder / rename)
   useEffect(() => {
     if (!restored.current) return;
 
-    const metas: AgentMeta[] = Object.values(agents)
-      .filter((a) => a.status !== "exited") // don't persist dead agents
-      .map((a) => ({
-        id: a.id,
-        project_id: a.projectId,
-        name: a.name,
-        cwd: a.cwd,
-        created_at: a.createdAt,
-      }));
+    const metas: AgentMeta[] = [];
+    for (const [, ids] of Object.entries(agentOrder)) {
+      for (const id of ids) {
+        const a = agents[id];
+        if (a && a.status !== "exited") {
+          metas.push({
+            id: a.id,
+            project_id: a.projectId,
+            name: a.name,
+            cwd: a.cwd,
+            created_at: a.createdAt,
+          });
+        }
+      }
+    }
 
     saveAgents(metas).catch(console.error);
-  }, [agents]);
+  }, [agents, agentOrder]);
 }
