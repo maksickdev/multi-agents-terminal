@@ -79,13 +79,14 @@ export function TerminalPane({ agentId, isVisible }: Props) {
       ref={containerRef}
       style={
         isVisible
-          ? { width: "100%", height: "100%" }
+          ? { width: "100%", height: "100%", overflow: "hidden" }
           : {
               position: "absolute",
               visibility: "hidden",
               pointerEvents: "none",
               width: "100%",
               height: "100%",
+              overflow: "hidden",
             }
       }
       className="p-1"
