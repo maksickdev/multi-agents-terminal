@@ -25,6 +25,7 @@ export function TabBar({ project, agents, activeAgentId, getTerminalSize }: Prop
         id: agentId,
         projectId: project.id,
         name: `Agent ${existingCount + 1}`,
+        cwd: project.path,
         status: "active",
         createdAt: Date.now(),
       };

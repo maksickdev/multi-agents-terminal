@@ -21,6 +21,7 @@ export function ProjectItem({ project }: Props) {
         id: agentId,
         projectId: project.id,
         name: `Agent ${agents.length + 1}`,
+        cwd: project.path,
         status: "active",
         createdAt: Date.now(),
       };

@@ -9,6 +9,13 @@ interface TerminalEntry {
 
 const entries = new Map<string, TerminalEntry>();
 
+/** Scrollback bytes waiting to be replayed when the terminal attaches. */
+const pendingScrollback = new Map<string, Uint8Array>();
+
+export function setPendingScrollback(agentId: string, data: Uint8Array) {
+  pendingScrollback.set(agentId, data);
+}
+
 export function getOrCreate(agentId: string): TerminalEntry {
   if (!entries.has(agentId)) {
     const terminal = new Terminal({
@@ -52,6 +59,18 @@ export function attach(agentId: string, element: HTMLElement) {
   if (!entry.terminal.element) {
     entry.terminal.open(element);
   }
+
+  // Replay historical output if available (session restore)
+  const scrollback = pendingScrollback.get(agentId);
+  if (scrollback && scrollback.length > 0) {
+    pendingScrollback.delete(agentId);
+    entry.terminal.write(scrollback);
+    // Visual separator between history and new session
+    entry.terminal.write(
+      "\r\n\x1b[2m\x1b[90m─── session restored ───\x1b[0m\r\n\r\n"
+    );
+  }
+
   entry.fitAddon.fit();
 }
 

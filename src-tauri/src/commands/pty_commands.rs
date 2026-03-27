@@ -6,12 +6,10 @@ use uuid::Uuid;
 
 use crate::pty::reader::spawn_reader;
 use crate::pty::session::{AgentSession, STATUS_ACTIVE, STATUS_EXITED, STATUS_WAITING};
-use crate::state::app_state::{AgentStatus, AppState};
+use crate::state::app_state::{AgentMeta, AgentStatus, AppState};
 
 /// Find claude's absolute path and the user's shell PATH by running `zsh -il`.
-/// Returns (claude_path, shell_path).
 fn find_claude_env() -> (String, String) {
-    // Run zsh as interactive login to get the real PATH and claude location
     let output = std::process::Command::new("/bin/zsh")
         .args(["-il", "-c", "echo PATH=$PATH && which claude"])
         .output();
@@ -27,7 +25,6 @@ fn find_claude_env() -> (String, String) {
             if line.starts_with("PATH=") {
                 shell_path = line[5..].to_string();
             } else if !line.is_empty() && !line.contains('=') {
-                // last non-empty non-assignment line = which claude output
                 let candidate = line.trim().to_string();
                 if std::path::Path::new(&candidate).exists() {
                     claude_bin = candidate;
@@ -37,7 +34,6 @@ fn find_claude_env() -> (String, String) {
     }
 
     if claude_bin.is_empty() {
-        // Fallback: scan common install locations
         let home = std::env::var("HOME").unwrap_or_default();
         let candidates = [
             format!("{}/.local/bin/claude", home),
@@ -91,7 +87,6 @@ fn make_pty_pair_and_spawn(
         })
         .map_err(|e| format!("openpty error: {e}"))?;
 
-    // Spawn claude directly — no shell wrapper, no double session
     let mut cmd = CommandBuilder::new(&claude_bin);
     cmd.env("TERM", "xterm-256color");
     cmd.env("COLORTERM", "truecolor");
@@ -125,11 +120,16 @@ pub async fn spawn_agent(
     cwd: String,
     rows: Option<u16>,
     cols: Option<u16>,
+    agent_id: Option<String>,
 ) -> Result<String, String> {
-    let agent_id = Uuid::new_v4().to_string();
+    let agent_id = agent_id.unwrap_or_else(|| Uuid::new_v4().to_string());
     let rows = rows.unwrap_or(24);
     let cols = cols.unwrap_or(80);
     eprintln!("[spawn_agent] agent_id={} cwd={} size={}x{}", agent_id, cwd, cols, rows);
+
+    std::fs::create_dir_all(&state.scrollback_dir)
+        .map_err(|e| format!("create scrollback dir: {e}"))?;
+    let scrollback_path = state.scrollback_dir.join(format!("{}.bin", agent_id));
 
     let (master, writer, child, reader) = make_pty_pair_and_spawn(&cwd, rows, cols)?;
     let session = AgentSession::new(master, writer, child, project_id, cwd);
@@ -140,7 +140,7 @@ pub async fn spawn_agent(
         manager.insert(agent_id.clone(), session);
     }
 
-    spawn_reader(app, agent_id.clone(), reader, status);
+    spawn_reader(app, agent_id.clone(), reader, status, scrollback_path);
     Ok(agent_id)
 }
 
@@ -173,8 +173,16 @@ pub async fn kill_agent(
     state: State<'_, AppState>,
     agent_id: String,
 ) -> Result<(), String> {
-    let mut manager = state.pty_manager.lock().await;
-    manager.kill(&agent_id).map_err(|e| e.to_string())
+    {
+        let mut manager = state.pty_manager.lock().await;
+        manager.kill(&agent_id).map_err(|e| e.to_string())?;
+    }
+    // Remove scrollback on explicit kill (agent is gone for good)
+    let sb = state.scrollback_dir.join(format!("{}.bin", agent_id));
+    if sb.exists() {
+        let _ = std::fs::remove_file(&sb);
+    }
+    Ok(())
 }
 
 #[tauri::command]
@@ -192,8 +200,19 @@ pub async fn restart_agent(
         let _ = manager.kill(&agent_id);
     }
 
+    // Clear old scrollback so the restarted session starts fresh
+    let sb = state.scrollback_dir.join(format!("{}.bin", agent_id));
+    if sb.exists() {
+        let _ = std::fs::remove_file(&sb);
+    }
+
     let rows = rows.unwrap_or(24);
     let cols = cols.unwrap_or(80);
+
+    std::fs::create_dir_all(&state.scrollback_dir)
+        .map_err(|e| format!("create scrollback dir: {e}"))?;
+    let scrollback_path = state.scrollback_dir.join(format!("{}.bin", agent_id));
+
     let (master, writer, child, reader) = make_pty_pair_and_spawn(&cwd, rows, cols)?;
     let session = AgentSession::new(master, writer, child, project_id, cwd);
     let status = session.status.clone();
@@ -203,7 +222,7 @@ pub async fn restart_agent(
         manager.insert(agent_id.clone(), session);
     }
 
-    spawn_reader(app, agent_id, reader, status);
+    spawn_reader(app, agent_id, reader, status, scrollback_path);
     Ok(())
 }
 
@@ -219,4 +238,57 @@ pub async fn get_agent_status(
         Some(STATUS_EXITED) | None => Ok(AgentStatus::Exited),
         Some(_) => Ok(AgentStatus::Exited),
     }
+}
+
+// ─── Session persistence commands ────────────────────────────────────────────
+
+#[tauri::command]
+pub async fn load_agents(state: State<'_, AppState>) -> Result<Vec<AgentMeta>, String> {
+    let path = state.config_path.join("agents.json");
+    if !path.exists() {
+        return Ok(vec![]);
+    }
+    let content = std::fs::read_to_string(&path).map_err(|e| e.to_string())?;
+    serde_json::from_str(&content).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn save_agents(
+    state: State<'_, AppState>,
+    agents: Vec<AgentMeta>,
+) -> Result<(), String> {
+    let dir = &state.config_path;
+    std::fs::create_dir_all(dir).map_err(|e| e.to_string())?;
+    let content = serde_json::to_string_pretty(&agents).map_err(|e| e.to_string())?;
+    let tmp = dir.join("agents.json.tmp");
+    std::fs::write(&tmp, &content).map_err(|e| e.to_string())?;
+    std::fs::rename(&tmp, dir.join("agents.json")).map_err(|e| e.to_string())
+}
+
+/// Returns base64-encoded raw PTY bytes saved for this agent.
+/// Returns empty string if no scrollback exists.
+#[tauri::command]
+pub async fn load_scrollback(
+    state: State<'_, AppState>,
+    agent_id: String,
+) -> Result<String, String> {
+    let path = state.scrollback_dir.join(format!("{}.bin", agent_id));
+    if !path.exists() {
+        return Ok(String::new());
+    }
+    let bytes = std::fs::read(&path).map_err(|e| e.to_string())?;
+    Ok(B64.encode(&bytes))
+}
+
+/// Deletes the scrollback file for an agent (called when user removes an agent).
+#[tauri::command]
+pub async fn delete_scrollback(
+    state: State<'_, AppState>,
+    agent_id: String,
+) -> Result<(), String> {
+    let path = state.scrollback_dir.join(format!("{}.bin", agent_id));
+    if path.exists() {
+        std::fs::remove_file(&path).map_err(|e| e.to_string())?;
+    }
+    Ok(())
 }

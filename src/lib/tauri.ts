@@ -7,6 +7,15 @@ export interface Project {
   path: string;
 }
 
+/** Persisted agent metadata (stored in agents.json). */
+export interface AgentMeta {
+  id: string;
+  project_id: string;
+  name: string;
+  cwd: string;
+  created_at: number;
+}
+
 export type AgentStatus = "active" | "waiting" | "exited";
 
 export interface PtyOutputPayload {
@@ -25,8 +34,15 @@ export interface AgentStatusPayload {
 }
 
 // PTY commands — Tauri 2 maps camelCase JS params → snake_case Rust params
-export const spawnAgent = (projectId: string, cwd: string, rows?: number, cols?: number) =>
-  invoke<string>("spawn_agent", { projectId, cwd, rows, cols });
+
+/** agentId is optional — pass it to restore a saved session with the same ID. */
+export const spawnAgent = (
+  projectId: string,
+  cwd: string,
+  rows?: number,
+  cols?: number,
+  agentId?: string,
+) => invoke<string>("spawn_agent", { projectId, cwd, rows, cols, agentId });
 
 export const writeToAgent = (agentId: string, data: string) =>
   invoke<void>("write_to_agent", { agentId, data });
@@ -42,6 +58,19 @@ export const restartAgent = (agentId: string, cwd: string, projectId: string, ro
 
 // Project commands
 export const loadProjects = () => invoke<Project[]>("load_projects");
+
+// Session-persistence commands
+export const loadAgents = () => invoke<AgentMeta[]>("load_agents");
+
+export const saveAgents = (agents: AgentMeta[]) =>
+  invoke<void>("save_agents", { agents });
+
+/** Returns base64-encoded raw PTY bytes, or "" if no scrollback file exists. */
+export const loadScrollback = (agentId: string) =>
+  invoke<string>("load_scrollback", { agentId });
+
+export const deleteScrollback = (agentId: string) =>
+  invoke<void>("delete_scrollback", { agentId });
 
 export const saveProjects = (projects: Project[]) =>
   invoke<void>("save_projects", { projects });

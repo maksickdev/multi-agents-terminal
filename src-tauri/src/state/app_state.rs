@@ -12,6 +12,16 @@ pub struct Project {
     pub path: String,
 }
 
+/// Persisted metadata for a single agent (saved to agents.json).
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AgentMeta {
+    pub id: String,
+    pub project_id: String,
+    pub name: String,
+    pub cwd: String,
+    pub created_at: u64,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "snake_case")]
 pub enum AgentStatus {
@@ -41,12 +51,15 @@ pub struct AgentStatusPayload {
 pub struct AppState {
     pub pty_manager: Arc<Mutex<PtyManager>>,
     pub config_path: PathBuf,
+    pub scrollback_dir: PathBuf,
 }
 
 impl AppState {
     pub fn new(config_path: PathBuf) -> Self {
+        let scrollback_dir = config_path.join("scrollback");
         Self {
             pty_manager: Arc::new(Mutex::new(PtyManager::new())),
+            scrollback_dir,
             config_path,
         }
     }

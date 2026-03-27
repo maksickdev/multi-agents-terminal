@@ -5,6 +5,7 @@ export interface Agent {
   id: string;
   projectId: string;
   name: string;
+  cwd: string;
   status: AgentStatus;
   exitCode?: number;
   createdAt: number;

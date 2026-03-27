@@ -1,4 +1,5 @@
-use std::io::Read;
+use std::io::{Read, Write};
+use std::path::PathBuf;
 use std::sync::atomic::{AtomicU8, Ordering};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
@@ -15,18 +16,26 @@ pub fn spawn_reader(
     agent_id: String,
     mut reader: Box<dyn Read + Send>,
     status: Arc<AtomicU8>,
+    scrollback_path: PathBuf,
 ) {
     tokio::task::spawn_blocking(move || {
         let mut buf = [0u8; 4096];
         let mut last_output = Instant::now();
 
+        // Open scrollback file for appending (created if missing)
+        let mut sb_file = std::fs::OpenOptions::new()
+            .create(true)
+            .append(true)
+            .open(&scrollback_path)
+            .map_err(|e| eprintln!("[reader] scrollback open error: {e}"))
+            .ok();
+
         loop {
             match reader.read(&mut buf) {
                 Ok(0) => {
-                    // EOF
                     status.store(STATUS_EXITED, Ordering::Relaxed);
                     let _ = app.emit(
-                        &format!("agent-exited"),
+                        "agent-exited",
                         AgentExitedPayload {
                             agent_id: agent_id.clone(),
                             exit_code: None,
@@ -36,6 +45,11 @@ pub fn spawn_reader(
                 }
                 Ok(n) => {
                     last_output = Instant::now();
+
+                    // Persist to scrollback file
+                    if let Some(ref mut f) = sb_file {
+                        let _ = f.write_all(&buf[..n]);
+                    }
 
                     if status.load(Ordering::Relaxed) != STATUS_ACTIVE {
                         status.store(STATUS_ACTIVE, Ordering::Relaxed);
