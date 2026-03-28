@@ -6,13 +6,13 @@ import * as ptyManager from "../../lib/ptyManager";
 interface Props {
   agent: Agent;
   isActive: boolean;
+  isDragging: boolean;
   isDragOver: boolean;
   onSelect: () => void;
   onRename: (name: string) => void;
-  onDragStart: () => void;
-  onDragOver: (e: React.DragEvent) => void;
-  onDrop: () => void;
-  onDragEnd: () => void;
+  onMouseDown: () => void;
+  onMouseEnter: () => void;
+  suppressClick: () => boolean;
 }
 
 const statusColors: Record<Agent["status"], string> = {
@@ -22,22 +22,15 @@ const statusColors: Record<Agent["status"], string> = {
 };
 
 export function TabItem({
-  agent,
-  isActive,
-  isDragOver,
-  onSelect,
-  onRename,
-  onDragStart,
-  onDragOver,
-  onDrop,
-  onDragEnd,
+  agent, isActive, isDragging, isDragOver,
+  onSelect, onRename,
+  onMouseDown, onMouseEnter, suppressClick,
 }: Props) {
   const { removeAgent } = useStore();
   const [editing, setEditing] = useState(false);
   const [editValue, setEditValue] = useState(agent.name);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Keep edit value in sync if name changes externally
   useEffect(() => {
     if (!editing) setEditValue(agent.name);
   }, [agent.name, editing]);
@@ -56,10 +49,7 @@ export function TabItem({
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter") commitEdit();
-    if (e.key === "Escape") {
-      setEditing(false);
-      setEditValue(agent.name);
-    }
+    if (e.key === "Escape") { setEditing(false); setEditValue(agent.name); }
   };
 
   const handleClose = async (e: React.MouseEvent) => {
@@ -69,28 +59,31 @@ export function TabItem({
     removeAgent(agent.id);
   };
 
+  const handleClick = (_e: React.MouseEvent) => {
+    if (editing) return;
+    if (suppressClick()) return; // mouse moved to another tab → it was a drag
+    onSelect();
+  };
+
+  const borderStyle: React.CSSProperties = isDragOver
+    ? { borderLeft: "2px solid #7aa2f7" }
+    : {};
+
   return (
     <div
-      draggable={!editing}
-      onClick={!editing ? onSelect : undefined}
+      onClick={handleClick}
       onDoubleClick={!editing ? startEdit : undefined}
-      onDragStart={onDragStart}
-      onDragOver={onDragOver}
-      onDrop={onDrop}
-      onDragEnd={onDragEnd}
+      onMouseDown={!editing ? onMouseDown : undefined}
+      onMouseEnter={onMouseEnter}
+      style={{ ...borderStyle, opacity: isDragging ? 0.4 : 1, cursor: "pointer" }}
       className={[
-        "group flex items-center gap-2 px-3 py-2 cursor-pointer border-b-2 transition-colors whitespace-nowrap select-none",
+        "group flex items-center gap-2 px-3 py-2 border-b-2 transition-colors whitespace-nowrap select-none",
         isActive
           ? "border-[#7aa2f7] bg-[#1a1b26] text-[#c0caf5]"
           : "border-transparent bg-[#16161e] text-[#565f89] hover:bg-[#1a1b26] hover:text-[#a9b1d6]",
-        isDragOver ? "border-l-2 border-l-[#7aa2f7]" : "",
-      ]
-        .filter(Boolean)
-        .join(" ")}
+      ].join(" ")}
     >
-      <span
-        className={`w-2 h-2 rounded-full flex-shrink-0 ${statusColors[agent.status]}`}
-      />
+      <span className={`w-2 h-2 rounded-full flex-shrink-0 ${statusColors[agent.status]}`} />
 
       {editing ? (
         <input
@@ -110,6 +103,7 @@ export function TabItem({
       {!editing && (
         <button
           onClick={handleClose}
+          onMouseDown={(e) => e.stopPropagation()} // prevent triggering drag on close btn
           className="ml-1 opacity-0 group-hover:opacity-100 text-[#565f89] hover:text-[#f7768e] transition-opacity leading-none"
         >
           ×

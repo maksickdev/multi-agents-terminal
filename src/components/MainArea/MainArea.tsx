@@ -9,8 +9,11 @@ const CHAR_W = 8;
 const CHAR_H = 16;
 
 export function MainArea() {
-  const { projects, selectedProjectId, activeAgentId, getProjectAgents } =
+  // agentOrder is subscribed explicitly so MainArea re-renders when tabs
+  // are reordered and getProjectAgents returns the updated sequence.
+  const { projects, selectedProjectId, activeAgentId, getProjectAgents, agentOrder } =
     useStore();
+  void agentOrder; // referenced only to trigger re-render on reorder
   const terminalAreaRef = useRef<HTMLDivElement>(null);
 
   const getTerminalSize = (): { rows: number; cols: number } => {

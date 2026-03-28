@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { spawnAgent } from "../../lib/tauri";
 import { useStore, type Agent } from "../../store/useStore";
 import { TabItem } from "./TabItem";
@@ -14,8 +14,57 @@ interface Props {
 export function TabBar({ project, agents, activeAgentId, getTerminalSize }: Props) {
   const { addAgent, setActiveAgent, getProjectAgents, renameAgent, reorderAgents } = useStore();
 
-  const [draggedId, setDraggedId] = useState<string | null>(null);
-  const [dragOverId, setDragOverId] = useState<string | null>(null);
+  // Refs hold the live values; state drives rendering
+  const draggingRef = useRef<string | null>(null);
+  const dragOverRef  = useRef<string | null>(null);
+  const movedRef     = useRef(false);           // did the mouse actually move to another tab?
+
+  const [draggingId, setDraggingId]   = useState<string | null>(null);
+  const [dragOverId, setDragOverId]   = useState<string | null>(null);
+
+  // ── Reorder helper ─────────────────────────────────────────────────────────
+  const doReorder = useCallback((fromId: string, toId: string) => {
+    const ids = agents.map((a) => a.id);
+    const from = ids.indexOf(fromId);
+    const to   = ids.indexOf(toId);
+    if (from === -1 || to === -1 || from === to) return;
+    const next = [...ids];
+    next.splice(from, 1);
+    next.splice(to, 0, fromId);
+    reorderAgents(project.id, next);
+  }, [agents, project.id, reorderAgents]);
+
+  // ── Drag start (mousedown on a tab) ────────────────────────────────────────
+  const startDrag = useCallback((agentId: string) => {
+    draggingRef.current = agentId;
+    dragOverRef.current = null;
+    movedRef.current    = false;
+    setDraggingId(agentId);
+    setDragOverId(null);
+
+    const onMouseUp = () => {
+      const from = draggingRef.current;
+      const to   = dragOverRef.current;
+      if (from && to && from !== to) doReorder(from, to);
+
+      draggingRef.current = null;
+      dragOverRef.current = null;
+      movedRef.current    = false;
+      setDraggingId(null);
+      setDragOverId(null);
+      window.removeEventListener("mouseup", onMouseUp);
+    };
+
+    window.addEventListener("mouseup", onMouseUp);
+  }, [doReorder]);
+
+  // ── Hover over a tab while dragging ────────────────────────────────────────
+  const enterTab = useCallback((agentId: string) => {
+    if (!draggingRef.current || draggingRef.current === agentId) return;
+    movedRef.current    = true;
+    dragOverRef.current = agentId;
+    setDragOverId(agentId);
+  }, []);
 
   // ── New agent ──────────────────────────────────────────────────────────────
   const handleNewAgent = async () => {
@@ -23,70 +72,35 @@ export function TabBar({ project, agents, activeAgentId, getTerminalSize }: Prop
     try {
       const size = getTerminalSize?.() ?? { rows: 24, cols: 80 };
       const agentId = await spawnAgent(project.id, project.path, size.rows, size.cols);
-      const agent: Agent = {
+      addAgent({
         id: agentId,
         projectId: project.id,
         name: `Agent ${existingCount + 1}`,
         cwd: project.path,
         status: "active",
         createdAt: Date.now(),
-      };
-      addAgent(agent);
+      });
     } catch (err) {
       console.error("[TabBar] Failed to spawn agent:", err);
       alert(`Failed to start agent: ${err}`);
     }
   };
 
-  // ── Drag handlers ──────────────────────────────────────────────────────────
-  const handleDragStart = (agentId: string) => {
-    setDraggedId(agentId);
-  };
-
-  const handleDragOver = (e: React.DragEvent, agentId: string) => {
-    e.preventDefault();
-    if (agentId !== draggedId) setDragOverId(agentId);
-  };
-
-  const handleDrop = (targetId: string) => {
-    if (!draggedId || draggedId === targetId) return;
-
-    const ids = agents.map((a) => a.id);
-    const from = ids.indexOf(draggedId);
-    const to = ids.indexOf(targetId);
-    if (from === -1 || to === -1) return;
-
-    const newOrder = [...ids];
-    newOrder.splice(from, 1);
-    newOrder.splice(to, 0, draggedId);
-    reorderAgents(project.id, newOrder);
-
-    setDraggedId(null);
-    setDragOverId(null);
-  };
-
-  const handleDragEnd = () => {
-    setDraggedId(null);
-    setDragOverId(null);
-  };
-
   return (
-    <div
-      className="flex items-center bg-[#16161e] border-b border-[#1f2335] overflow-x-auto"
-      onDragOver={(e) => e.preventDefault()}
-    >
+    <div className="flex items-center bg-[#16161e] border-b border-[#1f2335] overflow-x-auto">
       {agents.map((agent) => (
         <TabItem
           key={agent.id}
           agent={agent}
           isActive={agent.id === activeAgentId}
+          isDragging={agent.id === draggingId}
           isDragOver={agent.id === dragOverId}
           onSelect={() => setActiveAgent(project.id, agent.id)}
           onRename={(name) => renameAgent(agent.id, name)}
-          onDragStart={() => handleDragStart(agent.id)}
-          onDragOver={(e) => handleDragOver(e, agent.id)}
-          onDrop={() => handleDrop(agent.id)}
-          onDragEnd={handleDragEnd}
+          onMouseDown={() => startDrag(agent.id)}
+          onMouseEnter={() => enterTab(agent.id)}
+          // Suppress click if the mouse actually moved to another tab
+          suppressClick={() => movedRef.current}
         />
       ))}
 
