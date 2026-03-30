@@ -60,9 +60,6 @@ export function MainArea() {
         </button>
       </div>
 
-      {/* Editor pane — visible when files are open */}
-      <EditorPane />
-
       {!project ? (
         <div className="flex-1 overflow-hidden flex flex-col">
           <div className="flex-1"><EmptyState /></div>
@@ -104,6 +101,9 @@ export function MainArea() {
               );
             })}
           </div>
+
+          {/* Editor pane — sits between terminal area and bottom shell panel */}
+          <EditorPane />
 
           <BottomPanel />
         </>

@@ -68,6 +68,7 @@ interface AppStore {
   updateFileContent: (path: string, content: string) => void;
   markFileSaved: (path: string) => void;
   setEditorPaneHeight: (height: number) => void;
+  reorderOpenFiles: (orderedPaths: string[]) => void;
 
   // UI actions
   selectProject: (projectId: string) => void;
@@ -231,6 +232,13 @@ export const useStore = create<AppStore>((set, get) => ({
 
   setEditorPaneHeight: (height) =>
     set({ editorPaneHeight: Math.max(100, Math.min(height, 700)) }),
+
+  reorderOpenFiles: (orderedPaths) =>
+    set((s) => {
+      const map = new Map(s.openFiles.map((f) => [f.path, f]));
+      const next = orderedPaths.map((p) => map.get(p)).filter(Boolean) as typeof s.openFiles;
+      return { openFiles: next };
+    }),
 
   selectProject: (projectId) => set({ selectedProjectId: projectId }),
 
