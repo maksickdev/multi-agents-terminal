@@ -22,6 +22,7 @@ export function getOrCreate(agentId: string): TerminalEntry {
       cursorBlink: true,
       fontSize: 13,
       fontFamily: '"JetBrains Mono", "Cascadia Code", Menlo, monospace',
+      macOptionIsMeta: true,
       theme: {
         background: "#1a1b26",
         foreground: "#c0caf5",
@@ -49,6 +50,7 @@ export function getOrCreate(agentId: string): TerminalEntry {
     const fitAddon = new FitAddon();
     terminal.loadAddon(fitAddon);
     terminal.loadAddon(new WebLinksAddon());
+
     entries.set(agentId, { terminal, fitAddon });
   }
   return entries.get(agentId)!;
@@ -58,6 +60,18 @@ export function attach(agentId: string, element: HTMLElement) {
   const entry = getOrCreate(agentId);
   if (!entry.terminal.element) {
     entry.terminal.open(element);
+
+    // Capture-phase listener on xterm's hidden textarea prevents WKWebView
+    // from processing Option+key natively (word-delete, word-nav, etc.)
+    // before JavaScript. xterm handles the key via macOptionIsMeta.
+    const textarea = element.querySelector(".xterm-helper-textarea");
+    if (textarea) {
+      textarea.addEventListener(
+        "keydown",
+        (e) => { if ((e as KeyboardEvent).altKey) e.preventDefault(); },
+        { capture: true },
+      );
+    }
   }
 
   // Replay historical output if available (session restore)

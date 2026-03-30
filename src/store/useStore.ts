@@ -31,6 +31,14 @@ interface AppStore {
   updateAgentStatus: (agentId: string, status: AgentStatus, exitCode?: number) => void;
   removeAgent: (agentId: string) => void;
 
+  // Bottom panel
+  bottomPanelOpen: boolean;
+  bottomPanelHeight: number;
+  shellAgentIds: Record<string, string>; // projectId → shellAgentId
+  setBottomPanelOpen: (open: boolean) => void;
+  setBottomPanelHeight: (height: number) => void;
+  setShellAgentId: (projectId: string, agentId: string) => void;
+
   // UI actions
   selectProject: (projectId: string) => void;
   setActiveAgent: (projectId: string, agentId: string | null) => void;
@@ -45,6 +53,9 @@ export const useStore = create<AppStore>((set, get) => ({
   agentOrder: {},
   selectedProjectId: null,
   activeAgentId: {},
+  bottomPanelOpen: false,
+  bottomPanelHeight: 220,
+  shellAgentIds: {},
 
   setProjects: (projects) => set({ projects }),
 
@@ -59,17 +70,18 @@ export const useStore = create<AppStore>((set, get) => ({
     })),
 
   addAgent: (agent) =>
-    set((s) => ({
-      agents: { ...s.agents, [agent.id]: agent },
-      agentOrder: {
-        ...s.agentOrder,
-        [agent.projectId]: [
-          ...(s.agentOrder[agent.projectId] ?? []),
-          agent.id,
-        ],
-      },
-      activeAgentId: { ...s.activeAgentId, [agent.projectId]: agent.id },
-    })),
+    set((s) => {
+      const existing = s.agentOrder[agent.projectId] ?? [];
+      // Guard: skip appending to agentOrder if this ID is already tracked
+      const newOrder = existing.includes(agent.id)
+        ? existing
+        : [...existing, agent.id];
+      return {
+        agents: { ...s.agents, [agent.id]: agent },
+        agentOrder: { ...s.agentOrder, [agent.projectId]: newOrder },
+        activeAgentId: { ...s.activeAgentId, [agent.projectId]: agent.id },
+      };
+    }),
 
   renameAgent: (agentId, name) =>
     set((s) => {
@@ -124,6 +136,11 @@ export const useStore = create<AppStore>((set, get) => ({
       };
     }),
 
+  setBottomPanelOpen: (open) => set({ bottomPanelOpen: open }),
+  setBottomPanelHeight: (height) => set({ bottomPanelHeight: Math.max(100, Math.min(height, 600)) }),
+  setShellAgentId: (projectId, agentId) =>
+    set((s) => ({ shellAgentIds: { ...s.shellAgentIds, [projectId]: agentId } })),
+
   selectProject: (projectId) => set({ selectedProjectId: projectId }),
 
   setActiveAgent: (projectId, agentId) =>
@@ -134,7 +151,7 @@ export const useStore = create<AppStore>((set, get) => ({
   /** Returns agents in explicit tab order (agentOrder), not by createdAt. */
   getProjectAgents: (projectId) => {
     const { agents, agentOrder } = get();
-    return (agentOrder[projectId] ?? [])
+    return [...new Set(agentOrder[projectId] ?? [])]
       .map((id) => agents[id])
       .filter(Boolean) as Agent[];
   },

@@ -44,6 +44,13 @@ export const spawnAgent = (
   agentId?: string,
 ) => invoke<string>("spawn_agent", { projectId, cwd, rows, cols, agentId });
 
+export const spawnShell = (
+  cwd: string,
+  rows?: number,
+  cols?: number,
+  agentId?: string,
+) => invoke<string>("spawn_shell", { cwd, rows, cols, agentId });
+
 export const writeToAgent = (agentId: string, data: string) =>
   invoke<void>("write_to_agent", { agentId, data });
 

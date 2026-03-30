@@ -60,6 +60,53 @@ fn find_claude_env() -> (String, String) {
     (claude_bin, shell_path)
 }
 
+fn make_shell_pty_pair(
+    cwd: &str,
+    rows: u16,
+    cols: u16,
+) -> Result<
+    (
+        Box<dyn portable_pty::MasterPty + Send>,
+        Box<dyn std::io::Write + Send>,
+        Box<dyn portable_pty::Child + Send + Sync>,
+        Box<dyn std::io::Read + Send>,
+    ),
+    String,
+> {
+    let shell = std::env::var("SHELL").unwrap_or_else(|_| "/bin/zsh".to_string());
+    let (_, shell_path) = find_claude_env();
+
+    // Fall back to HOME if cwd is empty or does not exist
+    let cwd = if cwd.is_empty() || !std::path::Path::new(cwd).exists() {
+        std::env::var("HOME").unwrap_or_else(|_| "/".to_string())
+    } else {
+        cwd.to_string()
+    };
+
+    let pty_system = native_pty_system();
+    let pair = pty_system
+        .openpty(PtySize { rows, cols, pixel_width: 0, pixel_height: 0 })
+        .map_err(|e| format!("openpty error: {e}"))?;
+
+    // Inherit locale so zsh ZLE handles multi-byte UTF-8 (Cyrillic etc.) correctly.
+    let lang = std::env::var("LANG").unwrap_or_else(|_| "en_US.UTF-8".to_string());
+    let lc_all = std::env::var("LC_ALL").unwrap_or_else(|_| lang.clone());
+
+    let mut cmd = CommandBuilder::new(&shell);
+    cmd.env("TERM", "xterm-256color");
+    cmd.env("COLORTERM", "truecolor");
+    cmd.env("PATH", &shell_path);
+    cmd.env("LANG", &lang);
+    cmd.env("LC_ALL", &lc_all);
+    cmd.env("LC_CTYPE", &lc_all);
+    cmd.cwd(&cwd);
+
+    let child = pair.slave.spawn_command(cmd).map_err(|e| format!("spawn error: {e}"))?;
+    let reader = pair.master.try_clone_reader().map_err(|e| format!("clone_reader error: {e}"))?;
+    let writer = pair.master.take_writer().map_err(|e| format!("take_writer error: {e}"))?;
+    Ok((pair.master, writer, child, reader))
+}
+
 fn make_pty_pair_and_spawn(
     cwd: &str,
     rows: u16,
@@ -263,6 +310,37 @@ pub async fn save_agents(
     let tmp = dir.join("agents.json.tmp");
     std::fs::write(&tmp, &content).map_err(|e| e.to_string())?;
     std::fs::rename(&tmp, dir.join("agents.json")).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn spawn_shell(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    cwd: String,
+    rows: Option<u16>,
+    cols: Option<u16>,
+    agent_id: Option<String>,
+) -> Result<String, String> {
+    let agent_id = agent_id.unwrap_or_else(|| Uuid::new_v4().to_string());
+    let rows = rows.unwrap_or(24);
+    let cols = cols.unwrap_or(80);
+    eprintln!("[spawn_shell] agent_id={} cwd={} size={}x{}", agent_id, cwd, cols, rows);
+
+    std::fs::create_dir_all(&state.scrollback_dir)
+        .map_err(|e| format!("create scrollback dir: {e}"))?;
+    let scrollback_path = state.scrollback_dir.join(format!("{}.bin", agent_id));
+
+    let (master, writer, child, reader) = make_shell_pty_pair(&cwd, rows, cols)?;
+    let session = AgentSession::new(master, writer, child, "shell".to_string(), cwd);
+    let status = session.status.clone();
+
+    {
+        let mut manager = state.pty_manager.lock().await;
+        manager.insert(agent_id.clone(), session);
+    }
+
+    spawn_reader(app, agent_id.clone(), reader, status, scrollback_path);
+    Ok(agent_id)
 }
 
 /// Returns base64-encoded raw PTY bytes saved for this agent.

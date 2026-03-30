@@ -5,7 +5,7 @@ mod state;
 use state::app_state::AppState;
 use commands::pty_commands::{
     delete_scrollback, get_agent_status, kill_agent, load_agents, load_scrollback, resize_agent,
-    restart_agent, save_agents, spawn_agent, write_to_agent,
+    restart_agent, save_agents, spawn_agent, spawn_shell, write_to_agent,
 };
 use commands::project_commands::{load_projects, pick_folder, save_projects};
 
@@ -22,6 +22,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             // PTY
             spawn_agent,
+            spawn_shell,
             write_to_agent,
             resize_agent,
             kill_agent,
