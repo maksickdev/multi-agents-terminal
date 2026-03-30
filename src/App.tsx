@@ -2,6 +2,7 @@ import { useSessionPersistence } from "./hooks/useSessionPersistence";
 import { usePtyEvents } from "./hooks/usePty";
 import { Sidebar } from "./components/Sidebar/Sidebar";
 import { MainArea } from "./components/MainArea/MainArea";
+import { FileExplorer } from "./components/FileExplorer/FileExplorer";
 
 export function App() {
   useSessionPersistence();
@@ -16,6 +17,7 @@ export function App() {
       />
       <div className="flex flex-1 overflow-hidden">
         <Sidebar />
+        <FileExplorer />
         <MainArea />
       </div>
     </div>

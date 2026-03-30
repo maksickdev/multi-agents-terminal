@@ -1,0 +1,175 @@
+import { useState, useRef } from "react";
+import { useStore } from "../../store/useStore";
+import { readFileText, deletePath, renamePath } from "../../lib/tauri";
+import type { FileEntry } from "../../lib/tauri";
+import { ContextMenu, type ContextMenuItem } from "./ContextMenu";
+import { detectLanguage } from "../../lib/languageDetect";
+
+interface Props {
+  entry: FileEntry;
+  depth: number;
+  projectId: string;
+  onRefresh: () => void;
+  /** Only provided when this dir node is expanded; renders sub-FileTree. */
+  renderChildren?: (rootPath: string, depth: number) => React.ReactNode;
+}
+
+interface ContextState { x: number; y: number }
+
+export function FileTreeNode({ entry, depth, projectId, onRefresh, renderChildren }: Props) {
+  const { toggleExpandedDir, openFile } = useStore();
+
+  const [contextMenu, setContextMenu] = useState<ContextState | null>(null);
+  const [renaming, setRenaming] = useState(false);
+  const [renameValue, setRenameValue] = useState(entry.name);
+  const renameInputRef = useRef<HTMLInputElement>(null);
+
+  const indent = depth * 12;
+
+  // ── Rename ───────────────────────────────────────────────────────────────
+  const startRename = () => {
+    setRenameValue(entry.name);
+    setRenaming(true);
+    setTimeout(() => renameInputRef.current?.select(), 0);
+  };
+
+  const commitRename = async () => {
+    setRenaming(false);
+    const trimmed = renameValue.trim();
+    if (!trimmed || trimmed === entry.name) return;
+    const lastSlash = entry.path.lastIndexOf("/");
+    const parent = entry.path.slice(0, lastSlash);
+    const newPath = `${parent}/${trimmed}`;
+    try {
+      await renamePath(entry.path, newPath);
+      onRefresh();
+    } catch (e) {
+      console.error("rename failed", e);
+    }
+  };
+
+  const handleRenameKey = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter") commitRename();
+    if (e.key === "Escape") setRenaming(false);
+  };
+
+  // ── Click ────────────────────────────────────────────────────────────────
+  const handleClick = async () => {
+    if (entry.is_dir) {
+      toggleExpandedDir(projectId, entry.path);
+      return;
+    }
+    try {
+      const content = await readFileText(entry.path);
+      openFile({
+        path: entry.path,
+        projectId,
+        content,
+        isDirty: false,
+        language: detectLanguage(entry.name),
+      });
+    } catch (e) {
+      console.error("open file failed", e);
+    }
+  };
+
+  // ── Context menu ─────────────────────────────────────────────────────────
+  const handleContextMenu = (e: React.MouseEvent) => {
+    e.preventDefault();
+    setContextMenu({ x: e.clientX, y: e.clientY });
+  };
+
+  const contextItems: ContextMenuItem[] = [
+    {
+      label: "Rename",
+      onClick: startRename,
+    },
+    {
+      label: "Copy Path",
+      onClick: () => navigator.clipboard.writeText(entry.path),
+    },
+    {
+      label: entry.is_dir ? "Delete Folder" : "Delete File",
+      danger: true,
+      onClick: async () => {
+        const confirmed = window.confirm(
+          `Delete "${entry.name}"?${entry.is_dir ? "\n\nThis will delete the folder and all its contents." : ""}`
+        );
+        if (!confirmed) return;
+        try {
+          await deletePath(entry.path);
+          onRefresh();
+        } catch (e) {
+          console.error("delete failed", e);
+        }
+      },
+    },
+  ];
+
+  return (
+    <>
+      {contextMenu && (
+        <ContextMenu
+          x={contextMenu.x}
+          y={contextMenu.y}
+          items={contextItems}
+          onClose={() => setContextMenu(null)}
+        />
+      )}
+
+      <div
+        className="group flex items-center gap-1 py-0.5 px-1 rounded cursor-pointer hover:bg-[#1f2335] select-none text-xs"
+        style={{ paddingLeft: 6 + indent }}
+        onClick={handleClick}
+        onContextMenu={handleContextMenu}
+        onDoubleClick={(e) => { e.stopPropagation(); if (!entry.is_dir) startRename(); }}
+      >
+        {/* Expand caret for dirs */}
+        <span className="w-3 flex-shrink-0 text-center text-[#565f89]">
+          {entry.is_dir ? (renderChildren ? "▾" : "▸") : ""}
+        </span>
+
+        {/* Icon */}
+        <span className="flex-shrink-0 text-sm leading-none">
+          {entry.is_dir ? "📁" : fileIcon(entry.name)}
+        </span>
+
+        {/* Name / rename input */}
+        {renaming ? (
+          <input
+            ref={renameInputRef}
+            value={renameValue}
+            onChange={(e) => setRenameValue(e.target.value)}
+            onKeyDown={handleRenameKey}
+            onBlur={commitRename}
+            onClick={(e) => e.stopPropagation()}
+            className="flex-1 bg-[#292e42] text-[#c0caf5] text-xs px-1 rounded outline-none min-w-0"
+            autoFocus
+          />
+        ) : (
+          <span className="truncate flex-1 text-[#a9b1d6] group-hover:text-[#c0caf5]">
+            {entry.name}
+          </span>
+        )}
+      </div>
+
+      {/* Expanded children — rendered directly below */}
+      {renderChildren?.(entry.path, depth + 1)}
+    </>
+  );
+}
+
+function fileIcon(name: string): string {
+  const ext = name.split(".").pop()?.toLowerCase() ?? "";
+  const icons: Record<string, string> = {
+    ts: "📄", tsx: "⚛️", js: "📄", jsx: "⚛️",
+    rs: "🦀", toml: "⚙️", json: "📋",
+    md: "📝", mdx: "📝",
+    css: "🎨", scss: "🎨",
+    html: "🌐",
+    png: "🖼️", jpg: "🖼️", jpeg: "🖼️", gif: "🖼️", svg: "🖼️",
+    sh: "💻", bash: "💻", zsh: "💻",
+    lock: "🔒",
+  };
+  return icons[ext] ?? "📄";
+}

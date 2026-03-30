@@ -1,6 +1,16 @@
 import { create } from "zustand";
 import type { AgentStatus, Project } from "../lib/tauri";
 
+export interface OpenFile {
+  /** Absolute path — used as a unique key. */
+  path: string;
+  projectId: string;
+  content: string;
+  isDirty: boolean;
+  /** Derived from file extension: "typescript", "rust", "json", "markdown", "css", "html", "" */
+  language: string;
+}
+
 export interface Agent {
   id: string;
   projectId: string;
@@ -39,6 +49,26 @@ interface AppStore {
   setBottomPanelHeight: (height: number) => void;
   setShellAgentId: (projectId: string, agentId: string) => void;
 
+  // File explorer
+  fileExplorerOpen: boolean;
+  fileExplorerWidth: number;
+  /** projectId → array of expanded absolute dir paths */
+  expandedDirs: Record<string, string[]>;
+  setFileExplorerOpen: (open: boolean) => void;
+  setFileExplorerWidth: (width: number) => void;
+  toggleExpandedDir: (projectId: string, dirPath: string) => void;
+
+  // Editor pane
+  openFiles: OpenFile[];
+  activeFilePath: string | null;
+  editorPaneHeight: number;
+  openFile: (file: OpenFile) => void;
+  closeFile: (path: string) => void;
+  setActiveFile: (path: string) => void;
+  updateFileContent: (path: string, content: string) => void;
+  markFileSaved: (path: string) => void;
+  setEditorPaneHeight: (height: number) => void;
+
   // UI actions
   selectProject: (projectId: string) => void;
   setActiveAgent: (projectId: string, agentId: string | null) => void;
@@ -56,6 +86,14 @@ export const useStore = create<AppStore>((set, get) => ({
   bottomPanelOpen: false,
   bottomPanelHeight: 220,
   shellAgentIds: {},
+
+  fileExplorerOpen: false,
+  fileExplorerWidth: 240,
+  expandedDirs: {},
+
+  openFiles: [],
+  activeFilePath: null,
+  editorPaneHeight: 300,
 
   setProjects: (projects) => set({ projects }),
 
@@ -140,6 +178,59 @@ export const useStore = create<AppStore>((set, get) => ({
   setBottomPanelHeight: (height) => set({ bottomPanelHeight: Math.max(100, Math.min(height, 600)) }),
   setShellAgentId: (projectId, agentId) =>
     set((s) => ({ shellAgentIds: { ...s.shellAgentIds, [projectId]: agentId } })),
+
+  setFileExplorerOpen: (open) => set({ fileExplorerOpen: open }),
+  setFileExplorerWidth: (width) => set({ fileExplorerWidth: Math.max(160, Math.min(width, 600)) }),
+  toggleExpandedDir: (projectId, dirPath) =>
+    set((s) => {
+      const current = s.expandedDirs[projectId] ?? [];
+      const next = current.includes(dirPath)
+        ? current.filter((p) => p !== dirPath)
+        : [...current, dirPath];
+      return { expandedDirs: { ...s.expandedDirs, [projectId]: next } };
+    }),
+
+  openFile: (file) =>
+    set((s) => {
+      const exists = s.openFiles.some((f) => f.path === file.path);
+      return {
+        openFiles: exists ? s.openFiles : [...s.openFiles, file],
+        activeFilePath: file.path,
+      };
+    }),
+
+  closeFile: (path) =>
+    set((s) => {
+      const idx = s.openFiles.findIndex((f) => f.path === path);
+      if (idx === -1) return s;
+      const next = s.openFiles.filter((f) => f.path !== path);
+      let active = s.activeFilePath;
+      if (active === path) {
+        active = next.length > 0
+          ? (next[idx] ?? next[next.length - 1]).path
+          : null;
+      }
+      return { openFiles: next, activeFilePath: active };
+    }),
+
+  setActiveFile: (path) => set({ activeFilePath: path }),
+
+  updateFileContent: (path, content) =>
+    set((s) => ({
+      openFiles: s.openFiles.map((f) =>
+        f.path === path ? { ...f, content, isDirty: true } : f
+      ),
+    })),
+
+  markFileSaved: (path) =>
+    set((s) => ({
+      openFiles: s.openFiles.map((f) =>
+        f.path === path ? { ...f, isDirty: false } : f
+      ),
+    })),
+
+  setEditorPaneHeight: (height) =>
+    set({ editorPaneHeight: Math.max(100, Math.min(height, 700)) }),
 
   selectProject: (projectId) => set({ selectedProjectId: projectId }),
 

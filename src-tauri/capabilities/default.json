@@ -12,6 +12,9 @@
     "fs:allow-write-file",
     "fs:allow-rename",
     "fs:allow-mkdir",
-    "fs:allow-exists"
+    "fs:allow-exists",
+    "fs:allow-read-dir",
+    "fs:allow-stat",
+    "fs:allow-remove"
   ]
 }

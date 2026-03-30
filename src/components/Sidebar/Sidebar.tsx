@@ -3,7 +3,7 @@ import { ProjectItem } from "./ProjectItem";
 import { useStore } from "../../store/useStore";
 
 export function Sidebar() {
-  const { projects } = useStore();
+  const { projects, fileExplorerOpen, setFileExplorerOpen } = useStore();
 
   return (
     <aside className="flex flex-col w-56 min-w-[180px] bg-[#16161e] border-r border-[#1f2335] h-full select-none">
@@ -21,7 +21,19 @@ export function Sidebar() {
         )}
       </div>
 
-      <div className="border-t border-[#1f2335] p-2">
+      <div className="border-t border-[#1f2335] p-2 flex flex-col gap-1">
+        <button
+          onClick={() => setFileExplorerOpen(!fileExplorerOpen)}
+          title="Toggle file explorer (⌘E)"
+          className={`w-full flex items-center gap-1.5 px-2 py-1 text-xs rounded transition-colors ${
+            fileExplorerOpen
+              ? "text-[#7aa2f7] bg-[#1a1b26]"
+              : "text-[#565f89] hover:text-[#a9b1d6] hover:bg-[#1a1b26]"
+          }`}
+        >
+          <span>⊞</span>
+          <span>Files</span>
+        </button>
         <AddProjectButton />
       </div>
     </aside>

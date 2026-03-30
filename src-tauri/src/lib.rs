@@ -8,6 +8,10 @@ use commands::pty_commands::{
     restart_agent, save_agents, spawn_agent, spawn_shell, write_to_agent,
 };
 use commands::project_commands::{load_projects, pick_folder, save_projects};
+use commands::file_commands::{
+    read_dir, read_file_text, write_file_text, delete_path,
+    create_file, create_dir_all, rename_path,
+};
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -37,6 +41,14 @@ pub fn run() {
             save_agents,
             load_scrollback,
             delete_scrollback,
+            // File manager
+            read_dir,
+            read_file_text,
+            write_file_text,
+            delete_path,
+            create_file,
+            create_dir_all,
+            rename_path,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

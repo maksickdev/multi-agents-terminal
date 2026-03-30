@@ -4,6 +4,7 @@ import { EmptyState } from "./EmptyState";
 import { TabBar } from "./TabBar";
 import { TerminalGrid } from "../Terminal/TerminalGrid";
 import { BottomPanel } from "../BottomPanel/BottomPanel";
+import { EditorPane } from "../Editor/EditorPane";
 
 // Approximate character dimensions for JetBrains Mono 13px
 const CHAR_W = 8;
@@ -58,6 +59,9 @@ export function MainArea() {
           ⌨ Terminal
         </button>
       </div>
+
+      {/* Editor pane — visible when files are open */}
+      <EditorPane />
 
       {!project ? (
         <div className="flex-1 overflow-hidden flex flex-col">

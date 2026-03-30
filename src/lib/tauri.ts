@@ -84,6 +84,35 @@ export const saveProjects = (projects: Project[]) =>
 
 export const pickFolder = () => invoke<string | null>("pick_folder");
 
+// ── File manager ─────────────────────────────────────────────────────────────
+
+export interface FileEntry {
+  name: string;
+  path: string;
+  is_dir: boolean;
+}
+
+export const readDir = (path: string) =>
+  invoke<FileEntry[]>("read_dir", { path });
+
+export const readFileText = (path: string) =>
+  invoke<string>("read_file_text", { path });
+
+export const writeFileText = (path: string, content: string) =>
+  invoke<void>("write_file_text", { path, content });
+
+export const deletePath = (path: string) =>
+  invoke<void>("delete_path", { path });
+
+export const createFile = (path: string) =>
+  invoke<void>("create_file", { path });
+
+export const createDirAll = (path: string) =>
+  invoke<void>("create_dir_all", { path });
+
+export const renamePath = (oldPath: string, newPath: string) =>
+  invoke<void>("rename_path", { oldPath, newPath });
+
 // Event listeners
 export const onPtyOutput = (
   cb: (payload: PtyOutputPayload) => void
