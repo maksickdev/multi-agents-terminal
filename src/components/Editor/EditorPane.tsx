@@ -3,6 +3,9 @@ import { useStore } from "../../store/useStore";
 import { writeFileText } from "../../lib/tauri";
 import { CodeEditor } from "./CodeEditor";
 import { EditorTab } from "./EditorTab";
+import { RenderedPreview } from "./RenderedPreview";
+
+const PREVIEWABLE = ["markdown"];
 
 export function EditorPane() {
   const {
@@ -15,6 +18,7 @@ export function EditorPane() {
 
   const activeFile = openFiles.find((f) => f.path === activeFilePath) ?? openFiles[0] ?? null;
   const isVisible = openFiles.length > 0;
+  const isPreviewable = activeFile ? PREVIEWABLE.includes(activeFile.language) : false;
 
   // ── Resize handle (bottom edge — grows downward into terminal area) ───────
   const resizingRef = useRef(false);
@@ -47,6 +51,7 @@ export function EditorPane() {
 
   const [draggingPath, setDraggingPath] = useState<string | null>(null);
   const [dragOverPath, setDragOverPath] = useState<string | null>(null);
+  const [previewMode, setPreviewMode] = useState<"raw" | "rendered">("raw");
 
   const doReorder = useCallback((fromPath: string, toPath: string) => {
     const paths = openFiles.map((f) => f.path);
@@ -148,23 +153,44 @@ export function EditorPane() {
       {activeFile && (
         <div className="flex items-center justify-between px-3 h-5 bg-[#16161e] border-b border-[#1f2335] flex-shrink-0">
           <span className="text-[10px] text-[#414868] truncate">{activeFile.path}</span>
-          <span className="text-[10px] text-[#414868] flex-shrink-0 ml-2">
-            {activeFile.language || "plain text"}
-            {activeFile.isDirty && <span className="ml-2 text-[#e0af68]">● unsaved</span>}
-          </span>
+          <div className="flex items-center gap-2 flex-shrink-0 ml-2">
+            {isPreviewable && (
+              <div className="flex items-center rounded overflow-hidden border border-[#2a2b3d]">
+                {(["raw", "rendered"] as const).map((mode) => (
+                  <button
+                    key={mode}
+                    onClick={() => setPreviewMode(mode)}
+                    className={`px-2 h-4 text-[9px] leading-none uppercase tracking-wide transition-colors ${
+                      previewMode === mode
+                        ? "bg-[#7aa2f7] text-[#1a1b26]"
+                        : "text-[#414868] hover:text-[#a9b1d6]"
+                    }`}
+                  >
+                    {mode}
+                  </button>
+                ))}
+              </div>
+            )}
+            <span className="text-[10px] text-[#414868]">
+              {activeFile.language || "plain text"}
+              {activeFile.isDirty && <span className="ml-2 text-[#e0af68]">● unsaved</span>}
+            </span>
+          </div>
         </div>
       )}
 
-      {/* Editor */}
+      {/* Editor / Preview */}
       <div className="flex-1 overflow-hidden">
         {activeFile && (
-          <CodeEditor
-            key={activeFile.path}
-            content={activeFile.content}
-            language={activeFile.language}
-            onChange={(content) => updateFileContent(activeFile.path, content)}
-            onSave={handleSave}
-          />
+          isPreviewable && previewMode === "rendered"
+            ? <RenderedPreview content={activeFile.content} language={activeFile.language} />
+            : <CodeEditor
+                key={activeFile.path}
+                content={activeFile.content}
+                language={activeFile.language}
+                onChange={(content) => updateFileContent(activeFile.path, content)}
+                onSave={handleSave}
+              />
         )}
       </div>
 
