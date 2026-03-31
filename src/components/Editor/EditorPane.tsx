@@ -149,9 +149,24 @@ export function EditorPane() {
         ))}
       </div>
 
-      {/* Status bar */}
+      {/* Editor / Preview */}
+      <div className="flex-1 overflow-hidden">
+        {activeFile && (
+          isPreviewable && previewMode === "rendered"
+            ? <RenderedPreview content={activeFile.content} language={activeFile.language} />
+            : <CodeEditor
+                key={activeFile.path}
+                content={activeFile.content}
+                language={activeFile.language}
+                onChange={(content) => updateFileContent(activeFile.path, content)}
+                onSave={handleSave}
+              />
+        )}
+      </div>
+
+      {/* Status bar — bottom */}
       {activeFile && (
-        <div className="flex items-center justify-between px-3 h-5 bg-[#16161e] border-b border-[#1f2335] flex-shrink-0">
+        <div className="flex items-center justify-between px-3 h-5 bg-[#16161e] border-t border-[#1f2335] flex-shrink-0">
           <span className="text-[10px] text-[#414868] truncate">{activeFile.path}</span>
           <div className="flex items-center gap-2 flex-shrink-0 ml-2">
             {isPreviewable && (
@@ -178,21 +193,6 @@ export function EditorPane() {
           </div>
         </div>
       )}
-
-      {/* Editor / Preview */}
-      <div className="flex-1 overflow-hidden">
-        {activeFile && (
-          isPreviewable && previewMode === "rendered"
-            ? <RenderedPreview content={activeFile.content} language={activeFile.language} />
-            : <CodeEditor
-                key={activeFile.path}
-                content={activeFile.content}
-                language={activeFile.language}
-                onChange={(content) => updateFileContent(activeFile.path, content)}
-                onSave={handleSave}
-              />
-        )}
-      </div>
 
     </div>
   );
