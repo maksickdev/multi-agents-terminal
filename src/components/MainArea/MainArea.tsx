@@ -45,20 +45,6 @@ export function MainArea() {
 
   return (
     <main className="flex-1 flex flex-col bg-[#1a1b26] overflow-hidden min-w-0">
-      {/* Toolbar row */}
-      <div className="flex items-center justify-end px-2 h-7 bg-[#16161e] border-b border-[#1f2335] flex-shrink-0">
-        <button
-          onClick={() => setBottomPanelOpen(!bottomPanelOpen)}
-          title="Toggle terminal panel (⌘J)"
-          className={`px-2 py-0.5 text-xs rounded transition-colors ${
-            bottomPanelOpen
-              ? "text-[#7aa2f7] bg-[#1a1b26]"
-              : "text-[#565f89] hover:text-[#a9b1d6] hover:bg-[#1a1b26]"
-          }`}
-        >
-          ⌨ Terminal
-        </button>
-      </div>
 
       {!project ? (
         <div className="flex-1 overflow-hidden flex flex-col">
