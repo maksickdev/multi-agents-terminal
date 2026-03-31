@@ -24,6 +24,18 @@ export function EditorTab({
     onSelect();
   };
 
+  const handleMouseDown = (e: React.MouseEvent) => {
+    if (e.button === 1) {
+      e.preventDefault();
+      return;
+    }
+    onMouseDown();
+  };
+
+  const handleAuxClick = (e: React.MouseEvent) => {
+    if (e.button === 1) onClose();
+  };
+
   const borderStyle: React.CSSProperties = isDragOver
     ? { borderLeft: "2px solid #7aa2f7" }
     : {};
@@ -31,7 +43,8 @@ export function EditorTab({
   return (
     <div
       onClick={handleClick}
-      onMouseDown={onMouseDown}
+      onMouseDown={handleMouseDown}
+      onAuxClick={handleAuxClick}
       onMouseEnter={onMouseEnter}
       style={{ ...borderStyle, opacity: isDragging ? 0.4 : 1, cursor: "pointer" }}
       title={file.path}
