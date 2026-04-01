@@ -145,15 +145,36 @@ function stop() {
 
 // ── Public API ────────────────────────────────────────────────────────────────
 
+const DRAG_THRESHOLD = 6; // px
+
 export function isDraggingFile(): boolean {
   return draggingPath !== null;
 }
 
-export function startFileDrag(path: string, isDir = false) {
+export function startFileDrag(path: string, isDir = false, originX = 0, originY = 0) {
   stop();
-  clearSelection();
-  draggingPath = path;
-  createGhost(path, isDir);
-  window.addEventListener("mousemove", onMouseMove);
-  window.addEventListener("mouseup", onMouseUp);
+
+  const onPendingMove = (e: MouseEvent) => {
+    const dx = e.clientX - originX;
+    const dy = e.clientY - originY;
+    if (Math.sqrt(dx * dx + dy * dy) < DRAG_THRESHOLD) return;
+
+    // Threshold reached — activate drag
+    window.removeEventListener("mousemove", onPendingMove);
+    window.removeEventListener("mouseup", onPendingCancel);
+
+    clearSelection();
+    draggingPath = path;
+    createGhost(path, isDir);
+    window.addEventListener("mousemove", onMouseMove);
+    window.addEventListener("mouseup", onMouseUp);
+  };
+
+  const onPendingCancel = () => {
+    window.removeEventListener("mousemove", onPendingMove);
+    window.removeEventListener("mouseup", onPendingCancel);
+  };
+
+  window.addEventListener("mousemove", onPendingMove);
+  window.addEventListener("mouseup", onPendingCancel);
 }

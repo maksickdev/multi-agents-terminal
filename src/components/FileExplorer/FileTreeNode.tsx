@@ -128,7 +128,7 @@ export function FileTreeNode({ entry, depth, projectId, onRefresh, renderChildre
         onMouseDown={(e) => {
           if (e.button === 0) {
             e.preventDefault();
-            startFileDrag(entry.path, entry.is_dir);
+            startFileDrag(entry.path, entry.is_dir, e.clientX, e.clientY);
           }
         }}
       >
