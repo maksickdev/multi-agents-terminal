@@ -4,6 +4,7 @@ import { writeFileText } from "../../lib/tauri";
 import { CodeEditor } from "./CodeEditor";
 import { EditorTab } from "./EditorTab";
 import { RenderedPreview } from "./RenderedPreview";
+import { ConfirmModal } from "../shared/ConfirmModal";
 
 const PREVIEWABLE = ["markdown"];
 
@@ -60,6 +61,7 @@ export function EditorPane() {
   const [draggingPath, setDraggingPath] = useState<string | null>(null);
   const [dragOverPath, setDragOverPath] = useState<string | null>(null);
   const [previewMode, setPreviewMode] = useState<"raw" | "rendered">("raw");
+  const [pendingClosePath, setPendingClosePath] = useState<string | null>(null);
 
   const doReorder = useCallback((fromPath: string, toPath: string) => {
     const paths = projectFiles.map((f) => f.path);
@@ -116,15 +118,29 @@ export function EditorPane() {
   const handleClose = (path: string) => {
     const file = openFiles.find((f) => f.path === path);
     if (file?.isDirty) {
-      const confirmed = window.confirm(
-        `"${path.split("/").pop()}" has unsaved changes. Close anyway?`
-      );
-      if (!confirmed) return;
+      setPendingClosePath(path);
+      return;
     }
     closeFile(path);
   };
 
+  const confirmClose = () => {
+    if (pendingClosePath) closeFile(pendingClosePath);
+    setPendingClosePath(null);
+  };
+
   return (
+    <>
+    {pendingClosePath && (
+      <ConfirmModal
+        title="Unsaved changes"
+        message={`"${pendingClosePath.split("/").pop()}" has unsaved changes. Close anyway?`}
+        confirmLabel="Close"
+        danger
+        onConfirm={confirmClose}
+        onCancel={() => setPendingClosePath(null)}
+      />
+    )}
     <div
       style={{
         height: isVisible ? editorPaneHeight : 0,
@@ -203,5 +219,6 @@ export function EditorPane() {
       )}
 
     </div>
+    </>
   );
 }
