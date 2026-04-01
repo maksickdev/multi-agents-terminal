@@ -49,6 +49,7 @@ PTY process output
 - **`pty/reader.rs`** — `spawn_reader()`: blocking task that reads PTY → appends to scrollback file → emits `pty-output` event. Emits `agent-status: waiting` after 2 s silence, `agent-exited` on EOF/error.
 - **`commands/pty_commands.rs`** — all PTY Tauri commands. `spawn_agent` runs `claude` (located via `zsh -il`). `spawn_shell` runs `$SHELL` with inherited `LANG`/`LC_ALL`/`LC_CTYPE`. Both accept optional `rows`/`cols` and `agent_id` (for session restore). Scrollback files are `{scrollback_dir}/{agent_id}.bin`.
 - **`commands/project_commands.rs`** — load/save projects.json (atomic rename), folder picker.
+- **`commands/file_commands.rs`** — 7 FS commands: `read_dir`, `read_file_text`, `write_file_text`, `delete_path`, `create_file`, `create_dir_all`, `rename_path`. `read_dir` sorts dirs first (alphabetical), then files.
 
 Tauri 2 maps **camelCase JS parameters → snake_case Rust parameters** automatically.
 
@@ -61,6 +62,35 @@ Tauri 2 maps **camelCase JS parameters → snake_case Rust parameters** automati
 - `agentOrder: Record<projectId, agentId[]>` — explicit tab order per project. `addAgent` deduplicates before appending. `getProjectAgents` also deduplicates via `Set`.
 - `activeAgentId: Record<projectId, agentId | null>` — which tab is active per project
 - `bottomPanelOpen`, `bottomPanelHeight`, `shellAgentIds: Record<projectId, agentId>`
+- `fileExplorerOpen`, `fileExplorerWidth`, `expandedDirs: Record<projectId, string[]>`
+- `openFiles: OpenFile[]`, `activeFilePath: string | null`, `editorPaneHeight: number` — editor state. `OpenFile` has `path`, `projectId`, `content`, `isDirty`, `language`.
+
+**Layout (left → right, top → bottom)**
+
+```
+App
+├── Sidebar          — project list + icon toolbar (Files, Terminal toggles)
+├── FileExplorer     — toggleable file tree panel (width: 0 when closed)
+└── MainArea
+    ├── TabBar        — agent tabs for active project
+    ├── TerminalArea  — flex-1, all project TerminalGrids mounted (visibility:hidden when inactive)
+    ├── EditorPane    — file editor, shown only when files are open; resize handle at top
+    └── BottomPanel   — shell panel, height: 0 when closed
+```
+
+**File Explorer (`src/components/FileExplorer/`)**
+
+- `FileExplorer.tsx` — outer panel with resize handle, header buttons (New File, New Folder, Refresh), Cmd+E shortcut.
+- `FileTree.tsx` — loads one directory level via `readDir`, renders `FileTreeNode` entries.
+- `FileTreeNode.tsx` — click opens file/expands folder, double-click triggers inline rename, right-click shows `ContextMenu`.
+- `ContextMenu.tsx` — `ReactDOM.createPortal` to `document.body`, `position: fixed`, closes on outside click (capture phase) or Escape.
+
+**Editor Pane (`src/components/Editor/`)**
+
+- `EditorPane.tsx` — tab bar with drag-to-reorder (same mouse-event pattern as agent TabBar), CodeEditor or RenderedPreview, status bar at bottom. Filters `openFiles` by `selectedProjectId` so only active project's files are shown.
+- `CodeEditor.tsx` — CodeMirror 6, Tokyo Night theme, language via `Compartment`. Uses **ref pattern** for `onSave`/`onChange` callbacks (`onSaveRef`, `onChangeRef` updated each render via `useEffect`) to avoid stale closures in keymap and updateListener.
+- `EditorTab.tsx` — drag props, dirty indicator (●), middle-click closes tab (`onAuxClick`).
+- `RenderedPreview.tsx` — markdown rendered via `marked` + `DOMPurify`. RAW/RENDERED toggle in status bar for `.md` files only.
 
 **xterm.js lifecycle (`src/lib/ptyManager.ts`)**
 
@@ -76,6 +106,7 @@ Module-level `Map<agentId, { terminal, fitAddon }>`. Key rules:
 xterm cannot be re-opened once closed. Two patterns used:
 1. **All project TerminalGrids stay mounted** in `MainArea` — inactive ones use `visibility: hidden; pointer-events: none` (not `display: none`, which breaks rendering).
 2. **BottomPanel** stays mounted with `height: 0; overflow: hidden` when closed — so `ShellPane`/xterm never unmounts.
+3. **EditorPane** stays mounted with `height: 0; overflow: hidden` when no files are open.
 
 **Session persistence (`src/hooks/useSessionPersistence.ts`)**
 
@@ -91,7 +122,7 @@ On mount: loads projects + agents.json → stages scrollback via `ptyManager.set
 
 **Tab drag-and-drop**
 
-Uses **mouse events** (not HTML5 DnD — unreliable in WKWebView). Module-level `draggingAgentId` variable + `window.addEventListener("mouseup", ...)` in `TabBar`. `movedRef` suppresses click when mouse actually moved to another tab.
+Uses **mouse events** (not HTML5 DnD — unreliable in WKWebView). `draggingRef`/`dragOverRef`/`movedRef` + `window.addEventListener("mouseup", ...)`. `movedRef` suppresses click when mouse actually moved to another tab. Pattern used in both agent TabBar and editor EditorPane file tabs.
 
 ### Key gotchas
 
@@ -99,3 +130,6 @@ Uses **mouse events** (not HTML5 DnD — unreliable in WKWebView). Module-level 
 - `spawn_agent` / `spawn_shell` both require PTY size at spawn time — measure the container before calling, otherwise Claude TUI wraps incorrectly.
 - Shell PTY (`spawn_shell`) inherits `LANG`/`LC_ALL`/`LC_CTYPE` from environment so zsh ZLE handles multi-byte UTF-8 correctly.
 - Scrollback files are raw PTY bytes (not text) — replayed through xterm for session restore.
+- **Stale closure in CodeMirror**: keymap and updateListener are created once on mount. Always use `useRef` for `onSave`/`onChange` callbacks and update the ref via `useEffect` (no deps) — never pass callbacks directly into the keymap closure.
+- **Vite HMR gotcha**: saving any file from `src/` or `index.html` via the editor triggers Vite HMR in dev mode, reloading the app. This does not affect production builds.
+- `EditorPane` filters `openFiles` by `selectedProjectId` — only files of the active project are shown. All project files remain in the store and reappear when switching back.
