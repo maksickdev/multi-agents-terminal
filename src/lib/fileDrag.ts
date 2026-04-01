@@ -87,6 +87,10 @@ function stop() {
   window.removeEventListener("mouseup", onMouseUp);
 }
 
+export function isDraggingFile(): boolean {
+  return draggingPath !== null;
+}
+
 export function startFileDrag(path: string) {
   stop(); // clear any previous drag
   clearSelection();

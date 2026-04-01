@@ -3,6 +3,7 @@ import { spawnAgent } from "../../lib/tauri";
 import { useStore, type Agent } from "../../store/useStore";
 import { TabItem } from "./TabItem";
 import type { Project } from "../../lib/tauri";
+import { isDraggingFile } from "../../lib/fileDrag";
 
 interface Props {
   project: Project;
@@ -60,11 +61,17 @@ export function TabBar({ project, agents, activeAgentId, getTerminalSize }: Prop
 
   // ── Hover over a tab while dragging ────────────────────────────────────────
   const enterTab = useCallback((agentId: string) => {
+    // File drag over tab → activate it so the terminal is ready to receive the drop
+    if (isDraggingFile()) {
+      setActiveAgent(project.id, agentId);
+      return;
+    }
+    // Normal agent tab reorder
     if (!draggingRef.current || draggingRef.current === agentId) return;
     movedRef.current    = true;
     dragOverRef.current = agentId;
     setDragOverId(agentId);
-  }, []);
+  }, [project.id, setActiveAgent]);
 
   // ── New agent ──────────────────────────────────────────────────────────────
   const handleNewAgent = async () => {
