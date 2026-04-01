@@ -20,9 +20,9 @@ function encodeInput(text: string): string {
   );
 }
 
-function createGhost(path: string) {
+function createGhost(path: string, isDir: boolean) {
   ghost = document.createElement("div");
-  ghost.textContent = "📄 " + path.split("/").pop();
+  ghost.textContent = (isDir ? "📁 " : "📄 ") + path.split("/").pop();
   Object.assign(ghost.style, {
     position: "fixed",
     top: "-100px",
@@ -91,11 +91,11 @@ export function isDraggingFile(): boolean {
   return draggingPath !== null;
 }
 
-export function startFileDrag(path: string) {
+export function startFileDrag(path: string, isDir = false) {
   stop(); // clear any previous drag
   clearSelection();
   draggingPath = path;
-  createGhost(path);
+  createGhost(path, isDir);
   window.addEventListener("mousemove", onMouseMove);
   window.addEventListener("mouseup", onMouseUp);
 }

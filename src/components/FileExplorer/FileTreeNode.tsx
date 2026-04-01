@@ -125,9 +125,9 @@ export function FileTreeNode({ entry, depth, projectId, onRefresh, renderChildre
         onContextMenu={handleContextMenu}
         onDoubleClick={(e) => { e.stopPropagation(); if (!entry.is_dir) startRename(); }}
         onMouseDown={(e) => {
-          if (!entry.is_dir && e.button === 0) {
+          if (e.button === 0) {
             e.preventDefault();
-            startFileDrag(entry.path);
+            startFileDrag(entry.path, entry.is_dir);
           }
         }}
       >
