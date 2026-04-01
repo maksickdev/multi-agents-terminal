@@ -127,3 +127,7 @@ export function clearTerminal(agentId: string) {
     entry.terminal.clear();
   }
 }
+
+export function getTerminal(agentId: string) {
+  return entries.get(agentId)?.terminal ?? null;
+}
