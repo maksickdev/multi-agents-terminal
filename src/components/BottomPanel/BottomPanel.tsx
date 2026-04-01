@@ -50,6 +50,7 @@ function ShellPane({ agentId, isVisible, height }: {
   return (
     <div
       ref={containerRef}
+      data-agent-id={agentId}
       style={
         isVisible
           ? { width: "100%", height: "100%", overflow: "hidden" }

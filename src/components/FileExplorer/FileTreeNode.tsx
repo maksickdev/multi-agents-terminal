@@ -4,6 +4,7 @@ import { readFileText, deletePath, renamePath } from "../../lib/tauri";
 import type { FileEntry } from "../../lib/tauri";
 import { ContextMenu, type ContextMenuItem } from "./ContextMenu";
 import { detectLanguage } from "../../lib/languageDetect";
+import { startFileDrag } from "../../lib/fileDrag";
 
 interface Props {
   entry: FileEntry;
@@ -123,6 +124,12 @@ export function FileTreeNode({ entry, depth, projectId, onRefresh, renderChildre
         onClick={handleClick}
         onContextMenu={handleContextMenu}
         onDoubleClick={(e) => { e.stopPropagation(); if (!entry.is_dir) startRename(); }}
+        onMouseDown={(e) => {
+          if (!entry.is_dir && e.button === 0) {
+            e.preventDefault();
+            startFileDrag(entry.path);
+          }
+        }}
       >
         {/* Expand caret for dirs */}
         <span className="w-3 flex-shrink-0 text-center text-[#565f89]">

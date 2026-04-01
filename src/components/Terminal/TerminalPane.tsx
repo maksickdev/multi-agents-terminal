@@ -77,6 +77,7 @@ export function TerminalPane({ agentId, isVisible }: Props) {
   return (
     <div
       ref={containerRef}
+      data-agent-id={agentId}
       style={
         isVisible
           ? { width: "100%", height: "100%", overflow: "hidden" }
