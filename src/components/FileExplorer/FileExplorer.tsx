@@ -123,7 +123,7 @@ export function FileExplorer() {
       className="flex flex-col bg-[#16161e] border-r border-[#1f2335]"
     >
       {/* Header */}
-      <div className="flex items-center justify-between px-2 h-7 bg-[#16161e] border-b border-[#1f2335] flex-shrink-0 select-none">
+      <div className="flex items-center justify-between px-2 h-8 bg-[#16161e] border-b border-[#1f2335] flex-shrink-0 select-none">
         <span className="text-xs font-semibold text-[#565f89] uppercase tracking-widest truncate">
           {selectedProject ? selectedProject.name : "Explorer"}
         </span>

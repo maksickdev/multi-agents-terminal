@@ -96,7 +96,7 @@ export function TabItem({
         onMouseEnter={onMouseEnter}
         style={{ ...borderStyle, opacity: isDragging ? 0.4 : 1, cursor: "pointer" }}
         className={[
-          "group flex items-center gap-2 px-3 py-2 border-b-2 transition-colors whitespace-nowrap select-none",
+          "group flex items-center gap-2 px-3 h-8 border-b-2 transition-colors whitespace-nowrap select-none",
           isActive
             ? "border-[#7aa2f7] bg-[#1a1b26] text-[#c0caf5]"
             : "border-transparent bg-[#16161e] text-[#565f89] hover:bg-[#1a1b26] hover:text-[#a9b1d6]",

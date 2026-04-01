@@ -156,7 +156,7 @@ export function EditorPane() {
       />
 
       {/* Tab bar */}
-      <div className="flex h-7 bg-[#16161e] border-b border-[#1f2335] overflow-x-auto flex-shrink-0 scrollbar-none">
+      <div className="flex h-8 bg-[#16161e] border-b border-[#1f2335] overflow-x-auto flex-shrink-0 scrollbar-none">
         {projectFiles.map((file) => (
           <EditorTab
             key={file.path}
