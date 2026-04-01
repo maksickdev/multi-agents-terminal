@@ -77,6 +77,12 @@ export function CodeEditor({ content, language, onChange, onSave }: Props) {
   // Track last content pushed into editor to avoid echo loops
   const lastExternalContent = useRef(content);
 
+  // Always-current refs so keymap / updateListener never close over stale props
+  const onSaveRef  = useRef(onSave);
+  const onChangeRef = useRef(onChange);
+  useEffect(() => { onSaveRef.current  = onSave;  });
+  useEffect(() => { onChangeRef.current = onChange; });
+
   useEffect(() => {
     if (!containerRef.current) return;
 
@@ -93,13 +99,13 @@ export function CodeEditor({ content, language, onChange, onSave }: Props) {
           ...foldKeymap,
           ...completionKeymap,
           indentWithTab,
-          { key: "Mod-s", run: () => { onSave(); return true; } },
+          { key: "Mod-s", run: () => { onSaveRef.current(); return true; } },
         ]),
         EditorView.updateListener.of((update) => {
           if (update.docChanged) {
             const newContent = update.state.doc.toString();
             lastExternalContent.current = newContent;
-            onChange(newContent);
+            onChangeRef.current(newContent);
           }
         }),
       ],
