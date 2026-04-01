@@ -14,17 +14,17 @@ export function Sidebar() {
   return (
     <aside className="flex flex-col w-56 min-w-[180px] bg-[#16161e] border-r border-[#1f2335] h-full select-none">
       {/* Icon toolbar */}
-      <div className="flex items-center gap-1 px-2 py-1.5 border-b border-[#1f2335]">
+      <div className="flex items-center justify-center gap-1 px-2 py-1.5 border-b border-[#1f2335]">
         <button
           onClick={() => setFileExplorerOpen(!fileExplorerOpen)}
           title="Файловый менеджер (⌘E)"
-          className={`flex items-center justify-center w-7 h-7 rounded transition-colors ${
+          className={`flex items-center justify-center w-8 h-8 rounded transition-colors ${
             fileExplorerOpen
               ? "text-[#7aa2f7] bg-[#1a1b26]"
               : "text-[#565f89] hover:text-[#a9b1d6] hover:bg-[#1a1b26]"
           }`}
         >
-          <svg width="15" height="15" viewBox="0 0 16 16" fill="currentColor">
+          <svg width="20" height="20" viewBox="0 0 16 16" fill="currentColor">
             <path d="M1 3.5A1.5 1.5 0 0 1 2.5 2h2.764c.958 0 1.76.56 2.311 1.184C7.985 3.648 8.48 4 9 4h4.5A1.5 1.5 0 0 1 15 5.5v7a1.5 1.5 0 0 1-1.5 1.5h-11A1.5 1.5 0 0 1 1 12.5v-9z"/>
           </svg>
         </button>
@@ -32,13 +32,13 @@ export function Sidebar() {
         <button
           onClick={() => setBottomPanelOpen(!bottomPanelOpen)}
           title="Терминал"
-          className={`flex items-center justify-center w-7 h-7 rounded transition-colors ${
+          className={`flex items-center justify-center w-8 h-8 rounded transition-colors ${
             bottomPanelOpen
               ? "text-[#7aa2f7] bg-[#1a1b26]"
               : "text-[#565f89] hover:text-[#a9b1d6] hover:bg-[#1a1b26]"
           }`}
         >
-          <svg width="15" height="15" viewBox="0 0 16 16" fill="currentColor">
+          <svg width="20" height="20" viewBox="0 0 16 16" fill="currentColor">
             <path d="M0 3a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V3zm9.5 5.5h-3a.5.5 0 0 0 0 1h3a.5.5 0 0 0 0-1zm-6.354-.354a.5.5 0 1 0 .708.708l2-2a.5.5 0 0 0 0-.708l-2-2a.5.5 0 1 0-.708.708L4.793 6.5 3.146 8.146z"/>
           </svg>
         </button>
