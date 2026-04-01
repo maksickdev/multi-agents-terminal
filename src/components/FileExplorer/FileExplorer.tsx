@@ -194,7 +194,7 @@ export function FileExplorer() {
       {/* Right-side resize handle */}
       <div
         onMouseDown={fileExplorerOpen ? onHandleMouseDown : undefined}
-        className="absolute right-0 top-0 bottom-0 w-1 cursor-ew-resize hover:bg-[#7aa2f7] transition-colors"
+        className="absolute right-0 top-0 bottom-0 w-[6px] cursor-ew-resize hover:bg-[#7aa2f7]/20 transition-colors flex items-center justify-center"
       />
     </div>
     </>

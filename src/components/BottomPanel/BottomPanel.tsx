@@ -125,12 +125,12 @@ export function BottomPanel() {
         flexShrink: 0,
         overflow: "hidden",
       }}
-      className="flex flex-col bg-[#1a1b26]"
+      className="relative flex flex-col bg-[#1a1b26]"
     >
       {/* Resize handle — only interactable when open */}
       <div
         onMouseDown={bottomPanelOpen ? onHandleMouseDown : undefined}
-        className="h-1 cursor-ns-resize bg-[#1f2335] hover:bg-[#7aa2f7] transition-colors flex-shrink-0"
+        className="absolute top-0 left-0 right-0 h-[6px] border-t border-[#1f2335] cursor-ns-resize hover:bg-[#7aa2f7]/20 transition-colors z-10 flex flex-col justify-center"
       />
 
       {/* Header */}

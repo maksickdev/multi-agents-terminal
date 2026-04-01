@@ -131,12 +131,12 @@ export function EditorPane() {
         flexShrink: 0,
         overflow: "hidden",
       }}
-      className="flex flex-col bg-[#1a1b26]"
+      className="relative flex flex-col bg-[#1a1b26]"
     >
       {/* Top resize handle */}
       <div
         onMouseDown={isVisible ? onHandleMouseDown : undefined}
-        className="h-1 cursor-ns-resize bg-[#1f2335] hover:bg-[#7aa2f7] transition-colors flex-shrink-0"
+        className="absolute top-0 left-0 right-0 h-[6px] border-t border-[#1f2335] cursor-ns-resize hover:bg-[#7aa2f7]/20 transition-colors z-10 flex flex-col justify-center"
       />
 
       {/* Tab bar */}
@@ -174,7 +174,7 @@ export function EditorPane() {
 
       {/* Status bar — bottom */}
       {activeFile && (
-        <div className="flex items-center justify-between px-3 h-5 bg-[#16161e] border-t border-[#1f2335] flex-shrink-0">
+        <div className="flex items-center justify-between px-3 h-6 bg-[#16161e] border-t border-[#1f2335] flex-shrink-0">
           <span className="text-[10px] text-[#414868] truncate">{activeFile.path}</span>
           <div className="flex items-center gap-2 flex-shrink-0 ml-2">
             {isPreviewable && (
