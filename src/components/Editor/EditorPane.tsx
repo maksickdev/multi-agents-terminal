@@ -14,10 +14,18 @@ export function EditorPane() {
     setActiveFile, closeFile,
     updateFileContent, markFileSaved,
     reorderOpenFiles,
+    selectedProjectId,
   } = useStore();
 
-  const activeFile = openFiles.find((f) => f.path === activeFilePath) ?? openFiles[0] ?? null;
-  const isVisible = openFiles.length > 0;
+  // Only show files belonging to the currently selected project
+  const projectFiles = openFiles.filter((f) => f.projectId === selectedProjectId);
+
+  const activeFile =
+    projectFiles.find((f) => f.path === activeFilePath) ??
+    projectFiles[0] ??
+    null;
+
+  const isVisible = projectFiles.length > 0;
   const isPreviewable = activeFile ? PREVIEWABLE.includes(activeFile.language) : false;
 
   // ── Resize handle (bottom edge — grows downward into terminal area) ───────
@@ -54,7 +62,7 @@ export function EditorPane() {
   const [previewMode, setPreviewMode] = useState<"raw" | "rendered">("raw");
 
   const doReorder = useCallback((fromPath: string, toPath: string) => {
-    const paths = openFiles.map((f) => f.path);
+    const paths = projectFiles.map((f) => f.path);
     const from = paths.indexOf(fromPath);
     const to   = paths.indexOf(toPath);
     if (from === -1 || to === -1 || from === to) return;
@@ -62,7 +70,7 @@ export function EditorPane() {
     next.splice(from, 1);
     next.splice(to, 0, fromPath);
     reorderOpenFiles(next);
-  }, [openFiles, reorderOpenFiles]);
+  }, [projectFiles, reorderOpenFiles]);
 
   const startDrag = useCallback((path: string) => {
     draggingRef.current = path;
@@ -133,7 +141,7 @@ export function EditorPane() {
 
       {/* Tab bar */}
       <div className="flex h-7 bg-[#16161e] border-b border-[#1f2335] overflow-x-auto flex-shrink-0 scrollbar-none">
-        {openFiles.map((file) => (
+        {projectFiles.map((file) => (
           <EditorTab
             key={file.path}
             file={file}
