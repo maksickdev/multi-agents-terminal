@@ -16,6 +16,13 @@ html, body, #root {
   height: 100%;
 }
 
+/* File drag — folder drop target highlight */
+.file-drag-folder-hover {
+  background-color: #2a3654 !important;
+  outline: 1px solid #7aa2f7;
+  border-radius: 4px;
+}
+
 /* Markdown / HTML rendered preview */
 .prose-preview {
   color: #c0caf5;

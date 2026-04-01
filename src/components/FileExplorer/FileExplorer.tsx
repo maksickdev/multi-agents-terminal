@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import { useStore } from "../../store/useStore";
-import { createFile, createDirAll } from "../../lib/tauri";
+import { createFile, createDirAll, renamePath } from "../../lib/tauri";
 import { FileTree } from "./FileTree";
+import { MoveConfirmModal } from "./MoveConfirmModal";
+import { setOnFolderDrop } from "../../lib/fileDrag";
 
 export function FileExplorer() {
   const {
@@ -53,6 +55,26 @@ export function FileExplorer() {
   const [newName, setNewName] = useState("");
   const [refreshKey, setRefreshKey] = useState(0);
 
+  // ── File move (drag-to-folder) ────────────────────────────────────────────
+  const [pendingMove, setPendingMove] = useState<{ src: string; dst: string } | null>(null);
+
+  useEffect(() => {
+    setOnFolderDrop((src, dst) => setPendingMove({ src, dst }));
+  }, []);
+
+  const confirmMove = async () => {
+    if (!pendingMove) return;
+    const { src, dst } = pendingMove;
+    setPendingMove(null);
+    const name = src.split("/").pop()!;
+    try {
+      await renamePath(src, `${dst}/${name}`);
+      setRefreshKey((k) => k + 1);
+    } catch (e) {
+      console.error("move failed", e);
+    }
+  };
+
   const startCreating = (type: "file" | "dir") => {
     setNewName("");
     setCreating(type);
@@ -82,6 +104,15 @@ export function FileExplorer() {
   };
 
   return (
+    <>
+    {pendingMove && (
+      <MoveConfirmModal
+        sourcePath={pendingMove.src}
+        targetFolder={pendingMove.dst}
+        onConfirm={confirmMove}
+        onCancel={() => setPendingMove(null)}
+      />
+    )}
     <div
       style={{
         width: fileExplorerOpen ? fileExplorerWidth : 0,
@@ -123,8 +154,12 @@ export function FileExplorer() {
         </div>
       </div>
 
-      {/* Tree content */}
-      <div className="flex-1 overflow-y-auto overflow-x-hidden py-1">
+      {/* Tree content — data-folder-path on the root container so dragging
+          into empty space targets the project root folder */}
+      <div
+        className="flex-1 overflow-y-auto overflow-x-hidden py-1"
+        data-folder-path={selectedProject?.path}
+      >
         {selectedProject ? (
           <>
             {/* Inline creation input at root level */}
@@ -162,5 +197,6 @@ export function FileExplorer() {
         className="absolute right-0 top-0 bottom-0 w-1 cursor-ew-resize hover:bg-[#7aa2f7] transition-colors"
       />
     </div>
+    </>
   );
 }

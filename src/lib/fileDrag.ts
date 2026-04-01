@@ -1,16 +1,28 @@
 /**
- * File drag-to-terminal via mouse events (HTML5 DnD is unreliable in WKWebView).
+ * File drag-to-terminal / drag-to-folder via mouse events
+ * (HTML5 DnD is unreliable in WKWebView).
  *
- * Usage:
- *   - FileTreeNode calls startFileDrag(path) on mousedown
- *   - TerminalPane containers carry data-agent-id="<id>" attribute
- *   - On mouseup this module finds the terminal under cursor and writes the path
+ * Drop targets:
+ *   - TerminalPane / ShellPane: data-agent-id="<id>"  → inserts path into PTY
+ *   - FileTreeNode folder:      data-folder-path="<p>" → calls onFolderDrop callback
  */
 
 import { writeToAgent } from "./tauri";
 
 let draggingPath: string | null = null;
 let ghost: HTMLDivElement | null = null;
+let hoveredFolderEl: HTMLElement | null = null;
+let folderDropCb: ((src: string, dst: string) => void) | null = null;
+
+const FOLDER_HOVER_CLASS = "file-drag-folder-hover";
+
+// ── Callback registration ─────────────────────────────────────────────────────
+
+export function setOnFolderDrop(cb: (src: string, dst: string) => void) {
+  folderDropCb = cb;
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
 
 function encodeInput(text: string): string {
   return btoa(
@@ -49,50 +61,96 @@ function removeGhost() {
   ghost = null;
 }
 
+function clearSelection() {
+  window.getSelection()?.removeAllRanges();
+}
+
+// ── Folder highlight tracking ─────────────────────────────────────────────────
+
+function getElementsAt(x: number, y: number): Element[] {
+  if (ghost) ghost.style.display = "none";
+  const els = document.elementsFromPoint(x, y);
+  if (ghost) ghost.style.display = "";
+  return els;
+}
+
+function updateFolderHighlight(x: number, y: number) {
+  const els = getElementsAt(x, y);
+  let newFolder: HTMLElement | null = null;
+  for (const el of els) {
+    const fp = (el as HTMLElement).dataset?.folderPath;
+    if (fp !== undefined) {
+      newFolder = el as HTMLElement;
+      break;
+    }
+  }
+  if (newFolder !== hoveredFolderEl) {
+    hoveredFolderEl?.classList.remove(FOLDER_HOVER_CLASS);
+    newFolder?.classList.add(FOLDER_HOVER_CLASS);
+    hoveredFolderEl = newFolder;
+  }
+}
+
+function clearFolderHighlight() {
+  hoveredFolderEl?.classList.remove(FOLDER_HOVER_CLASS);
+  hoveredFolderEl = null;
+}
+
+// ── Mouse handlers ────────────────────────────────────────────────────────────
+
 function onMouseMove(e: MouseEvent) {
   if (!ghost) return;
   ghost.style.left = e.clientX + 14 + "px";
   ghost.style.top  = e.clientY - 10 + "px";
-}
-
-function findAgentId(x: number, y: number): string | null {
-  if (ghost) ghost.style.display = "none";
-  const els = document.elementsFromPoint(x, y);
-  if (ghost) ghost.style.display = "";
-  for (const el of els) {
-    const id = (el as HTMLElement).dataset?.agentId;
-    if (id) return id;
-  }
-  return null;
+  updateFolderHighlight(e.clientX, e.clientY);
 }
 
 function onMouseUp(e: MouseEvent) {
-  const path = draggingPath;
+  const src = draggingPath;
+  const folderEl = hoveredFolderEl;
   stop();
-  if (!path) return;
-  const agentId = findAgentId(e.clientX, e.clientY);
-  if (!agentId) return;
-  writeToAgent(agentId, encodeInput(path)).catch(console.error);
-}
+  if (!src) return;
 
-function clearSelection() {
-  window.getSelection()?.removeAllRanges();
+  // Drop on folder → move
+  if (folderEl) {
+    const dst = folderEl.dataset.folderPath!;
+    // Prevent dropping into self or own subfolder
+    if (dst === src || dst.startsWith(src + "/")) return;
+    // Prevent dropping into the file's current parent (no-op)
+    const srcParent = src.substring(0, src.lastIndexOf("/"));
+    if (dst === srcParent) return;
+    folderDropCb?.(src, dst);
+    return;
+  }
+
+  // Drop on terminal → insert path
+  const els = getElementsAt(e.clientX, e.clientY);
+  for (const el of els) {
+    const agentId = (el as HTMLElement).dataset?.agentId;
+    if (agentId) {
+      writeToAgent(agentId, encodeInput(src)).catch(console.error);
+      return;
+    }
+  }
 }
 
 function stop() {
   draggingPath = null;
   removeGhost();
+  clearFolderHighlight();
   clearSelection();
   window.removeEventListener("mousemove", onMouseMove);
   window.removeEventListener("mouseup", onMouseUp);
 }
+
+// ── Public API ────────────────────────────────────────────────────────────────
 
 export function isDraggingFile(): boolean {
   return draggingPath !== null;
 }
 
 export function startFileDrag(path: string, isDir = false) {
-  stop(); // clear any previous drag
+  stop();
   clearSelection();
   draggingPath = path;
   createGhost(path, isDir);

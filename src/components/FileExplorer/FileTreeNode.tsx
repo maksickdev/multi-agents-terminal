@@ -121,6 +121,7 @@ export function FileTreeNode({ entry, depth, projectId, onRefresh, renderChildre
       <div
         className="group flex items-center gap-1 py-0.5 px-1 rounded cursor-pointer hover:bg-[#1f2335] select-none text-xs"
         style={{ paddingLeft: 6 + indent }}
+        data-folder-path={entry.is_dir ? entry.path : undefined}
         onClick={handleClick}
         onContextMenu={handleContextMenu}
         onDoubleClick={(e) => { e.stopPropagation(); if (!entry.is_dir) startRename(); }}
