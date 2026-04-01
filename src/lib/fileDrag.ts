@@ -74,16 +74,26 @@ function getElementsAt(x: number, y: number): Element[] {
   return els;
 }
 
-function updateFolderHighlight(x: number, y: number) {
+function resolveFolderTarget(x: number, y: number): HTMLElement | null {
   const els = getElementsAt(x, y);
-  let newFolder: HTMLElement | null = null;
   for (const el of els) {
-    const fp = (el as HTMLElement).dataset?.folderPath;
-    if (fp !== undefined) {
-      newFolder = el as HTMLElement;
-      break;
+    const h = el as HTMLElement;
+    // Hovering over a folder row — use it directly
+    if (h.dataset?.folderPath !== undefined) return h;
+    // Hovering over a file row — find its parent folder element by path
+    if (h.dataset?.parentFolder !== undefined) {
+      const parentPath = h.dataset.parentFolder;
+      const folderEl = document.querySelector<HTMLElement>(
+        `[data-folder-path="${CSS.escape(parentPath)}"]`
+      );
+      if (folderEl) return folderEl;
     }
   }
+  return null;
+}
+
+function updateFolderHighlight(x: number, y: number) {
+  const newFolder = resolveFolderTarget(x, y);
   if (newFolder !== hoveredFolderEl) {
     hoveredFolderEl?.classList.remove(FOLDER_HOVER_CLASS);
     newFolder?.classList.add(FOLDER_HOVER_CLASS);
@@ -107,7 +117,7 @@ function onMouseMove(e: MouseEvent) {
 
 function onMouseUp(e: MouseEvent) {
   const src = draggingPath;
-  const folderEl = hoveredFolderEl;
+  const folderEl = resolveFolderTarget(e.clientX, e.clientY);
   stop();
   if (!src) return;
 
