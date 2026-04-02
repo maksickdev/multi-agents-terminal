@@ -147,9 +147,9 @@ function ShellPane({ agentId, isVisible, height }: {
         <div
           ref={thumbRef}
           onMouseDown={handleThumbMouseDown}
-          style={{ display: "none", position: "absolute", left: 0, right: 0, width: 6, top: "0%", height: "100%", background: "#414868", borderRadius: 3, cursor: "grab" }}
-          onMouseEnter={(e) => (e.currentTarget.style.background = "#565f89")}
-          onMouseLeave={(e) => (e.currentTarget.style.background = "#414868")}
+          style={{ display: "none", position: "absolute", left: 0, right: 0, width: 6, top: "0%", height: "100%", background: "var(--c-muted)", borderRadius: 3, cursor: "grab" }}
+          onMouseEnter={(e) => (e.currentTarget.style.background = "var(--c-text-dim)")}
+          onMouseLeave={(e) => (e.currentTarget.style.background = "var(--c-muted)")}
         />
       </div>
     </div>
@@ -220,27 +220,27 @@ export function BottomPanel() {
         flexShrink: 0,
         overflow: "hidden",
       }}
-      className="relative flex flex-col bg-[#1a1b26]"
+      className="relative flex flex-col bg-[var(--c-bg)]"
     >
       {/* Resize handle — only interactable when open */}
       <div
         onMouseDown={bottomPanelOpen ? onHandleMouseDown : undefined}
-        className="absolute top-0 left-0 right-0 h-[6px] border-t border-[#1f2335] cursor-ns-resize hover:bg-[#7aa2f7]/20 transition-colors z-10 flex flex-col justify-center"
+        className="absolute top-0 left-0 right-0 h-[6px] border-t border-[var(--c-border)] cursor-ns-resize hover:bg-[var(--c-accent)]/20 transition-colors z-10 flex flex-col justify-center"
       />
 
       {/* Header */}
-      <div className="flex items-center justify-between px-3 h-8 bg-[#16161e] border-b border-[#1f2335] flex-shrink-0 select-none">
-        <span className="text-xs font-semibold text-[#565f89] uppercase tracking-widest">
+      <div className="flex items-center justify-between px-3 h-8 bg-[var(--c-bg-deep)] border-b border-[var(--c-border)] flex-shrink-0 select-none">
+        <span className="text-xs font-semibold text-[var(--c-text-dim)] uppercase tracking-widest">
           Terminal
           {selectedProject && (
-            <span className="ml-2 normal-case font-normal text-[#414868]">
+            <span className="ml-2 normal-case font-normal text-[var(--c-muted)]">
               {selectedProject.name}
             </span>
           )}
         </span>
         <button
           onClick={() => setBottomPanelOpen(false)}
-          className="flex items-center text-[#565f89] hover:text-[#c0caf5] transition-colors"
+          className="flex items-center text-[var(--c-text-dim)] hover:text-[var(--c-text-bright)] transition-colors"
           title="Close panel (⌘J)"
         >
           <X size={14} />
@@ -258,7 +258,7 @@ export function BottomPanel() {
           />
         ))}
         {!selectedProject && (
-          <div className="absolute inset-0 flex items-center justify-center text-[#565f89] text-sm">
+          <div className="absolute inset-0 flex items-center justify-center text-[var(--c-text-dim)] text-sm">
             Select a project to open a terminal
           </div>
         )}

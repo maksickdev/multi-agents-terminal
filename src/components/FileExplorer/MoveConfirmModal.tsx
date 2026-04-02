@@ -11,24 +11,24 @@ export function MoveConfirmModal({ sourcePath, targetFolder, onConfirm, onCancel
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-      <div className="bg-[#1f2335] border border-[#414868] rounded-lg shadow-2xl p-5 w-80 flex flex-col gap-4">
-        <h2 className="text-sm font-semibold text-[#c0caf5]">Move item</h2>
-        <p className="text-xs text-[#a9b1d6] leading-relaxed">
+      <div className="bg-[var(--c-bg-elevated)] border border-[var(--c-muted)] rounded-lg shadow-2xl p-5 w-80 flex flex-col gap-4">
+        <h2 className="text-sm font-semibold text-[var(--c-text-bright)]">Move item</h2>
+        <p className="text-xs text-[var(--c-text)] leading-relaxed">
           Move{" "}
-          <span className="text-[#7aa2f7] font-medium">"{sourceName}"</span>
+          <span className="text-[var(--c-accent)] font-medium">"{sourceName}"</span>
           {" "}to{" "}
-          <span className="text-[#7aa2f7] font-medium">"{targetName}"</span>?
+          <span className="text-[var(--c-accent)] font-medium">"{targetName}"</span>?
         </p>
         <div className="flex gap-2 justify-end">
           <button
             onClick={onCancel}
-            className="px-3 py-1.5 text-xs rounded bg-[#292e42] text-[#a9b1d6] hover:bg-[#414868] transition-colors"
+            className="px-3 py-1.5 text-xs rounded bg-[var(--c-bg-hover)] text-[var(--c-text)] hover:text-[var(--c-text-bright)] transition-colors"
           >
             Cancel
           </button>
           <button
             onClick={onConfirm}
-            className="px-3 py-1.5 text-xs rounded bg-[#7aa2f7] text-[#1a1b26] hover:bg-[#89b4fa] transition-colors font-medium"
+            className="px-3 py-1.5 text-xs rounded bg-[var(--c-accent)] text-[var(--c-bg)] hover:opacity-90 transition-opacity font-medium"
           >
             Move
           </button>

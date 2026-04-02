@@ -121,11 +121,11 @@ export function FileExplorer() {
         overflow: "hidden",
         position: "relative",
       }}
-      className="flex flex-col bg-[#16161e] border-r border-[#1f2335]"
+      className="flex flex-col bg-[var(--c-bg-deep)] border-r border-[var(--c-border)]"
     >
       {/* Header */}
-      <div className="flex items-center justify-between px-2 h-8 bg-[#16161e] border-b border-[#1f2335] flex-shrink-0 select-none">
-        <span className="text-xs font-semibold text-[#565f89] uppercase tracking-widest truncate">
+      <div className="flex items-center justify-between px-2 h-8 bg-[var(--c-bg-deep)] border-b border-[var(--c-border)] flex-shrink-0 select-none">
+        <span className="text-xs font-semibold text-[var(--c-text-dim)] uppercase tracking-widest truncate">
           {selectedProject ? selectedProject.name : "Explorer"}
         </span>
         <div className="flex items-center gap-0.5">
@@ -133,7 +133,7 @@ export function FileExplorer() {
             onClick={() => startCreating("file")}
             title="New File"
             disabled={!selectedProject}
-            className="p-1 text-[#565f89] hover:text-[#c0caf5] disabled:opacity-30 rounded"
+            className="p-1 text-[var(--c-text-dim)] hover:text-[var(--c-text-bright)] disabled:opacity-30 rounded"
           >
             <FilePlus size={13} />
           </button>
@@ -141,14 +141,14 @@ export function FileExplorer() {
             onClick={() => startCreating("dir")}
             title="New Folder"
             disabled={!selectedProject}
-            className="p-1 text-[#565f89] hover:text-[#c0caf5] disabled:opacity-30 rounded"
+            className="p-1 text-[var(--c-text-dim)] hover:text-[var(--c-text-bright)] disabled:opacity-30 rounded"
           >
             <FolderPlus size={13} />
           </button>
           <button
             onClick={() => setRefreshKey((k) => k + 1)}
             title="Refresh"
-            className="p-1 text-[#565f89] hover:text-[#c0caf5] rounded"
+            className="p-1 text-[var(--c-text-dim)] hover:text-[var(--c-text-bright)] rounded"
           >
             <RotateCw size={13} />
           </button>
@@ -174,7 +174,7 @@ export function FileExplorer() {
                   onBlur={commitCreate}
                   autoFocus
                   placeholder={creating === "dir" ? "folder name" : "file name"}
-                  className="flex-1 bg-[#292e42] text-[#c0caf5] text-xs px-1 rounded outline-none"
+                  className="flex-1 bg-[var(--c-bg-selected)] text-[var(--c-text-bright)] text-xs px-1 rounded outline-none"
                 />
               </div>
             )}
@@ -186,7 +186,7 @@ export function FileExplorer() {
             />
           </>
         ) : (
-          <div className="text-[#414868] text-xs px-3 py-2 italic">
+          <div className="text-[var(--c-muted)] text-xs px-3 py-2 italic">
             Select a project
           </div>
         )}
@@ -195,7 +195,7 @@ export function FileExplorer() {
       {/* Right-side resize handle */}
       <div
         onMouseDown={fileExplorerOpen ? onHandleMouseDown : undefined}
-        className="absolute right-0 top-0 bottom-0 w-[6px] cursor-ew-resize hover:bg-[#7aa2f7]/20 transition-colors flex items-center justify-center"
+        className="absolute right-0 top-0 bottom-0 w-[6px] cursor-ew-resize hover:bg-[var(--c-accent)]/20 transition-colors flex items-center justify-center"
       />
     </div>
     </>

@@ -175,12 +175,12 @@ export function TerminalPane({ agentId, isVisible }: Props) {
             width: 6,
             top: "0%",
             height: "100%",
-            background: "#414868",
+            background: "var(--c-muted)",
             borderRadius: 3,
             cursor: "grab",
           }}
-          onMouseEnter={(e) => (e.currentTarget.style.background = "#565f89")}
-          onMouseLeave={(e) => (e.currentTarget.style.background = "#414868")}
+          onMouseEnter={(e) => (e.currentTarget.style.background = "var(--c-text-dim)")}
+          onMouseLeave={(e) => (e.currentTarget.style.background = "var(--c-muted)")}
         />
       </div>
     </div>

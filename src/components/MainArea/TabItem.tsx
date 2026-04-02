@@ -74,7 +74,7 @@ export function TabItem({
   };
 
   const borderStyle: React.CSSProperties = isDragOver
-    ? { borderLeft: "2px solid #7aa2f7" }
+    ? { borderLeft: "2px solid var(--c-accent)" }
     : {};
 
   return (
@@ -99,8 +99,8 @@ export function TabItem({
         className={[
           "group flex items-center gap-2 px-3 h-8 border-b-2 transition-colors whitespace-nowrap select-none",
           isActive
-            ? "border-[#7aa2f7] bg-[#1a1b26] text-[#c0caf5]"
-            : "border-transparent bg-[#16161e] text-[#565f89] hover:bg-[#1a1b26] hover:text-[#a9b1d6]",
+            ? "border-[var(--c-accent)] bg-[var(--c-bg)] text-[var(--c-text-bright)]"
+            : "border-transparent bg-[var(--c-bg-deep)] text-[var(--c-text-dim)] hover:bg-[var(--c-bg)] hover:text-[var(--c-text)]",
         ].join(" ")}
       >
         <span className={`w-2 h-2 rounded-full flex-shrink-0 ${statusColors[agent.status]}`} />
@@ -114,7 +114,7 @@ export function TabItem({
             onBlur={commitEdit}
             onKeyDown={handleKeyDown}
             onClick={(e) => e.stopPropagation()}
-            className="text-sm bg-transparent border-b border-[#7aa2f7] outline-none w-24 text-[#c0caf5] caret-[#7aa2f7]"
+            className="text-sm bg-transparent border-b border-[var(--c-accent)] outline-none w-24 text-[var(--c-text-bright)] caret-[var(--c-accent)]"
           />
         ) : (
           <span className="text-sm">{agent.name}</span>
@@ -124,7 +124,7 @@ export function TabItem({
           <button
             onClick={handleClose}
             onMouseDown={(e) => e.stopPropagation()} // prevent triggering drag on close btn
-            className="ml-1 opacity-0 group-hover:opacity-100 text-[#565f89] hover:text-[#f7768e] transition-opacity"
+            className="ml-1 opacity-0 group-hover:opacity-100 text-[var(--c-text-dim)] hover:text-[var(--c-danger)] transition-opacity"
           >
             <X size={12} />
           </button>

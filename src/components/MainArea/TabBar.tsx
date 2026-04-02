@@ -95,7 +95,7 @@ export function TabBar({ project, agents, activeAgentId, getTerminalSize }: Prop
   };
 
   return (
-    <div className="flex items-center h-8 bg-[#16161e] border-b border-[#1f2335] overflow-x-auto scrollbar-none">
+    <div className="flex items-center h-8 bg-[var(--c-bg-deep)] border-b border-[var(--c-border)] overflow-x-auto scrollbar-none">
       {agents.map((agent) => (
         <TabItem
           key={agent.id}
@@ -114,7 +114,7 @@ export function TabBar({ project, agents, activeAgentId, getTerminalSize }: Prop
 
       <button
         onClick={handleNewAgent}
-        className="flex items-center justify-center flex-shrink-0 px-3 h-full text-[#565f89] hover:text-[#7aa2f7] hover:bg-[#1a1b26] transition-colors"
+        className="flex items-center justify-center flex-shrink-0 px-3 h-full text-[var(--c-text-dim)] hover:text-[var(--c-accent)] hover:bg-[var(--c-bg)] transition-colors"
         title="New agent"
       >
         <Plus size={15} />

@@ -27,7 +27,7 @@ export function AddProjectButton() {
   return (
     <button
       onClick={handleAdd}
-      className="w-full flex items-center gap-2 px-3 py-2 text-sm text-[#7aa2f7] hover:bg-[#1f2335] rounded transition-colors"
+      className="w-full flex items-center gap-2 px-3 py-2 text-sm text-[var(--c-accent)] hover:bg-[var(--c-bg-elevated)] rounded transition-colors"
     >
       <FolderOpen size={15} />
       <span>Add Project</span>

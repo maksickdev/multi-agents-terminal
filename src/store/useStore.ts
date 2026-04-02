@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import type { AgentStatus, Project } from "../lib/tauri";
+import type { ThemeId } from "../lib/themes";
 
 export interface OpenFile {
   /** Absolute path — used as a unique key. */
@@ -70,6 +71,10 @@ interface AppStore {
   setEditorPaneHeight: (height: number) => void;
   reorderOpenFiles: (orderedPaths: string[]) => void;
 
+  // Theme
+  theme: ThemeId;
+  setTheme: (theme: ThemeId) => void;
+
   // UI actions
   selectProject: (projectId: string) => void;
   setActiveAgent: (projectId: string, agentId: string | null) => void;
@@ -95,6 +100,7 @@ export const useStore = create<AppStore>((set, get) => ({
   openFiles: [],
   activeFilePath: null,
   editorPaneHeight: 300,
+  theme: (localStorage.getItem("theme") as ThemeId | null) ?? "dark",
 
   setProjects: (projects) => set({ projects }),
 
@@ -239,6 +245,11 @@ export const useStore = create<AppStore>((set, get) => ({
       const next = orderedPaths.map((p) => map.get(p)).filter(Boolean) as typeof s.openFiles;
       return { openFiles: next };
     }),
+
+  setTheme: (theme) => {
+    localStorage.setItem("theme", theme);
+    set({ theme });
+  },
 
   selectProject: (projectId) => set({ selectedProjectId: projectId }),
 

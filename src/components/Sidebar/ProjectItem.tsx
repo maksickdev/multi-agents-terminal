@@ -66,30 +66,30 @@ export function ProjectItem({ project }: Props) {
         onClick={() => selectProject(project.id)}
         className={`group flex items-center justify-between px-3 py-2 rounded cursor-pointer transition-colors ${
           isSelected
-            ? "bg-[#1f2335] text-[#c0caf5]"
-            : "text-[#a9b1d6] hover:bg-[#1a1b26]"
+            ? "bg-[var(--c-bg-elevated)] text-[var(--c-text-bright)]"
+            : "text-[var(--c-text)] hover:bg-[var(--c-bg)]"
         }`}
       >
         <div className="flex flex-col min-w-0 flex-1">
           <span className="text-sm font-medium truncate">{project.name}</span>
-          <span className="text-xs text-[#565f89] truncate">{project.path}</span>
+          <span className="text-xs text-[var(--c-text-dim)] truncate">{project.path}</span>
         </div>
 
         <div className="flex items-center gap-1 ml-2 opacity-0 group-hover:opacity-100 transition-opacity">
           {agents.length > 0 && (
-            <span className="text-xs text-[#7aa2f7] px-1">{agents.length}</span>
+            <span className="text-xs text-[var(--c-accent)] px-1">{agents.length}</span>
           )}
           <button
             onClick={handleNewAgent}
             title="New agent"
-            className="p-1 text-[#7aa2f7] hover:text-[#c0caf5] rounded hover:bg-[#292e42]"
+            className="p-1 text-[var(--c-accent)] hover:text-[var(--c-text-bright)] rounded hover:bg-[var(--c-bg-hover)]"
           >
             <Plus size={13} />
           </button>
           <button
             onClick={handleRemove}
             title="Remove project"
-            className="p-1 text-[#565f89] hover:text-[#f7768e] rounded hover:bg-[#292e42]"
+            className="p-1 text-[var(--c-text-dim)] hover:text-[var(--c-danger)] rounded hover:bg-[var(--c-bg-hover)]"
           >
             <X size={13} />
           </button>

@@ -148,16 +148,16 @@ export function EditorPane() {
         flexShrink: 0,
         overflow: "hidden",
       }}
-      className="relative flex flex-col bg-[#1a1b26]"
+      className="relative flex flex-col bg-[var(--c-bg)]"
     >
       {/* Top resize handle */}
       <div
         onMouseDown={isVisible ? onHandleMouseDown : undefined}
-        className="absolute top-0 left-0 right-0 h-[6px] border-t border-[#1f2335] cursor-ns-resize hover:bg-[#7aa2f7]/20 transition-colors z-10 flex flex-col justify-center"
+        className="absolute top-0 left-0 right-0 h-[6px] border-t border-[var(--c-border)] cursor-ns-resize hover:bg-[var(--c-accent)]/20 transition-colors z-10 flex flex-col justify-center"
       />
 
       {/* Tab bar */}
-      <div className="flex h-8 bg-[#16161e] border-b border-[#1f2335] overflow-x-auto flex-shrink-0 scrollbar-none">
+      <div className="flex h-8 bg-[var(--c-bg-deep)] border-b border-[var(--c-border)] overflow-x-auto flex-shrink-0 scrollbar-none">
         {projectFiles.map((file) => (
           <EditorTab
             key={file.path}
@@ -191,19 +191,19 @@ export function EditorPane() {
 
       {/* Status bar — bottom */}
       {activeFile && (
-        <div className="flex items-center justify-between px-3 h-6 bg-[#16161e] border-t border-[#1f2335] flex-shrink-0">
-          <span className="text-[10px] text-[#414868] truncate">{activeFile.path}</span>
+        <div className="flex items-center justify-between px-3 h-6 bg-[var(--c-bg-deep)] border-t border-[var(--c-border)] flex-shrink-0">
+          <span className="text-[10px] text-[var(--c-muted)] truncate">{activeFile.path}</span>
           <div className="flex items-center gap-2 flex-shrink-0 ml-2">
             {isPreviewable && (
-              <div className="flex items-center rounded overflow-hidden border border-[#2a2b3d]">
+              <div className="flex items-center rounded overflow-hidden border border-[var(--c-bg-selected)]">
                 {(["raw", "rendered"] as const).map((mode) => (
                   <button
                     key={mode}
                     onClick={() => setPreviewMode(mode)}
                     className={`px-2 h-4 text-[9px] leading-none uppercase tracking-wide transition-colors ${
                       previewMode === mode
-                        ? "bg-[#7aa2f7] text-[#1a1b26]"
-                        : "text-[#414868] hover:text-[#a9b1d6]"
+                        ? "bg-[var(--c-accent)] text-[var(--c-bg)]"
+                        : "text-[var(--c-muted)] hover:text-[var(--c-text)]"
                     }`}
                   >
                     {mode}
@@ -211,9 +211,13 @@ export function EditorPane() {
                 ))}
               </div>
             )}
-            <span className="text-[10px] text-[#414868]">
+            <span className="text-[10px] text-[var(--c-muted)]">
               {activeFile.language || "plain text"}
-              {activeFile.isDirty && <span className="ml-2 flex items-center gap-1 text-[#e0af68]"><Circle size={6} className="fill-[#e0af68]" /> unsaved</span>}
+              {activeFile.isDirty && (
+                <span className="ml-2 inline-flex items-center gap-1 text-[var(--c-accent-yellow)]">
+                  <Circle size={6} className="fill-[var(--c-accent-yellow)]" /> unsaved
+                </span>
+              )}
             </span>
           </div>
         </div>

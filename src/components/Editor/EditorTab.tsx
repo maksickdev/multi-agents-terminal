@@ -38,7 +38,7 @@ export function EditorTab({
   };
 
   const borderStyle: React.CSSProperties = isDragOver
-    ? { borderLeft: "2px solid #7aa2f7" }
+    ? { borderLeft: "2px solid var(--c-accent)" }
     : {};
 
   return (
@@ -49,20 +49,20 @@ export function EditorTab({
       onMouseEnter={onMouseEnter}
       style={{ ...borderStyle, opacity: isDragging ? 0.4 : 1, cursor: "pointer" }}
       title={file.path}
-      className={`flex items-center gap-1 px-3 h-full border-r border-[#1f2335] flex-shrink-0 select-none transition-colors ${
+      className={`flex items-center gap-1 px-3 h-full border-r border-[var(--c-border)] flex-shrink-0 select-none transition-colors ${
         isActive
-          ? "bg-[#1a1b26] text-[#c0caf5]"
-          : "bg-[#16161e] text-[#565f89] hover:text-[#a9b1d6] hover:bg-[#1a1b26]"
+          ? "bg-[var(--c-bg)] text-[var(--c-text-bright)]"
+          : "bg-[var(--c-bg-deep)] text-[var(--c-text-dim)] hover:text-[var(--c-text)] hover:bg-[var(--c-bg)]"
       }`}
     >
       {file.isDirty && (
-        <Circle size={6} className="flex-shrink-0 fill-[#e0af68] text-[#e0af68]" />
+        <Circle size={6} className="flex-shrink-0 fill-[var(--c-accent-yellow)] text-[var(--c-accent-yellow)]" />
       )}
       <span className="text-xs">{basename}</span>
       <button
         onMouseDown={(e) => e.stopPropagation()}
         onClick={(e) => { e.stopPropagation(); onClose(); }}
-        className="ml-1 flex items-center text-[#414868] hover:text-[#f7768e] flex-shrink-0"
+        className="ml-1 flex items-center text-[var(--c-muted)] hover:text-[var(--c-danger)] flex-shrink-0"
         title="Close"
       >
         <X size={12} />

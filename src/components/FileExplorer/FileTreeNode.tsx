@@ -129,7 +129,7 @@ export function FileTreeNode({ entry, depth, projectId, onRefresh, renderChildre
       )}
 
       <div
-        className="group flex items-center gap-1 py-0.5 rounded cursor-pointer hover:bg-[#1f2335] select-none text-xs"
+        className="group flex items-center gap-1 py-0.5 rounded cursor-pointer hover:bg-[var(--c-bg-elevated)] select-none text-xs"
         style={{ paddingLeft: 2 + indent, paddingRight: 0, marginLeft: 4, marginRight: 4 }}
         data-folder-path={entry.is_dir ? entry.path : undefined}
         data-parent-folder={!entry.is_dir ? entry.path.substring(0, entry.path.lastIndexOf("/")) : undefined}
@@ -144,7 +144,7 @@ export function FileTreeNode({ entry, depth, projectId, onRefresh, renderChildre
         }}
       >
         {/* Expand caret for dirs */}
-        <span className="w-3 flex-shrink-0 flex items-center justify-center text-[#565f89]">
+        <span className="w-3 flex-shrink-0 flex items-center justify-center text-[var(--c-text-dim)]">
           {entry.is_dir ? (renderChildren ? <ChevronDown size={12} /> : <ChevronRight size={12} />) : null}
         </span>
 
@@ -152,8 +152,8 @@ export function FileTreeNode({ entry, depth, projectId, onRefresh, renderChildre
         <span className="flex-shrink-0 flex items-center">
           {entry.is_dir
             ? (renderChildren
-                ? <FolderOpen size={13} style={{ color: "#e0af68" }} />
-                : <Folder size={13} style={{ color: "#e0af68" }} />)
+                ? <FolderOpen size={13} style={{ color: "var(--c-accent-yellow)" }} />
+                : <Folder size={13} style={{ color: "var(--c-accent-yellow)" }} />)
             : <FileIcon name={entry.name} size={13} />}
         </span>
 
@@ -166,11 +166,11 @@ export function FileTreeNode({ entry, depth, projectId, onRefresh, renderChildre
             onKeyDown={handleRenameKey}
             onBlur={commitRename}
             onClick={(e) => e.stopPropagation()}
-            className="flex-1 bg-[#292e42] text-[#c0caf5] text-xs px-1 rounded outline-none min-w-0"
+            className="flex-1 bg-[var(--c-bg-hover)] text-[var(--c-text-bright)] text-xs px-1 rounded outline-none min-w-0"
             autoFocus
           />
         ) : (
-          <span className="truncate flex-1 text-[#a9b1d6] group-hover:text-[#c0caf5]">
+          <span className="truncate flex-1 text-[var(--c-text)] group-hover:text-[var(--c-text-bright)]">
             {entry.name}
           </span>
         )}

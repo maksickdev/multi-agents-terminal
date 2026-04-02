@@ -1,7 +1,9 @@
+import { useState } from "react";
 import { AddProjectButton } from "./AddProjectButton";
 import { ProjectItem } from "./ProjectItem";
 import { useStore } from "../../store/useStore";
-import { Folder, SquareTerminal } from "lucide-react";
+import { Folder, SquareTerminal, Settings } from "lucide-react";
+import { SettingsModal } from "../Settings/SettingsModal";
 
 export function Sidebar() {
   const {
@@ -12,53 +14,70 @@ export function Sidebar() {
     setBottomPanelOpen,
   } = useStore();
 
+  const [settingsOpen, setSettingsOpen] = useState(false);
+
   return (
-    <aside className="flex flex-col w-56 min-w-[180px] bg-[#16161e] border-r border-[#1f2335] h-full select-none">
-      {/* Icon toolbar */}
-      <div className="flex items-center justify-center gap-1 px-2 h-8 border-b border-[#1f2335]">
-        <button
-          onClick={() => setFileExplorerOpen(!fileExplorerOpen)}
-          title="Файловый менеджер (⌘E)"
-          className={`flex items-center justify-center w-8 h-8 rounded transition-colors ${
-            fileExplorerOpen
-              ? "text-[#7aa2f7] bg-[#1a1b26]"
-              : "text-[#565f89] hover:text-[#a9b1d6] hover:bg-[#1a1b26]"
-          }`}
-        >
-          <Folder size={18} />
-        </button>
+    <>
+      {settingsOpen && <SettingsModal onClose={() => setSettingsOpen(false)} />}
 
-        <button
-          onClick={() => setBottomPanelOpen(!bottomPanelOpen)}
-          title="Терминал"
-          className={`flex items-center justify-center w-8 h-8 rounded transition-colors ${
-            bottomPanelOpen
-              ? "text-[#7aa2f7] bg-[#1a1b26]"
-              : "text-[#565f89] hover:text-[#a9b1d6] hover:bg-[#1a1b26]"
-          }`}
-        >
-          <SquareTerminal size={18} />
-        </button>
-      </div>
+      <aside className="flex flex-col w-56 min-w-[180px] bg-[var(--c-bg-deep)] border-r border-[var(--c-border)] h-full select-none">
+        {/* Icon toolbar */}
+        <div className="flex items-center justify-center gap-1 px-2 h-8 border-b border-[var(--c-border)]">
+          <button
+            onClick={() => setFileExplorerOpen(!fileExplorerOpen)}
+            title="Файловый менеджер (⌘E)"
+            className={`flex items-center justify-center w-8 h-8 rounded transition-colors ${
+              fileExplorerOpen
+                ? "text-[var(--c-accent)] bg-[var(--c-bg)]"
+                : "text-[var(--c-text-dim)] hover:text-[var(--c-text)] hover:bg-[var(--c-bg)]"
+            }`}
+          >
+            <Folder size={18} />
+          </button>
 
-      {/* Projects label */}
-      <div className="flex items-center px-4 h-8 border-b border-[#1f2335]">
-        <h1 className="text-xs font-semibold text-[#565f89] uppercase tracking-widest">
-          Projects
-        </h1>
-      </div>
+          <button
+            onClick={() => setBottomPanelOpen(!bottomPanelOpen)}
+            title="Терминал"
+            className={`flex items-center justify-center w-8 h-8 rounded transition-colors ${
+              bottomPanelOpen
+                ? "text-[var(--c-accent)] bg-[var(--c-bg)]"
+                : "text-[var(--c-text-dim)] hover:text-[var(--c-text)] hover:bg-[var(--c-bg)]"
+            }`}
+          >
+            <SquareTerminal size={18} />
+          </button>
+        </div>
 
-      <div className="flex-1 overflow-y-auto py-2 px-2 space-y-1">
-        {projects.length === 0 ? (
-          <p className="text-xs text-[#565f89] px-1 py-2">No projects yet</p>
-        ) : (
-          projects.map((p) => <ProjectItem key={p.id} project={p} />)
-        )}
-      </div>
+        {/* Projects label */}
+        <div className="flex items-center px-4 h-8 border-b border-[var(--c-border)]">
+          <h1 className="text-xs font-semibold text-[var(--c-text-dim)] uppercase tracking-widest">
+            Projects
+          </h1>
+        </div>
 
-      <div className="border-t border-[#1f2335] p-2">
-        <AddProjectButton />
-      </div>
-    </aside>
+        <div className="flex-1 overflow-y-auto py-2 px-2 space-y-1">
+          {projects.length === 0 ? (
+            <p className="text-xs text-[var(--c-text-dim)] px-1 py-2">No projects yet</p>
+          ) : (
+            projects.map((p) => <ProjectItem key={p.id} project={p} />)
+          )}
+        </div>
+
+        <div className="border-t border-[var(--c-border)] p-2">
+          <AddProjectButton />
+        </div>
+
+        {/* Settings button */}
+        <div className="border-t border-[var(--c-border)] p-2">
+          <button
+            onClick={() => setSettingsOpen(true)}
+            className="w-full flex items-center gap-2 px-3 py-2 text-sm text-[var(--c-text-dim)] hover:text-[var(--c-text)] hover:bg-[var(--c-bg-elevated)] rounded transition-colors"
+          >
+            <Settings size={15} />
+            <span>Settings</span>
+          </button>
+        </div>
+      </aside>
+    </>
   );
 }

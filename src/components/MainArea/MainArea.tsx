@@ -44,7 +44,7 @@ export function MainArea() {
   const allProjects = projects;
 
   return (
-    <main className="flex-1 flex flex-col bg-[#1a1b26] overflow-hidden min-w-0">
+    <main className="flex-1 flex flex-col bg-[var(--c-bg)] overflow-hidden min-w-0">
 
       {!project ? (
         <div className="flex-1 overflow-hidden flex flex-col">
@@ -63,8 +63,8 @@ export function MainArea() {
           {/* Terminal area — keep ALL projects mounted to preserve xterm state */}
           <div ref={terminalAreaRef} className="flex-1 overflow-hidden relative min-h-0">
             {getProjectAgents(project.id).length === 0 && (
-              <div className="absolute inset-0 flex items-center justify-center text-[#565f89] text-sm">
-                Click <span className="mx-1 text-[#7aa2f7]">+</span> to start a new agent
+              <div className="absolute inset-0 flex items-center justify-center text-[var(--c-text-dim)] text-sm">
+                Click <span className="mx-1 text-[var(--c-accent)]">+</span> to start a new agent
               </div>
             )}
 
