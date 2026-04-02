@@ -78,16 +78,34 @@ App
     └── BottomPanel   — shell panel, height: 0 when closed
 ```
 
+All panel headers and tab bars are **32px tall** (`h-8`).
+
 **File Explorer (`src/components/FileExplorer/`)**
 
 - `FileExplorer.tsx` — outer panel with resize handle, header buttons (New File, New Folder, Refresh), Cmd+E shortcut.
 - `FileTree.tsx` — loads one directory level via `readDir`, renders `FileTreeNode` entries.
-- `FileTreeNode.tsx` — click opens file/expands folder, double-click triggers inline rename, right-click shows `ContextMenu`.
-- `ContextMenu.tsx` — `ReactDOM.createPortal` to `document.body`, `position: fixed`, closes on outside click (capture phase) or Escape.
+- `FileTreeNode.tsx` — click opens file/expands folder, double-click triggers inline rename, right-click shows `ContextMenu`. Uses `<FileIcon>` for files and lucide `<Folder>`/`<FolderOpen>` (color `#e0af68`) for dirs.
+- `ContextMenu.tsx` — `ReactDOM.createPortal` to `document.body`, `position: fixed`, closes on outside click (capture phase) or Escape. Each item can have a `lucide-react` icon.
+- `MoveConfirmModal.tsx` — confirmation modal shown when dragging a file/folder to a new folder.
+
+**File drag (`src/lib/fileDrag.ts`)**
+
+Mouse-based drag (not HTML5 DnD). Files/folders can be dragged to a different folder in the tree (shows `MoveConfirmModal`) or to a terminal pane (pastes path). Folders in the tree get a highlight class `file-drag-folder-hover` on hover. A drag threshold (mouse must move ≥5px) prevents accidental drags on click.
+
+**File icons (`src/lib/fileIcons.tsx`)**
+
+- `EXT_MAP` — 60+ extensions → `{ icon: LucideIcon, color }`. TypeScript = blue `#3178c6`, Rust = red `#ce422b`, JSON = yellow, etc.
+- `NAME_MAP` — special filenames: `Dockerfile`, `package.json`, `tsconfig.json`, `vite.config.ts`, `Makefile`, `.env`, etc.
+- `getFileIconDef(name)` — resolves by full name first, then dotfile key, then extension.
+- `FileIcon` component: `<Icon size={size} style={{ color, flexShrink: 0 }} />`
+
+**Shared components (`src/components/shared/`)**
+
+- `ConfirmModal.tsx` — reusable modal with title, message, confirm/cancel buttons; `danger` prop for red confirm; closes on Escape, Enter confirms, click-outside cancels. Used for: agent kill, file close with unsaved changes, project removal, file move.
 
 **Editor Pane (`src/components/Editor/`)**
 
-- `EditorPane.tsx` — tab bar with drag-to-reorder (same mouse-event pattern as agent TabBar), CodeEditor or RenderedPreview, status bar at bottom. Filters `openFiles` by `selectedProjectId` so only active project's files are shown.
+- `EditorPane.tsx` — tab bar with drag-to-reorder (same mouse-event pattern as agent TabBar), CodeEditor or RenderedPreview, status bar at bottom. Filters `openFiles` by `selectedProjectId` so only active project's files are shown. Uses `ConfirmModal` when closing a dirty file.
 - `CodeEditor.tsx` — CodeMirror 6, Tokyo Night theme, language via `Compartment`. Uses **ref pattern** for `onSave`/`onChange` callbacks (`onSaveRef`, `onChangeRef` updated each render via `useEffect`) to avoid stale closures in keymap and updateListener.
 - `EditorTab.tsx` — drag props, dirty indicator (●), middle-click closes tab (`onAuxClick`).
 - `RenderedPreview.tsx` — markdown rendered via `marked` + `DOMPurify`. RAW/RENDERED toggle in status bar for `.md` files only.
@@ -100,6 +118,15 @@ Module-level `Map<agentId, { terminal, fitAddon }>`. Key rules:
 - `macOptionIsMeta: true` — Option key sends ESC+key meta sequences.
 - `clearTerminal(agentId)` is called on the **first** PTY output chunk per agent to wipe xterm.js initialization garbage.
 - Terminals are **never disposed** on project/tab switch — only on explicit agent kill.
+- `getTerminal(agentId)` exported for external scrollbar access.
+
+**Custom xterm scrollbar**
+
+The native xterm scrollbar is hidden via CSS (`.xterm-viewport { scrollbar-width: none }`). Each `TerminalPane` renders a custom 6px scrollbar alongside the xterm container using **direct DOM refs** (`trackRef`, `thumbRef`) — no React state, no re-renders. Scroll position is synced via xterm's `onScroll` callback and a `wheel` event listener (with `requestAnimationFrame`) on the xterm element. The thumb supports drag interaction.
+
+**Global scrollbar styles (`src/index.css`)**
+
+All non-xterm scrollbars use Tokyo Night colors: `scrollbar-color: #414868 #16161e`, 6px width. The `.scrollbar-none` utility class hides scrollbars (used on the agent TabBar).
 
 **Avoiding xterm re-mount problems**
 
@@ -133,3 +160,4 @@ Uses **mouse events** (not HTML5 DnD — unreliable in WKWebView). `draggingRef`
 - **Stale closure in CodeMirror**: keymap and updateListener are created once on mount. Always use `useRef` for `onSave`/`onChange` callbacks and update the ref via `useEffect` (no deps) — never pass callbacks directly into the keymap closure.
 - **Vite HMR gotcha**: saving any file from `src/` or `index.html` via the editor triggers Vite HMR in dev mode, reloading the app. This does not affect production builds.
 - `EditorPane` filters `openFiles` by `selectedProjectId` — only files of the active project are shown. All project files remain in the store and reappear when switching back.
+- **xterm scrollbar**: WKWebView does not apply webkit-scrollbar CSS to xterm's `.xterm-viewport`. The native scrollbar is hidden with `display: none` and a custom React scrollbar renders alongside the container using direct DOM mutation (not setState) for performance.
