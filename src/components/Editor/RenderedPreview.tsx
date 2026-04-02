@@ -44,7 +44,7 @@ export function RenderedPreview({ content, language }: Props) {
 
   return (
     <div
-      className="h-full overflow-auto p-6 bg-[#1a1b26] prose-preview"
+      className="h-full overflow-auto p-6 bg-[var(--c-bg)] prose-preview"
       // eslint-disable-next-line react/no-danger
       dangerouslySetInnerHTML={{ __html: markdownHtml ?? "" }}
     />
