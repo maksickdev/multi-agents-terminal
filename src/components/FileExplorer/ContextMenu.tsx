@@ -1,8 +1,10 @@
 import { useEffect, useRef } from "react";
 import ReactDOM from "react-dom";
+import type { LucideIcon } from "lucide-react";
 
 export interface ContextMenuItem {
   label: string;
+  icon?: LucideIcon;
   onClick: () => void;
   danger?: boolean;
 }
@@ -45,10 +47,11 @@ export function ContextMenu({ x, y, items, onClose }: Props) {
         <button
           key={item.label}
           onClick={() => { item.onClick(); onClose(); }}
-          className={`w-full text-left px-3 py-1.5 text-xs hover:bg-[#292e42] transition-colors ${
+          className={`w-full flex items-center gap-2 px-3 py-1.5 text-xs hover:bg-[#292e42] transition-colors ${
             item.danger ? "text-[#f7768e]" : "text-[#c0caf5]"
           }`}
         >
+          {item.icon && <item.icon size={13} className="flex-shrink-0 opacity-70" />}
           {item.label}
         </button>
       ))}

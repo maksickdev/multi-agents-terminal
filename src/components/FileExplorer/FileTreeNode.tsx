@@ -5,7 +5,7 @@ import type { FileEntry } from "../../lib/tauri";
 import { ContextMenu, type ContextMenuItem } from "./ContextMenu";
 import { detectLanguage } from "../../lib/languageDetect";
 import { startFileDrag } from "../../lib/fileDrag";
-import { ChevronRight, ChevronDown, Folder, FolderOpen } from "lucide-react";
+import { ChevronRight, ChevronDown, Folder, FolderOpen, Pencil, Copy, Trash2 } from "lucide-react";
 import { FileIcon } from "../../lib/fileIcons";
 
 interface Props {
@@ -85,14 +85,17 @@ export function FileTreeNode({ entry, depth, projectId, onRefresh, renderChildre
   const contextItems: ContextMenuItem[] = [
     {
       label: "Rename",
+      icon: Pencil,
       onClick: startRename,
     },
     {
       label: "Copy Path",
+      icon: Copy,
       onClick: () => navigator.clipboard.writeText(entry.path),
     },
     {
       label: entry.is_dir ? "Delete Folder" : "Delete File",
+      icon: Trash2,
       danger: true,
       onClick: async () => {
         const confirmed = window.confirm(
