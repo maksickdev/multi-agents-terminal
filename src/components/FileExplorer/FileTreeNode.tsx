@@ -124,8 +124,8 @@ export function FileTreeNode({ entry, depth, projectId, onRefresh, renderChildre
       )}
 
       <div
-        className="group flex items-center gap-1 py-0.5 px-1 rounded cursor-pointer hover:bg-[#1f2335] select-none text-xs"
-        style={{ paddingLeft: 6 + indent }}
+        className="group flex items-center gap-1 py-0.5 rounded cursor-pointer hover:bg-[#1f2335] select-none text-xs"
+        style={{ paddingLeft: 2 + indent, paddingRight: 0, marginLeft: 4, marginRight: 4 }}
         data-folder-path={entry.is_dir ? entry.path : undefined}
         data-parent-folder={!entry.is_dir ? entry.path.substring(0, entry.path.lastIndexOf("/")) : undefined}
         onClick={handleClick}
