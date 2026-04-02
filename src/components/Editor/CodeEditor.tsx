@@ -11,6 +11,8 @@ import { html } from "@codemirror/lang-html";
 import { rust } from "@codemirror/lang-rust";
 import { json } from "@codemirror/lang-json";
 import { markdown } from "@codemirror/lang-markdown";
+import { useStore } from "../../store/useStore";
+import type { ThemeId } from "../../lib/themes";
 
 interface Props {
   content: string;
@@ -19,6 +21,7 @@ interface Props {
   onSave: () => void;
 }
 
+// ── Dark: Tokyo Night ─────────────────────────────────────────────────────────
 const tokyoNightTheme = EditorView.theme({
   "&": {
     backgroundColor: "#1a1b26",
@@ -36,7 +39,34 @@ const tokyoNightTheme = EditorView.theme({
   ".cm-lineNumbers .cm-gutterElement": { padding: "0 8px" },
   ".cm-selectionBackground, ::selection": { backgroundColor: "#283457" },
   "&.cm-focused .cm-selectionBackground": { backgroundColor: "#283457" },
-});
+}, { dark: true });
+
+// ── Light: Dawn ───────────────────────────────────────────────────────────────
+const dawnTheme = EditorView.theme({
+  "&": {
+    backgroundColor: "#f5f5fa",
+    color: "#1a1a3a",
+    height: "100%",
+    fontSize: "13px",
+    fontFamily: '"JetBrains Mono", "Cascadia Code", Menlo, monospace',
+  },
+  ".cm-scroller": { overflow: "auto" },
+  ".cm-content": { caretColor: "#1a1a3a", padding: "4px 0" },
+  ".cm-cursor": { borderLeftColor: "#3878e8" },
+  ".cm-activeLine": { backgroundColor: "#ebebf2" },
+  ".cm-gutters": { backgroundColor: "#e8e8f0", borderRight: "1px solid #d0d0de", color: "#9898b8" },
+  ".cm-activeLineGutter": { backgroundColor: "#ebebf2" },
+  ".cm-lineNumbers .cm-gutterElement": { padding: "0 8px" },
+  ".cm-selectionBackground, ::selection": { backgroundColor: "#c8d8ff" },
+  "&.cm-focused .cm-selectionBackground": { backgroundColor: "#c8d8ff" },
+  ".cm-tooltip": { backgroundColor: "#ebebf2", border: "1px solid #d0d0de", color: "#1a1a3a" },
+  ".cm-tooltip-autocomplete ul li[aria-selected]": { backgroundColor: "#c8d8ff" },
+}, { dark: false });
+
+function getThemeExtensions(themeId: ThemeId) {
+  if (themeId === "dark") return [oneDark, tokyoNightTheme];
+  return [dawnTheme, syntaxHighlighting(defaultHighlightStyle)];
+}
 
 function getLanguageExtension(language: string) {
   switch (language) {
@@ -66,16 +96,17 @@ const baseExtensions = [
   rectangularSelection(),
   crosshairCursor(),
   highlightActiveLine(),
-  oneDark,
-  tokyoNightTheme,
 ];
 
 export function CodeEditor({ content, language, onChange, onSave }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
   const languageCompartment = useRef(new Compartment());
+  const themeCompartment   = useRef(new Compartment());
   // Track last content pushed into editor to avoid echo loops
   const lastExternalContent = useRef(content);
+
+  const theme = useStore((s) => s.theme);
 
   // Always-current refs so keymap / updateListener never close over stale props
   const onSaveRef  = useRef(onSave);
@@ -83,6 +114,7 @@ export function CodeEditor({ content, language, onChange, onSave }: Props) {
   useEffect(() => { onSaveRef.current  = onSave;  });
   useEffect(() => { onChangeRef.current = onChange; });
 
+  // ── Create editor (recreate on language change) ───────────────────────────
   useEffect(() => {
     if (!containerRef.current) return;
 
@@ -92,6 +124,7 @@ export function CodeEditor({ content, language, onChange, onSave }: Props) {
       extensions: [
         ...baseExtensions,
         languageCompartment.current.of(langExt ? [langExt] : []),
+        themeCompartment.current.of(getThemeExtensions(theme)),
         keymap.of([
           ...closeBracketsKeymap,
           ...defaultKeymap,
@@ -123,7 +156,16 @@ export function CodeEditor({ content, language, onChange, onSave }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [language]);
 
-  // Sync external content changes (file switch) without re-creating the editor
+  // ── Swap theme without recreating the editor ──────────────────────────────
+  useEffect(() => {
+    const view = viewRef.current;
+    if (!view) return;
+    view.dispatch({
+      effects: themeCompartment.current.reconfigure(getThemeExtensions(theme)),
+    });
+  }, [theme]);
+
+  // ── Sync external content changes (file switch) ───────────────────────────
   useEffect(() => {
     const view = viewRef.current;
     if (!view) return;
@@ -134,9 +176,6 @@ export function CodeEditor({ content, language, onChange, onSave }: Props) {
       changes: { from: 0, to: view.state.doc.length, insert: content },
     });
   }, [content]);
-
-  // Update save handler when it changes (closure)
-  // We handle this by recreating the editor on language change which rebuilds keymap
 
   return <div ref={containerRef} className="h-full overflow-hidden" />;
 }
