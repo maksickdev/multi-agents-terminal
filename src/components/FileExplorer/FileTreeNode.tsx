@@ -5,7 +5,8 @@ import type { FileEntry } from "../../lib/tauri";
 import { ContextMenu, type ContextMenuItem } from "./ContextMenu";
 import { detectLanguage } from "../../lib/languageDetect";
 import { startFileDrag } from "../../lib/fileDrag";
-import { ChevronRight, ChevronDown, Folder, FolderOpen, File } from "lucide-react";
+import { ChevronRight, ChevronDown, Folder, FolderOpen } from "lucide-react";
+import { FileIcon } from "../../lib/fileIcons";
 
 interface Props {
   entry: FileEntry;
@@ -140,10 +141,12 @@ export function FileTreeNode({ entry, depth, projectId, onRefresh, renderChildre
         </span>
 
         {/* Icon */}
-        <span className="flex-shrink-0 flex items-center text-[#565f89]">
+        <span className="flex-shrink-0 flex items-center">
           {entry.is_dir
-            ? (renderChildren ? <FolderOpen size={13} className="text-[#e0af68]" /> : <Folder size={13} className="text-[#e0af68]" />)
-            : <File size={13} />}
+            ? (renderChildren
+                ? <FolderOpen size={13} style={{ color: "#e0af68" }} />
+                : <Folder size={13} style={{ color: "#e0af68" }} />)
+            : <FileIcon name={entry.name} size={13} />}
         </span>
 
         {/* Name / rename input */}
