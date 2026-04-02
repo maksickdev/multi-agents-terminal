@@ -1,11 +1,11 @@
 import { useState, useRef } from "react";
 import { useStore } from "../../store/useStore";
-import { readFileText, deletePath, renamePath } from "../../lib/tauri";
+import { readFileText, deletePath, renamePath, revealInFinder } from "../../lib/tauri";
 import type { FileEntry } from "../../lib/tauri";
 import { ContextMenu, type ContextMenuItem } from "./ContextMenu";
 import { detectLanguage } from "../../lib/languageDetect";
 import { startFileDrag } from "../../lib/fileDrag";
-import { ChevronRight, ChevronDown, Folder, FolderOpen, Pencil, Copy, Trash2 } from "lucide-react";
+import { ChevronRight, ChevronDown, Folder, FolderOpen, Pencil, Copy, Trash2, ScanSearch } from "lucide-react";
 import { FileIcon } from "../../lib/fileIcons";
 
 interface Props {
@@ -87,6 +87,11 @@ export function FileTreeNode({ entry, depth, projectId, onRefresh, renderChildre
       label: "Rename",
       icon: Pencil,
       onClick: startRename,
+    },
+    {
+      label: "Reveal in Finder",
+      icon: ScanSearch,
+      onClick: () => revealInFinder(entry.path),
     },
     {
       label: "Copy Path",

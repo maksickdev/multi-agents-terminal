@@ -79,3 +79,13 @@ pub fn create_dir_all(path: String) -> Result<(), String> {
 pub fn rename_path(old_path: String, new_path: String) -> Result<(), String> {
     std::fs::rename(&old_path, &new_path).map_err(|e| format!("rename_path failed: {e}"))
 }
+
+/// Open the containing folder in Finder and select the item (macOS only).
+#[tauri::command]
+pub fn reveal_in_finder(path: String) -> Result<(), String> {
+    std::process::Command::new("open")
+        .args(["-R", &path])
+        .spawn()
+        .map_err(|e| format!("reveal_in_finder failed: {e}"))?;
+    Ok(())
+}
