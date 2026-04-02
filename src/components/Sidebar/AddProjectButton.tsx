@@ -1,6 +1,7 @@
 import { pickFolder, saveProjects } from "../../lib/tauri";
 import { useStore } from "../../store/useStore";
 import { v4 as uuidv4 } from "uuid";
+import { FolderOpen } from "lucide-react";
 
 export function AddProjectButton() {
   const { addProject, projects } = useStore();
@@ -28,7 +29,7 @@ export function AddProjectButton() {
       onClick={handleAdd}
       className="w-full flex items-center gap-2 px-3 py-2 text-sm text-[#7aa2f7] hover:bg-[#1f2335] rounded transition-colors"
     >
-      <span className="text-lg leading-none">+</span>
+      <FolderOpen size={15} />
       <span>Add Project</span>
     </button>
   );

@@ -5,6 +5,7 @@ import { CodeEditor } from "./CodeEditor";
 import { EditorTab } from "./EditorTab";
 import { RenderedPreview } from "./RenderedPreview";
 import { ConfirmModal } from "../shared/ConfirmModal";
+import { Circle } from "lucide-react";
 
 const PREVIEWABLE = ["markdown"];
 
@@ -212,7 +213,7 @@ export function EditorPane() {
             )}
             <span className="text-[10px] text-[#414868]">
               {activeFile.language || "plain text"}
-              {activeFile.isDirty && <span className="ml-2 text-[#e0af68]">● unsaved</span>}
+              {activeFile.isDirty && <span className="ml-2 flex items-center gap-1 text-[#e0af68]"><Circle size={6} className="fill-[#e0af68]" /> unsaved</span>}
             </span>
           </div>
         </div>

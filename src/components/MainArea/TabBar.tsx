@@ -3,6 +3,7 @@ import { spawnAgent } from "../../lib/tauri";
 import { useStore, type Agent } from "../../store/useStore";
 import { TabItem } from "./TabItem";
 import type { Project } from "../../lib/tauri";
+import { Plus } from "lucide-react";
 import { isDraggingFile } from "../../lib/fileDrag";
 
 interface Props {
@@ -113,10 +114,10 @@ export function TabBar({ project, agents, activeAgentId, getTerminalSize }: Prop
 
       <button
         onClick={handleNewAgent}
-        className="flex-shrink-0 px-3 h-full text-[#565f89] hover:text-[#7aa2f7] hover:bg-[#1a1b26] transition-colors text-lg leading-none"
+        className="flex items-center justify-center flex-shrink-0 px-3 h-full text-[#565f89] hover:text-[#7aa2f7] hover:bg-[#1a1b26] transition-colors"
         title="New agent"
       >
-        +
+        <Plus size={15} />
       </button>
     </div>
   );

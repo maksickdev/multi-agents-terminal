@@ -5,6 +5,7 @@ import type { FileEntry } from "../../lib/tauri";
 import { ContextMenu, type ContextMenuItem } from "./ContextMenu";
 import { detectLanguage } from "../../lib/languageDetect";
 import { startFileDrag } from "../../lib/fileDrag";
+import { ChevronRight, ChevronDown, Folder, FolderOpen, File } from "lucide-react";
 
 interface Props {
   entry: FileEntry;
@@ -134,13 +135,15 @@ export function FileTreeNode({ entry, depth, projectId, onRefresh, renderChildre
         }}
       >
         {/* Expand caret for dirs */}
-        <span className="w-3 flex-shrink-0 text-center text-[#565f89]">
-          {entry.is_dir ? (renderChildren ? "▾" : "▸") : ""}
+        <span className="w-3 flex-shrink-0 flex items-center justify-center text-[#565f89]">
+          {entry.is_dir ? (renderChildren ? <ChevronDown size={12} /> : <ChevronRight size={12} />) : null}
         </span>
 
         {/* Icon */}
-        <span className="flex-shrink-0 text-sm leading-none">
-          {entry.is_dir ? "📁" : fileIcon(entry.name)}
+        <span className="flex-shrink-0 flex items-center text-[#565f89]">
+          {entry.is_dir
+            ? (renderChildren ? <FolderOpen size={13} className="text-[#e0af68]" /> : <Folder size={13} className="text-[#e0af68]" />)
+            : <File size={13} />}
         </span>
 
         {/* Name / rename input */}
@@ -168,17 +171,3 @@ export function FileTreeNode({ entry, depth, projectId, onRefresh, renderChildre
   );
 }
 
-function fileIcon(name: string): string {
-  const ext = name.split(".").pop()?.toLowerCase() ?? "";
-  const icons: Record<string, string> = {
-    ts: "📄", tsx: "⚛️", js: "📄", jsx: "⚛️",
-    rs: "🦀", toml: "⚙️", json: "📋",
-    md: "📝", mdx: "📝",
-    css: "🎨", scss: "🎨",
-    html: "🌐",
-    png: "🖼️", jpg: "🖼️", jpeg: "🖼️", gif: "🖼️", svg: "🖼️",
-    sh: "💻", bash: "💻", zsh: "💻",
-    lock: "🔒",
-  };
-  return icons[ext] ?? "📄";
-}

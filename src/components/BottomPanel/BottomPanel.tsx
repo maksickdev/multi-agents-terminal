@@ -4,6 +4,7 @@ import { useStore } from "../../store/useStore";
 import type { Project } from "../../lib/tauri";
 import * as ptyManager from "../../lib/ptyManager";
 import { useAgentInput } from "../../hooks/usePty";
+import { X } from "lucide-react";
 
 const CHAR_W = 8;
 const CHAR_H = 16;
@@ -239,10 +240,10 @@ export function BottomPanel() {
         </span>
         <button
           onClick={() => setBottomPanelOpen(false)}
-          className="text-[#565f89] hover:text-[#c0caf5] transition-colors text-base leading-none"
+          className="flex items-center text-[#565f89] hover:text-[#c0caf5] transition-colors"
           title="Close panel (⌘J)"
         >
-          ×
+          <X size={14} />
         </button>
       </div>
 

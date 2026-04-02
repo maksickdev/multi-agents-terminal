@@ -1,4 +1,5 @@
 import type { OpenFile } from "../../store/useStore";
+import { X, Circle } from "lucide-react";
 
 interface Props {
   file: OpenFile;
@@ -55,16 +56,16 @@ export function EditorTab({
       }`}
     >
       {file.isDirty && (
-        <span className="text-[#e0af68] text-xs leading-none flex-shrink-0">●</span>
+        <Circle size={6} className="flex-shrink-0 fill-[#e0af68] text-[#e0af68]" />
       )}
       <span className="text-xs">{basename}</span>
       <button
         onMouseDown={(e) => e.stopPropagation()}
         onClick={(e) => { e.stopPropagation(); onClose(); }}
-        className="ml-1 text-[#414868] hover:text-[#f7768e] leading-none text-sm flex-shrink-0"
+        className="ml-1 flex items-center text-[#414868] hover:text-[#f7768e] flex-shrink-0"
         title="Close"
       >
-        ×
+        <X size={12} />
       </button>
     </div>
   );

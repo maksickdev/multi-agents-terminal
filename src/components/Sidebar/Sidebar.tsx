@@ -1,6 +1,7 @@
 import { AddProjectButton } from "./AddProjectButton";
 import { ProjectItem } from "./ProjectItem";
 import { useStore } from "../../store/useStore";
+import { Folder, SquareTerminal } from "lucide-react";
 
 export function Sidebar() {
   const {
@@ -24,9 +25,7 @@ export function Sidebar() {
               : "text-[#565f89] hover:text-[#a9b1d6] hover:bg-[#1a1b26]"
           }`}
         >
-          <svg width="20" height="20" viewBox="0 0 16 16" fill="currentColor">
-            <path d="M1 3.5A1.5 1.5 0 0 1 2.5 2h2.764c.958 0 1.76.56 2.311 1.184C7.985 3.648 8.48 4 9 4h4.5A1.5 1.5 0 0 1 15 5.5v7a1.5 1.5 0 0 1-1.5 1.5h-11A1.5 1.5 0 0 1 1 12.5v-9z"/>
-          </svg>
+          <Folder size={18} />
         </button>
 
         <button
@@ -38,9 +37,7 @@ export function Sidebar() {
               : "text-[#565f89] hover:text-[#a9b1d6] hover:bg-[#1a1b26]"
           }`}
         >
-          <svg width="20" height="20" viewBox="0 0 16 16" fill="currentColor">
-            <path d="M0 3a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V3zm9.5 5.5h-3a.5.5 0 0 0 0 1h3a.5.5 0 0 0 0-1zm-6.354-.354a.5.5 0 1 0 .708.708l2-2a.5.5 0 0 0 0-.708l-2-2a.5.5 0 1 0-.708.708L4.793 6.5 3.146 8.146z"/>
-          </svg>
+          <SquareTerminal size={18} />
         </button>
       </div>
 

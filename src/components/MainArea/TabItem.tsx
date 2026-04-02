@@ -3,6 +3,7 @@ import { killAgent } from "../../lib/tauri";
 import { useStore, type Agent } from "../../store/useStore";
 import * as ptyManager from "../../lib/ptyManager";
 import { ConfirmModal } from "../shared/ConfirmModal";
+import { X } from "lucide-react";
 
 interface Props {
   agent: Agent;
@@ -123,9 +124,9 @@ export function TabItem({
           <button
             onClick={handleClose}
             onMouseDown={(e) => e.stopPropagation()} // prevent triggering drag on close btn
-            className="ml-1 opacity-0 group-hover:opacity-100 text-[#565f89] hover:text-[#f7768e] transition-opacity leading-none"
+            className="ml-1 opacity-0 group-hover:opacity-100 text-[#565f89] hover:text-[#f7768e] transition-opacity"
           >
-            ×
+            <X size={12} />
           </button>
         )}
       </div>

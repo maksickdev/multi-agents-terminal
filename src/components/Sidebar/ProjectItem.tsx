@@ -3,6 +3,7 @@ import { spawnAgent, killAgent } from "../../lib/tauri";
 import { useStore, type Agent } from "../../store/useStore";
 import type { Project } from "../../lib/tauri";
 import { ConfirmModal } from "../shared/ConfirmModal";
+import { Plus, X } from "lucide-react";
 
 interface Props {
   project: Project;
@@ -83,14 +84,14 @@ export function ProjectItem({ project }: Props) {
             title="New agent"
             className="p-1 text-[#7aa2f7] hover:text-[#c0caf5] rounded hover:bg-[#292e42]"
           >
-            +
+            <Plus size={13} />
           </button>
           <button
             onClick={handleRemove}
             title="Remove project"
             className="p-1 text-[#565f89] hover:text-[#f7768e] rounded hover:bg-[#292e42]"
           >
-            ×
+            <X size={13} />
           </button>
         </div>
       </div>

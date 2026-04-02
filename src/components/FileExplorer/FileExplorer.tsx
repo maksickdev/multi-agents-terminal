@@ -4,6 +4,7 @@ import { createFile, createDirAll, renamePath } from "../../lib/tauri";
 import { FileTree } from "./FileTree";
 import { MoveConfirmModal } from "./MoveConfirmModal";
 import { setOnFolderDrop } from "../../lib/fileDrag";
+import { FilePlus, FolderPlus, RotateCw } from "lucide-react";
 
 export function FileExplorer() {
   const {
@@ -132,24 +133,24 @@ export function FileExplorer() {
             onClick={() => startCreating("file")}
             title="New File"
             disabled={!selectedProject}
-            className="p-0.5 text-[#565f89] hover:text-[#c0caf5] disabled:opacity-30 rounded text-sm leading-none"
+            className="p-1 text-[#565f89] hover:text-[#c0caf5] disabled:opacity-30 rounded"
           >
-            +
+            <FilePlus size={13} />
           </button>
           <button
             onClick={() => startCreating("dir")}
             title="New Folder"
             disabled={!selectedProject}
-            className="p-0.5 text-[#565f89] hover:text-[#c0caf5] disabled:opacity-30 rounded text-xs leading-none"
+            className="p-1 text-[#565f89] hover:text-[#c0caf5] disabled:opacity-30 rounded"
           >
-            📁
+            <FolderPlus size={13} />
           </button>
           <button
             onClick={() => setRefreshKey((k) => k + 1)}
             title="Refresh"
-            className="p-0.5 text-[#565f89] hover:text-[#c0caf5] rounded text-xs leading-none"
+            className="p-1 text-[#565f89] hover:text-[#c0caf5] rounded"
           >
-            ↺
+            <RotateCw size={13} />
           </button>
         </div>
       </div>
