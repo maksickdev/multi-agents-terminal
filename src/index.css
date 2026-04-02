@@ -40,6 +40,13 @@ html, body, #root {
   height: 100%;
 }
 
+.scrollbar-none {
+  scrollbar-width: none;
+}
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+
 .xterm-viewport {
   scrollbar-width: none !important;
   background-color: transparent !important;

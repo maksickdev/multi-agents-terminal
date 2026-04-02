@@ -141,12 +141,12 @@ function ShellPane({ agentId, isVisible, height }: {
       <div
         ref={trackRef}
         onClick={handleTrackClick}
-        style={{ width: 8, flexShrink: 0, background: "#16161e", position: "relative", cursor: "default" }}
+        style={{ width: 6, flexShrink: 0, background: "none", position: "relative", right: 3, cursor: "pointer" }}
       >
         <div
           ref={thumbRef}
           onMouseDown={handleThumbMouseDown}
-          style={{ display: "none", position: "absolute", left: 2, right: 2, top: "0%", height: "100%", background: "#414868", borderRadius: 3, cursor: "grab" }}
+          style={{ display: "none", position: "absolute", left: 0, right: 0, width: 6, top: "0%", height: "100%", background: "#414868", borderRadius: 3, cursor: "grab" }}
           onMouseEnter={(e) => (e.currentTarget.style.background = "#565f89")}
           onMouseLeave={(e) => (e.currentTarget.style.background = "#414868")}
         />

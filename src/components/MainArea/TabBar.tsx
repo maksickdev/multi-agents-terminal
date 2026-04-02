@@ -94,7 +94,7 @@ export function TabBar({ project, agents, activeAgentId, getTerminalSize }: Prop
   };
 
   return (
-    <div className="flex items-center h-8 bg-[#16161e] border-b border-[#1f2335] overflow-x-auto">
+    <div className="flex items-center h-8 bg-[#16161e] border-b border-[#1f2335] overflow-x-auto scrollbar-none">
       {agents.map((agent) => (
         <TabItem
           key={agent.id}
