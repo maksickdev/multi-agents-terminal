@@ -3,7 +3,8 @@ import { spawnAgent, killAgent } from "../../lib/tauri";
 import { useStore, type Agent } from "../../store/useStore";
 import type { Project } from "../../lib/tauri";
 import { ConfirmModal } from "../shared/ConfirmModal";
-import { Plus, X } from "lucide-react";
+import { ContextMenu, type ContextMenuItem } from "../FileExplorer/ContextMenu";
+import { Plus, Trash2 } from "lucide-react";
 
 interface Props {
   project: Project;
@@ -14,10 +15,11 @@ export function ProjectItem({ project }: Props) {
     useStore();
   const isSelected = selectedProjectId === project.id;
   const agents = getProjectAgents(project.id);
-  const [showConfirm, setShowConfirm] = useState(false);
 
-  const handleNewAgent = async (e: React.MouseEvent) => {
-    e.stopPropagation();
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
+
+  const handleNewAgent = async () => {
     selectProject(project.id);
     try {
       const agentId = await spawnAgent(project.id, project.path);
@@ -44,10 +46,25 @@ export function ProjectItem({ project }: Props) {
     removeProject(project.id);
   };
 
-  const handleRemove = (e: React.MouseEvent) => {
+  const handleContextMenu = (e: React.MouseEvent) => {
+    e.preventDefault();
     e.stopPropagation();
-    setShowConfirm(true);
+    setContextMenu({ x: e.clientX, y: e.clientY });
   };
+
+  const contextItems: ContextMenuItem[] = [
+    {
+      label: "New Agent",
+      icon: Plus,
+      onClick: handleNewAgent,
+    },
+    {
+      label: "Remove Project",
+      icon: Trash2,
+      onClick: () => setShowConfirm(true),
+      danger: true,
+    },
+  ];
 
   return (
     <>
@@ -62,38 +79,31 @@ export function ProjectItem({ project }: Props) {
         />
       )}
 
+      {contextMenu && (
+        <ContextMenu
+          x={contextMenu.x}
+          y={contextMenu.y}
+          items={contextItems}
+          onClose={() => setContextMenu(null)}
+        />
+      )}
+
       <div
         onClick={() => selectProject(project.id)}
-        className={`group flex items-center justify-between px-3 py-2 rounded cursor-pointer transition-colors ${
+        onContextMenu={handleContextMenu}
+        className={`flex flex-col px-3 py-2 rounded cursor-pointer transition-colors ${
           isSelected
             ? "bg-[var(--c-bg-elevated)] text-[var(--c-text-bright)]"
             : "text-[var(--c-text)] hover:bg-[var(--c-bg)]"
         }`}
       >
-        <div className="flex flex-col min-w-0 flex-1">
+        <div className="flex items-center justify-between min-w-0">
           <span className="text-sm font-medium truncate">{project.name}</span>
-          <span className="text-xs text-[var(--c-text-dim)] truncate">{project.path}</span>
-        </div>
-
-        <div className="flex items-center gap-1 ml-2 opacity-0 group-hover:opacity-100 transition-opacity">
           {agents.length > 0 && (
-            <span className="text-xs text-[var(--c-accent)] px-1">{agents.length}</span>
+            <span className="text-xs text-[var(--c-accent)] ml-2 flex-shrink-0">{agents.length}</span>
           )}
-          <button
-            onClick={handleNewAgent}
-            title="New agent"
-            className="p-1 text-[var(--c-accent)] hover:text-[var(--c-text-bright)] rounded hover:bg-[var(--c-bg-hover)]"
-          >
-            <Plus size={13} />
-          </button>
-          <button
-            onClick={handleRemove}
-            title="Remove project"
-            className="p-1 text-[var(--c-text-dim)] hover:text-[var(--c-danger)] rounded hover:bg-[var(--c-bg-hover)]"
-          >
-            <X size={13} />
-          </button>
         </div>
+        <span className="text-xs text-[var(--c-text-dim)] truncate">{project.path}</span>
       </div>
     </>
   );
