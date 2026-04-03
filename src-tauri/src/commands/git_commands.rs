@@ -192,7 +192,7 @@ pub fn git_status(cwd: String) -> Result<GitStatus, String> {
 
     let mut opts = StatusOptions::new();
     opts.include_untracked(true)
-        .recurse_untracked_dirs(false)
+        .recurse_untracked_dirs(true)
         .include_ignored(false);
 
     let statuses = repo.statuses(Some(&mut opts)).map_err(|e| e.to_string())?;
