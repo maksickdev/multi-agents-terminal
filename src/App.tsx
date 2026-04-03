@@ -1,6 +1,7 @@
 import { useSessionPersistence } from "./hooks/useSessionPersistence";
 import { usePtyEvents } from "./hooks/usePty";
 import { useTheme } from "./hooks/useTheme";
+import { ActivityBar } from "./components/Sidebar/ActivityBar";
 import { Sidebar } from "./components/Sidebar/Sidebar";
 import { MainArea } from "./components/MainArea/MainArea";
 import { FileExplorer } from "./components/FileExplorer/FileExplorer";
@@ -18,6 +19,7 @@ export function App() {
         className="flex-shrink-0 h-8 bg-[var(--c-bg-deep)] border-b border-[var(--c-border)]"
       />
       <div className="flex flex-1 overflow-hidden">
+        <ActivityBar />
         <Sidebar />
         <FileExplorer />
         <MainArea />
