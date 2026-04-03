@@ -6,6 +6,7 @@ import { ActivityBar } from "./components/Sidebar/ActivityBar";
 import { Sidebar } from "./components/Sidebar/Sidebar";
 import { MainArea } from "./components/MainArea/MainArea";
 import { FileExplorer } from "./components/FileExplorer/FileExplorer";
+import { GitPanel } from "./components/Git/GitPanel";
 
 export function App() {
   useSessionPersistence();
@@ -32,6 +33,7 @@ export function App() {
       <div className="flex flex-1 overflow-hidden">
         <ActivityBar />
         <Sidebar />
+        <GitPanel />
         <FileExplorer />
         <MainArea />
       </div>

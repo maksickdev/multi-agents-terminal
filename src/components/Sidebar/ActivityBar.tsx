@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Folder, SquareTerminal, Settings, PanelLeft } from "lucide-react";
+import { Folder, SquareTerminal, Settings, PanelLeft, GitBranch } from "lucide-react";
 import { useStore } from "../../store/useStore";
 import { SettingsModal } from "../Settings/SettingsModal";
 
@@ -8,6 +8,7 @@ export function ActivityBar() {
     sidebarOpen, setSidebarOpen,
     fileExplorerOpen, setFileExplorerOpen,
     bottomPanelOpen, setBottomPanelOpen,
+    gitPanelOpen, setGitPanelOpen,
   } = useStore();
 
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -65,6 +66,18 @@ export function ActivityBar() {
             }`}
           >
             <SquareTerminal size={20} />
+          </button>
+
+          <button
+            onClick={() => setGitPanelOpen(!gitPanelOpen)}
+            title="Git"
+            className={`flex items-center justify-center w-9 h-9 rounded transition-colors ${
+              gitPanelOpen
+                ? "text-[var(--c-accent)] bg-[var(--c-bg)]"
+                : "text-[var(--c-text-dim)] hover:text-[var(--c-text)] hover:bg-[var(--c-bg)]"
+            }`}
+          >
+            <GitBranch size={20} />
           </button>
         </div>
 

@@ -12,6 +12,11 @@ use commands::file_commands::{
     read_dir, read_file_text, write_file_text, delete_path,
     create_file, create_dir_all, rename_path, reveal_in_finder,
 };
+use commands::git_commands::{
+    git_status, git_diff, git_stage, git_stage_all,
+    git_unstage, git_unstage_all, git_discard,
+    git_commit, git_log, git_pull, git_push,
+};
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -50,6 +55,18 @@ pub fn run() {
             create_dir_all,
             rename_path,
             reveal_in_finder,
+            // Git
+            git_status,
+            git_diff,
+            git_stage,
+            git_stage_all,
+            git_unstage,
+            git_unstage_all,
+            git_discard,
+            git_commit,
+            git_log,
+            git_pull,
+            git_push,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

@@ -56,6 +56,12 @@ interface AppStore {
   sidebarWidth: number;
   setSidebarWidth: (width: number) => void;
 
+  // Git panel
+  gitPanelOpen: boolean;
+  setGitPanelOpen: (open: boolean) => void;
+  gitPanelWidth: number;
+  setGitPanelWidth: (width: number) => void;
+
   fileExplorerOpen: boolean;
   fileExplorerWidth: number;
   /** projectId → array of expanded absolute dir paths */
@@ -100,6 +106,8 @@ export const useStore = create<AppStore>((set, get) => ({
 
   sidebarOpen: true,
   sidebarWidth: 192,
+  gitPanelOpen: false,
+  gitPanelWidth: 280,
 
   fileExplorerOpen: false,
   fileExplorerWidth: 240,
@@ -196,6 +204,8 @@ export const useStore = create<AppStore>((set, get) => ({
 
   setSidebarOpen: (open) => set({ sidebarOpen: open }),
   setSidebarWidth: (width) => set({ sidebarWidth: Math.max(140, Math.min(width, 480)) }),
+  setGitPanelOpen: (open) => set({ gitPanelOpen: open }),
+  setGitPanelWidth: (width) => set({ gitPanelWidth: Math.max(220, Math.min(width, 600)) }),
 
   setFileExplorerOpen: (open) => set({ fileExplorerOpen: open }),
   setFileExplorerWidth: (width) => set({ fileExplorerWidth: Math.max(160, Math.min(width, 600)) }),

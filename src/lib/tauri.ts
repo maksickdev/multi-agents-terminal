@@ -116,6 +116,48 @@ export const renamePath = (oldPath: string, newPath: string) =>
 export const revealInFinder = (path: string) =>
   invoke<void>("reveal_in_finder", { path });
 
+// Git
+
+export interface GitFileStatus {
+  path: string;
+  stagedStatus: string;   // X: M A D R C ? U space
+  unstagedStatus: string; // Y: M A D R C ? U space
+}
+
+export interface GitBranchInfo {
+  branch: string;
+  ahead: number;
+  behind: number;
+  hasRemote: boolean;
+}
+
+export interface GitStatus {
+  branch: GitBranchInfo;
+  files: GitFileStatus[];
+  isGitRepo: boolean;
+}
+
+export interface GitLogEntry {
+  hash: string;
+  shortHash: string;
+  message: string;
+  author: string;
+  date: string;
+}
+
+export const gitStatus  = (cwd: string) => invoke<GitStatus>("git_status", { cwd });
+export const gitDiff    = (cwd: string, path: string, staged: boolean) =>
+  invoke<string>("git_diff", { cwd, path, staged });
+export const gitStage   = (cwd: string, path: string) => invoke<void>("git_stage", { cwd, path });
+export const gitStageAll   = (cwd: string) => invoke<void>("git_stage_all", { cwd });
+export const gitUnstage = (cwd: string, path: string) => invoke<void>("git_unstage", { cwd, path });
+export const gitUnstageAll = (cwd: string) => invoke<void>("git_unstage_all", { cwd });
+export const gitDiscard = (cwd: string, path: string) => invoke<void>("git_discard", { cwd, path });
+export const gitCommit  = (cwd: string, message: string) => invoke<void>("git_commit", { cwd, message });
+export const gitLog     = (cwd: string, limit?: number) => invoke<GitLogEntry[]>("git_log", { cwd, limit });
+export const gitPull    = (cwd: string) => invoke<string>("git_pull", { cwd });
+export const gitPush    = (cwd: string) => invoke<string>("git_push", { cwd });
+
 // Event listeners
 export const onPtyOutput = (
   cb: (payload: PtyOutputPayload) => void
