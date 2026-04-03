@@ -4,7 +4,8 @@ import { useStore, type Agent } from "../../store/useStore";
 import type { Project } from "../../lib/tauri";
 import { ConfirmModal } from "../shared/ConfirmModal";
 import { ContextMenu, type ContextMenuItem } from "../FileExplorer/ContextMenu";
-import { Plus, Trash2 } from "lucide-react";
+import { revealInFinder } from "../../lib/tauri";
+import { Plus, Trash2, ScanSearch } from "lucide-react";
 
 interface Props {
   project: Project;
@@ -57,6 +58,11 @@ export function ProjectItem({ project }: Props) {
       label: "New Agent",
       icon: Plus,
       onClick: handleNewAgent,
+    },
+    {
+      label: "Reveal in Finder",
+      icon: ScanSearch,
+      onClick: () => revealInFinder(project.path),
     },
     {
       label: "Remove Project",
