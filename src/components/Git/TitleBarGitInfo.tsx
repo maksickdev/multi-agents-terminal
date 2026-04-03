@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { GitBranch } from "lucide-react";
 import { gitStatus, type GitStatus } from "../../lib/tauri";
+import { useStore } from "../../store/useStore";
 
 interface Props {
   projectPath: string;
@@ -8,16 +9,17 @@ interface Props {
 }
 
 export function TitleBarGitInfo({ projectPath, projectId }: Props) {
+  const gitStatusVersion = useStore((s) => s.gitStatusVersion);
   const [info, setInfo] = useState<GitStatus | null>(null);
 
   useEffect(() => {
-    setInfo(null);
+    if (!projectId) return;
     let cancelled = false;
     gitStatus(projectPath)
       .then((s) => { if (!cancelled) setInfo(s); })
       .catch(() => {});
     return () => { cancelled = true; };
-  }, [projectId, projectPath]);
+  }, [projectId, projectPath, gitStatusVersion]);
 
   if (!info?.isGitRepo) return null;
 

@@ -162,7 +162,7 @@ function SectionHeader({
 // ── main panel ────────────────────────────────────────────────────────────────
 
 export function GitPanel() {
-  const { projects, selectedProjectId, gitPanelWidth, setGitPanelWidth, gitPanelOpen } = useStore();
+  const { projects, selectedProjectId, gitPanelWidth, setGitPanelWidth, gitPanelOpen, bumpGitStatus } = useStore();
   const project = projects.find((p) => p.id === selectedProjectId) ?? null;
 
   const [status, setStatus]           = useState<GitStatus | null>(null);
@@ -213,7 +213,7 @@ export function GitPanel() {
       setLoading(true);
       setError(null);
       gitStatus(project.path)
-        .then((s) => { if (!cancelled) { setStatus(s); setLoading(false); } })
+        .then((s) => { if (!cancelled) { setStatus(s); setLoading(false); bumpGitStatus(); } })
         .catch((e) => { if (!cancelled) { setError(String(e)); setLoading(false); } });
     };
 

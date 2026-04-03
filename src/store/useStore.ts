@@ -61,6 +61,8 @@ interface AppStore {
   setGitPanelOpen: (open: boolean) => void;
   gitPanelWidth: number;
   setGitPanelWidth: (width: number) => void;
+  gitStatusVersion: number;
+  bumpGitStatus: () => void;
 
   fileExplorerOpen: boolean;
   fileExplorerWidth: number;
@@ -108,6 +110,7 @@ export const useStore = create<AppStore>((set, get) => ({
   sidebarWidth: 192,
   gitPanelOpen: false,
   gitPanelWidth: 280,
+  gitStatusVersion: 0,
 
   fileExplorerOpen: false,
   fileExplorerWidth: 240,
@@ -206,6 +209,7 @@ export const useStore = create<AppStore>((set, get) => ({
   setSidebarWidth: (width) => set({ sidebarWidth: Math.max(140, Math.min(width, 480)) }),
   setGitPanelOpen: (open) => set({ gitPanelOpen: open }),
   setGitPanelWidth: (width) => set({ gitPanelWidth: Math.max(220, Math.min(width, 600)) }),
+  bumpGitStatus: () => set((s) => ({ gitStatusVersion: s.gitStatusVersion + 1 })),
 
   setFileExplorerOpen: (open) => set({ fileExplorerOpen: open }),
   setFileExplorerWidth: (width) => set({ fileExplorerWidth: Math.max(160, Math.min(width, 600)) }),
