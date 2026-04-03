@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useStore } from "../../store/useStore";
 import {
   gitStatus, gitDiff, gitStage, gitStageAll,
@@ -200,23 +200,32 @@ export function GitPanel() {
   };
 
   // ── fetch status ─────────────────────────────────────────────────────────
-  const refresh = useCallback(async () => {
-    if (!project) return;
-    setLoading(true);
-    setError(null);
-    try {
-      const s = await gitStatus(project.path);
-      setStatus(s);
-    } catch (e) {
-      setError(String(e));
-    } finally {
-      setLoading(false);
-    }
-  }, [project?.path]);
+  // Ref so that manual "Refresh" button always calls the latest version
+  const refreshRef = useRef<() => void>(() => {});
 
   useEffect(() => {
-    if (gitPanelOpen) refresh();
-  }, [project?.id, gitPanelOpen]);
+    if (!gitPanelOpen || !project) return;
+
+    let cancelled = false;
+
+    const run = () => {
+      setLoading(true);
+      setError(null);
+      gitStatus(project.path)
+        .then((s) => { if (!cancelled) { setStatus(s); setLoading(false); } })
+        .catch((e) => { if (!cancelled) { setError(String(e)); setLoading(false); } });
+    };
+
+    refreshRef.current = run;
+    // Clear stale status immediately so we don't flash old project's data
+    setStatus(null);
+    setSelectedFile(null);
+    run();
+
+    return () => { cancelled = true; };
+  }, [project?.id, project?.path, gitPanelOpen]);
+
+  const refresh = () => refreshRef.current();
 
   // ── fetch diff ────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -314,9 +323,25 @@ export function GitPanel() {
         </div>
       </div>
 
+      {/* Error shown regardless of git status so PATH / exec errors are visible */}
+      {error && (
+        <div className="flex-shrink-0 text-[var(--c-danger)] text-xs px-3 py-2 leading-relaxed border-b border-[var(--c-border)]">
+          {error}
+        </div>
+      )}
+
       {!status?.isGitRepo ? (
-        <div className="flex-1 flex items-center justify-center text-[var(--c-text-dim)] text-xs p-4 text-center">
-          Not a git repository
+        <div className="flex-1 flex flex-col items-center justify-center text-[var(--c-text-dim)] text-xs p-4 text-center gap-2">
+          {status === null && !error ? (
+            <span>Loading…</span>
+          ) : (
+            <>
+              <span>Not a git repository</span>
+              {project && (
+                <span className="text-[10px] opacity-60 break-all">{project.path}</span>
+              )}
+            </>
+          )}
         </div>
       ) : (
         <div className="flex flex-col flex-1 min-h-0">
@@ -369,10 +394,6 @@ export function GitPanel() {
               <div className="text-[var(--c-text-dim)] text-xs px-3 py-3 italic">
                 No changes
               </div>
-            )}
-
-            {error && (
-              <div className="text-[var(--c-danger)] text-xs px-3 py-2 leading-relaxed">{error}</div>
             )}
           </div>
 
