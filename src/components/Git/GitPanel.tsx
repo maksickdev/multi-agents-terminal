@@ -35,7 +35,7 @@ function statusColor(s: string): string {
     case "A": return "var(--c-success)";
     case "D": return "var(--c-danger)";
     case "R": return "var(--c-accent-cyan)";
-    case "?": return "var(--c-text-dim)";
+    case "?": return "var(--c-success)";
     case "U": return "var(--c-danger)";
     default:  return "var(--c-text)";
   }
@@ -248,9 +248,10 @@ export function GitPanel() {
   }
 
   const stagedFiles   = status?.files.filter(f => f.stagedStatus !== " " && f.stagedStatus !== "?") ?? [];
-  const unstagedFiles = status?.files.filter(f => f.unstagedStatus !== " " && f.unstagedStatus !== "?") ?? [];
-  const untrackedFiles = status?.files.filter(f => f.stagedStatus === "?" && f.unstagedStatus === "?") ?? [];
-  const allChanges    = [...unstagedFiles, ...untrackedFiles];
+  // git2 returns stagedStatus=" " unstagedStatus="?" for untracked files
+  const unstagedFiles  = status?.files.filter(f => f.unstagedStatus !== " " && f.unstagedStatus !== "?") ?? [];
+  const untrackedFiles = status?.files.filter(f => f.unstagedStatus === "?") ?? [];
+  const allChanges     = [...unstagedFiles, ...untrackedFiles];
 
   const { branch } = status ?? { branch: { branch: "", ahead: 0, behind: 0, hasRemote: false } };
 
