@@ -51,6 +51,9 @@ interface AppStore {
   setShellAgentId: (projectId: string, agentId: string) => void;
 
   // File explorer
+  sidebarWidth: number;
+  setSidebarWidth: (width: number) => void;
+
   fileExplorerOpen: boolean;
   fileExplorerWidth: number;
   /** projectId → array of expanded absolute dir paths */
@@ -92,6 +95,8 @@ export const useStore = create<AppStore>((set, get) => ({
   bottomPanelOpen: false,
   bottomPanelHeight: 220,
   shellAgentIds: {},
+
+  sidebarWidth: 192,
 
   fileExplorerOpen: false,
   fileExplorerWidth: 240,
@@ -185,6 +190,8 @@ export const useStore = create<AppStore>((set, get) => ({
   setBottomPanelHeight: (height) => set({ bottomPanelHeight: Math.max(100, Math.min(height, 600)) }),
   setShellAgentId: (projectId, agentId) =>
     set((s) => ({ shellAgentIds: { ...s.shellAgentIds, [projectId]: agentId } })),
+
+  setSidebarWidth: (width) => set({ sidebarWidth: Math.max(140, Math.min(width, 480)) }),
 
   setFileExplorerOpen: (open) => set({ fileExplorerOpen: open }),
   setFileExplorerWidth: (width) => set({ fileExplorerWidth: Math.max(160, Math.min(width, 600)) }),
