@@ -7,6 +7,7 @@ import { Sidebar } from "./components/Sidebar/Sidebar";
 import { MainArea } from "./components/MainArea/MainArea";
 import { FileExplorer } from "./components/FileExplorer/FileExplorer";
 import { GitPanel } from "./components/Git/GitPanel";
+import { TitleBarGitInfo } from "./components/Git/TitleBarGitInfo";
 
 export function App() {
   useSessionPersistence();
@@ -24,9 +25,12 @@ export function App() {
         className="flex-shrink-0 h-8 bg-[var(--c-bg-deep)] border-b border-[var(--c-border)] flex items-center justify-center"
       >
         {activeProject && (
-          <span className="text-xs text-[var(--c-text-dim)] pointer-events-none select-none">
-            {activeProject.name}
-          </span>
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-[var(--c-text-dim)] pointer-events-none select-none">
+              {activeProject.name}
+            </span>
+            <TitleBarGitInfo projectPath={activeProject.path} projectId={activeProject.id} />
+          </div>
         )}
       </div>
 
