@@ -7,7 +7,7 @@ import {
   type GitFileStatus, type GitStatus,
 } from "../../lib/tauri";
 import { GitAuthModal } from "./GitAuthModal";
-import { GitDiffView } from "./GitDiffView";
+import { GitDiffModal } from "./GitDiffModal";
 import {
   RefreshCw, Plus, Minus, GitCommit, CloudDownload, CloudUpload,
   ChevronDown, ChevronRight, RotateCcw,
@@ -168,9 +168,7 @@ export function GitPanel() {
   const [status, setStatus]           = useState<GitStatus | null>(null);
   const [loading, setLoading]         = useState(false);
   const [error, setError]             = useState<string | null>(null);
-  const [selectedFile, setSelectedFile] = useState<{ path: string; staged: boolean } | null>(null);
-  const [diff, setDiff]               = useState<string>("");
-  const [diffLoading, setDiffLoading] = useState(false);
+  const [diffModal, setDiffModal] = useState<{ path: string; staged: boolean; diff: string; loading: boolean } | null>(null);
   const [commitMsg, setCommitMsg]     = useState("");
   const [committing, setCommitting]   = useState(false);
   const [pulling, setPulling]         = useState(false);
@@ -222,7 +220,7 @@ export function GitPanel() {
     refreshRef.current = run;
     // Clear stale status immediately so we don't flash old project's data
     setStatus(null);
-    setSelectedFile(null);
+    setDiffModal(null);
     run();
 
     return () => { cancelled = true; };
@@ -230,15 +228,14 @@ export function GitPanel() {
 
   const refresh = () => refreshRef.current();
 
-  // ── fetch diff ────────────────────────────────────────────────────────────
-  useEffect(() => {
-    if (!selectedFile || !project) { setDiff(""); return; }
-    setDiffLoading(true);
-    gitDiff(project.path, selectedFile.path, selectedFile.staged)
-      .then(setDiff)
-      .catch(() => setDiff(""))
-      .finally(() => setDiffLoading(false));
-  }, [selectedFile?.path, selectedFile?.staged, project?.path]);
+  // ── open diff modal ───────────────────────────────────────────────────────
+  const openDiff = (path: string, staged: boolean) => {
+    if (!project) return;
+    setDiffModal({ path, staged, diff: "", loading: true });
+    gitDiff(project.path, path, staged)
+      .then((d) => setDiffModal((m) => m && m.path === path ? { ...m, diff: d, loading: false } : m))
+      .catch(() => setDiffModal((m) => m && m.path === path ? { ...m, loading: false } : m));
+  };
 
   if (!project) {
     return (
@@ -262,7 +259,7 @@ export function GitPanel() {
     try {
       await gitCommit(project.path, commitMsg.trim());
       setCommitMsg("");
-      setSelectedFile(null);
+      setDiffModal(null);
       await refresh();
     } catch (e) {
       setError(String(e));
@@ -332,6 +329,15 @@ export function GitPanel() {
         onCancel={() => setAuthModal(null)}
       />
     )}
+    {diffModal && (
+      <GitDiffModal
+        path={diffModal.path}
+        staged={diffModal.staged}
+        diff={diffModal.diff}
+        loading={diffModal.loading}
+        onClose={() => setDiffModal(null)}
+      />
+    )}
     <div
       style={{ width: gitPanelOpen ? gitPanelWidth : 0, flexShrink: 0, overflow: "hidden", position: "relative" }}
       className="flex flex-col bg-[var(--c-bg-deep)] border-r border-[var(--c-border)] h-full"
@@ -391,8 +397,8 @@ export function GitPanel() {
         </div>
       ) : (
         <div className="flex flex-col flex-1 min-h-0">
-          {/* ── File lists (top half) ── */}
-          <div className="overflow-y-auto flex-shrink-0" style={{ maxHeight: "50%" }}>
+          {/* ── File lists ── */}
+          <div className="overflow-y-auto flex-1">
 
             {/* Staged */}
             <SectionHeader
@@ -406,9 +412,9 @@ export function GitPanel() {
               <FileRow
                 key={`staged-${f.path}`}
                 file={f}
-                isSelected={selectedFile?.path === f.path && selectedFile?.staged === true}
+                isSelected={false}
                 isStaged={true}
-                onSelect={() => setSelectedFile({ path: f.path, staged: true })}
+                onSelect={() => openDiff(f.path, true)}
                 onStage={() => {}}
                 onUnstage={() => gitUnstage(project.path, f.path).then(refresh)}
                 onDiscard={() => {}}
@@ -427,9 +433,9 @@ export function GitPanel() {
               <FileRow
                 key={`unstaged-${f.path}`}
                 file={f}
-                isSelected={selectedFile?.path === f.path && selectedFile?.staged === false}
+                isSelected={false}
                 isStaged={false}
-                onSelect={() => setSelectedFile({ path: f.path, staged: false })}
+                onSelect={() => openDiff(f.path, false)}
                 onStage={() => gitStage(project.path, f.path).then(refresh)}
                 onUnstage={() => {}}
                 onDiscard={() => gitDiscard(project.path, f.path).then(refresh)}
@@ -440,17 +446,6 @@ export function GitPanel() {
               <div className="text-[var(--c-text-dim)] text-xs px-3 py-3 italic">
                 No changes
               </div>
-            )}
-          </div>
-
-          {/* ── Diff view (bottom half) ── */}
-          <div className="flex-1 min-h-0 border-t border-[var(--c-border)] overflow-hidden">
-            {diffLoading ? (
-              <div className="flex items-center justify-center h-full text-[var(--c-text-dim)] text-xs">
-                Loading diff…
-              </div>
-            ) : (
-              <GitDiffView diff={diff} />
             )}
           </div>
 
