@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 import { EditorView, keymap, lineNumbers, highlightActiveLineGutter, highlightSpecialChars, drawSelection, rectangularSelection, crosshairCursor, highlightActiveLine } from "@codemirror/view";
-import { EditorState, Compartment } from "@codemirror/state";
+import { EditorState, Compartment, Transaction } from "@codemirror/state";
 import { defaultKeymap, history, historyKeymap, indentWithTab } from "@codemirror/commands";
 import { indentOnInput, syntaxHighlighting, defaultHighlightStyle, bracketMatching, foldGutter, foldKeymap } from "@codemirror/language";
 import { autocompletion, completionKeymap, closeBrackets, closeBracketsKeymap } from "@codemirror/autocomplete";
@@ -135,11 +135,15 @@ export function CodeEditor({ content, language, onChange, onSave }: Props) {
           { key: "Mod-s", run: () => { onSaveRef.current(); return true; } },
         ]),
         EditorView.updateListener.of((update) => {
-          if (update.docChanged) {
-            const newContent = update.state.doc.toString();
-            lastExternalContent.current = newContent;
-            onChangeRef.current(newContent);
-          }
+          if (!update.docChanged) return;
+          // Skip programmatic updates (file switch / external reload)
+          const isExternal = update.transactions.some(
+            (tr) => tr.annotation(Transaction.userEvent) === "external"
+          );
+          if (isExternal) return;
+          const newContent = update.state.doc.toString();
+          lastExternalContent.current = newContent;
+          onChangeRef.current(newContent);
         }),
       ],
     });
@@ -174,6 +178,7 @@ export function CodeEditor({ content, language, onChange, onSave }: Props) {
     lastExternalContent.current = content;
     view.dispatch({
       changes: { from: 0, to: view.state.doc.length, insert: content },
+      annotations: Transaction.userEvent.of("external"),
     });
   }, [content]);
 
