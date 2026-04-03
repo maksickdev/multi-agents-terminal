@@ -16,6 +16,7 @@ use commands::git_commands::{
     git_status, git_diff, git_stage, git_stage_all,
     git_unstage, git_unstage_all, git_discard,
     git_commit, git_log, git_pull, git_push,
+    git_pull_with_passphrase, git_push_with_passphrase,
 };
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -67,6 +68,8 @@ pub fn run() {
             git_log,
             git_pull,
             git_push,
+            git_pull_with_passphrase,
+            git_push_with_passphrase,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

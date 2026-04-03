@@ -3,8 +3,10 @@ import { useStore } from "../../store/useStore";
 import {
   gitStatus, gitDiff, gitStage, gitStageAll,
   gitUnstage, gitUnstageAll, gitDiscard, gitCommit, gitPull, gitPush,
+  gitPullWithPassphrase, gitPushWithPassphrase,
   type GitFileStatus, type GitStatus,
 } from "../../lib/tauri";
+import { GitAuthModal } from "./GitAuthModal";
 import { GitDiffView } from "./GitDiffView";
 import {
   RefreshCw, Plus, Minus, GitCommit, CloudDownload, CloudUpload,
@@ -173,6 +175,7 @@ export function GitPanel() {
   const [committing, setCommitting]   = useState(false);
   const [pulling, setPulling]         = useState(false);
   const [pushing, setPushing]         = useState(false);
+  const [authModal, setAuthModal]     = useState<{ operation: "push" | "pull" } | null>(null);
   const [stagedExpanded, setStagedExpanded]   = useState(true);
   const [changesExpanded, setChangesExpanded] = useState(true);
 
@@ -268,24 +271,67 @@ export function GitPanel() {
     }
   };
 
-  const doPull = async () => {
+  const AUTH_PREFIX = "AUTH_REQUIRED:";
+
+  const doPull = async (passphrase?: string) => {
     if (!project) return;
     setPulling(true);
-    try { await gitPull(project.path); await refresh(); }
-    catch (e) { setError(String(e)); }
-    finally { setPulling(false); }
+    setError(null);
+    try {
+      await (passphrase
+        ? gitPullWithPassphrase(project.path, passphrase)
+        : gitPull(project.path));
+      await refresh();
+    } catch (e) {
+      const msg = String(e);
+      if (msg.startsWith(AUTH_PREFIX)) {
+        setAuthModal({ operation: "pull" });
+      } else {
+        setError(msg);
+      }
+    } finally {
+      setPulling(false);
+    }
   };
 
-  const doPush = async () => {
+  const doPush = async (passphrase?: string) => {
     if (!project) return;
     setPushing(true);
-    try { await gitPush(project.path); await refresh(); }
-    catch (e) { setError(String(e)); }
-    finally { setPushing(false); }
+    setError(null);
+    try {
+      await (passphrase
+        ? gitPushWithPassphrase(project.path, passphrase)
+        : gitPush(project.path));
+      await refresh();
+    } catch (e) {
+      const msg = String(e);
+      if (msg.startsWith(AUTH_PREFIX)) {
+        setAuthModal({ operation: "push" });
+      } else {
+        setError(msg);
+      }
+    } finally {
+      setPushing(false);
+    }
+  };
+
+  const handleAuthConfirm = (passphrase: string) => {
+    const op = authModal?.operation;
+    setAuthModal(null);
+    if (op === "push") doPush(passphrase);
+    else if (op === "pull") doPull(passphrase);
   };
 
   // split the panel vertically: top = file list, bottom = diff
   return (
+    <>
+    {authModal && (
+      <GitAuthModal
+        operation={authModal.operation}
+        onConfirm={handleAuthConfirm}
+        onCancel={() => setAuthModal(null)}
+      />
+    )}
     <div
       style={{ width: gitPanelOpen ? gitPanelWidth : 0, flexShrink: 0, overflow: "hidden", position: "relative" }}
       className="flex flex-col bg-[var(--c-bg-deep)] border-r border-[var(--c-border)] h-full"
@@ -306,11 +352,11 @@ export function GitPanel() {
         <div className="flex items-center gap-0.5">
           {status?.isGitRepo && branch.hasRemote && (
             <>
-              <button onClick={doPull} title="Pull" disabled={pulling}
+              <button onClick={() => doPull()} title="Pull" disabled={pulling}
                 className="p-1 text-[var(--c-text-dim)] hover:text-[var(--c-text-bright)] disabled:opacity-40 rounded transition-colors">
                 <CloudDownload size={13} />
               </button>
-              <button onClick={doPush} title="Push" disabled={pushing}
+              <button onClick={() => doPush()} title="Push" disabled={pushing}
                 className="p-1 text-[var(--c-text-dim)] hover:text-[var(--c-text-bright)] disabled:opacity-40 rounded transition-colors">
                 <CloudUpload size={13} />
               </button>
@@ -438,5 +484,6 @@ export function GitPanel() {
         className="absolute right-0 top-0 bottom-0 w-[6px] cursor-ew-resize hover:bg-[var(--c-accent)]/20 transition-colors"
       />
     </div>
+    </>
   );
 }

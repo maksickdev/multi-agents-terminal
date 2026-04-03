@@ -157,6 +157,10 @@ export const gitCommit  = (cwd: string, message: string) => invoke<void>("git_co
 export const gitLog     = (cwd: string, limit?: number) => invoke<GitLogEntry[]>("git_log", { cwd, limit });
 export const gitPull    = (cwd: string) => invoke<string>("git_pull", { cwd });
 export const gitPush    = (cwd: string) => invoke<string>("git_push", { cwd });
+export const gitPullWithPassphrase = (cwd: string, passphrase: string) =>
+  invoke<string>("git_pull_with_passphrase", { cwd, passphrase });
+export const gitPushWithPassphrase = (cwd: string, passphrase: string) =>
+  invoke<string>("git_push_with_passphrase", { cwd, passphrase });
 
 // Event listeners
 export const onPtyOutput = (

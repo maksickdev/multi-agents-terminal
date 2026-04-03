@@ -89,20 +89,84 @@ fn branch_info(repo: &Repository) -> GitBranchInfo {
     }
 }
 
-/// Run git through the user's login shell — only used for network ops (pull/push)
-/// where credential helpers and SSH agent setup matters.
+fn is_auth_error(stderr: &str) -> bool {
+    let s = stderr.to_lowercase();
+    s.contains("permission denied (publickey)")
+        || s.contains("could not read username")
+        || s.contains("authentication failed")
+        || s.contains("invalid credentials")
+        || s.contains("error: 403")
+}
+
+/// Run git through the user's login shell — only used for network ops (pull/push).
+/// On macOS, tries to load SSH keys from the Keychain first (silent best-effort).
+/// Returns Err("AUTH_REQUIRED: <original stderr>") when git asks for credentials.
 fn shell_git(cwd: &str, subcmd: &str) -> Result<String, String> {
+    // macOS: silently load keys from Keychain so GUI apps can authenticate
+    let _ = Command::new("/usr/bin/ssh-add")
+        .args(["--apple-load-keychain"])
+        .env_remove("GIT_DIR")
+        .output();
+
+    let out = Command::new("/bin/zsh")
+        .args(["-l", "-c", &format!("git -c core.askPass= {subcmd}")])
+        .current_dir(cwd)
+        .env_remove("GIT_DIR")
+        .env_remove("GIT_WORK_TREE")
+        .env("GIT_TERMINAL_PROMPT", "0")
+        .output()
+        .map_err(|e| format!("shell exec failed: {e}"))?;
+
+    if out.status.success() {
+        Ok(String::from_utf8_lossy(&out.stdout).into())
+    } else {
+        let stderr = String::from_utf8_lossy(&out.stderr).trim().to_string();
+        if is_auth_error(&stderr) {
+            Err(format!("AUTH_REQUIRED: {stderr}"))
+        } else {
+            Err(stderr)
+        }
+    }
+}
+
+/// Run git with an askpass script that echoes the given passphrase/token.
+/// Works for both SSH key passphrases and HTTPS tokens.
+fn shell_git_with_askpass(cwd: &str, subcmd: &str, secret: &str) -> Result<String, String> {
+    use std::os::unix::fs::PermissionsExt;
+
+    let script_path = std::env::temp_dir().join("mat_git_askpass.sh");
+    // Escape single quotes inside the secret
+    let escaped = secret.replace('\'', "'\\''");
+    std::fs::write(&script_path, format!("#!/bin/sh\necho '{}'\n", escaped))
+        .map_err(|e| format!("askpass write: {e}"))?;
+    std::fs::set_permissions(&script_path, std::fs::Permissions::from_mode(0o755))
+        .map_err(|e| format!("askpass chmod: {e}"))?;
+
+    let script_str = script_path.to_string_lossy().to_string();
+
     let out = Command::new("/bin/zsh")
         .args(["-l", "-c", &format!("git {subcmd}")])
         .current_dir(cwd)
         .env_remove("GIT_DIR")
         .env_remove("GIT_WORK_TREE")
+        .env("SSH_ASKPASS", &script_str)
+        .env("SSH_ASKPASS_REQUIRE", "force")
+        .env("GIT_ASKPASS", &script_str)
+        .env("GIT_TERMINAL_PROMPT", "0")
         .output()
         .map_err(|e| format!("shell exec failed: {e}"))?;
+
+    let _ = std::fs::remove_file(&script_path);
+
     if out.status.success() {
         Ok(String::from_utf8_lossy(&out.stdout).into())
     } else {
-        Err(String::from_utf8_lossy(&out.stderr).trim().into())
+        let stderr = String::from_utf8_lossy(&out.stderr).trim().to_string();
+        if is_auth_error(&stderr) {
+            Err(format!("AUTH_REQUIRED: {stderr}"))
+        } else {
+            Err(stderr)
+        }
     }
 }
 
@@ -312,4 +376,16 @@ pub fn git_pull(cwd: String) -> Result<String, String> {
 #[tauri::command]
 pub fn git_push(cwd: String) -> Result<String, String> {
     shell_git(&cwd, "push")
+}
+
+/// Pull with an explicit passphrase/token (used after AUTH_REQUIRED error).
+#[tauri::command]
+pub fn git_pull_with_passphrase(cwd: String, passphrase: String) -> Result<String, String> {
+    shell_git_with_askpass(&cwd, "pull", &passphrase)
+}
+
+/// Push with an explicit passphrase/token (used after AUTH_REQUIRED error).
+#[tauri::command]
+pub fn git_push_with_passphrase(cwd: String, passphrase: String) -> Result<String, String> {
+    shell_git_with_askpass(&cwd, "push", &passphrase)
 }
