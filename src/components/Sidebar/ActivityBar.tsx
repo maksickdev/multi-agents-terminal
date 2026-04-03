@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Folder, SquareTerminal, Settings, PanelLeft } from "lucide-react";
 import { useStore } from "../../store/useStore";
 import { SettingsModal } from "../Settings/SettingsModal";
@@ -12,6 +12,18 @@ export function ActivityBar() {
 
   const [settingsOpen, setSettingsOpen] = useState(false);
 
+  // ⌘B — toggle sidebar (matches VS Code convention)
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.metaKey && e.key === "b") {
+        e.preventDefault();
+        setSidebarOpen(!sidebarOpen);
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [sidebarOpen, setSidebarOpen]);
+
   return (
     <>
       {settingsOpen && <SettingsModal onClose={() => setSettingsOpen(false)} />}
@@ -21,7 +33,7 @@ export function ActivityBar() {
         <div className="flex flex-col items-center gap-1 pt-2 flex-1">
           <button
             onClick={() => setSidebarOpen(!sidebarOpen)}
-            title="Toggle sidebar"
+            title="Toggle sidebar (⌘B)"
             className={`flex items-center justify-center w-9 h-9 rounded transition-colors ${
               sidebarOpen
                 ? "text-[var(--c-accent)] bg-[var(--c-bg)]"
