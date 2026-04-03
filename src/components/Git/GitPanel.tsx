@@ -9,10 +9,11 @@ import {
   type GitFileStatus, type GitStatus,
 } from "../../lib/tauri";
 import { GitAuthModal } from "./GitAuthModal";
+import { ConfirmModal } from "../shared/ConfirmModal";
 import { GitDiffModal } from "./GitDiffModal";
 import {
   RefreshCw, Plus, Minus, GitCommit, CloudDownload, CloudUpload,
-  ChevronDown, ChevronRight, RotateCcw,
+  ChevronDown, ChevronRight, RotateCcw, Trash2,
 } from "lucide-react";
 
 // ── status helpers ────────────────────────────────────────────────────────────
@@ -119,7 +120,7 @@ function FileRow({
 
 function SectionHeader({
   label, count, expanded, onToggle,
-  onStageAll, onUnstageAll,
+  onStageAll, onUnstageAll, onDiscardAll,
 }: {
   label: string;
   count: number;
@@ -127,6 +128,7 @@ function SectionHeader({
   onToggle: () => void;
   onStageAll?: () => void;
   onUnstageAll?: () => void;
+  onDiscardAll?: () => void;
 }) {
   return (
     <div
@@ -145,6 +147,15 @@ function SectionHeader({
             className="p-0.5 text-[var(--c-text-dim)] hover:text-[var(--c-success)] rounded"
           >
             <Plus size={11} />
+          </button>
+        )}
+        {onDiscardAll && (
+          <button
+            onClick={(e) => { e.stopPropagation(); onDiscardAll(); }}
+            title="Discard all changes"
+            className="p-0.5 text-[var(--c-text-dim)] hover:text-[var(--c-danger)] rounded"
+          >
+            <Trash2 size={11} />
           </button>
         )}
         {onUnstageAll && (
@@ -178,6 +189,8 @@ export function GitPanel() {
   const [authModal, setAuthModal]     = useState<{ operation: "push" | "pull" } | null>(null);
   const [stagedExpanded, setStagedExpanded]   = useState(true);
   const [changesExpanded, setChangesExpanded] = useState(true);
+  const [discardConfirm, setDiscardConfirm]   = useState<{ file: GitFileStatus } | null>(null);
+  const [discardAllConfirm, setDiscardAllConfirm] = useState(false);
 
   // ── resize ──────────────────────────────────────────────────────────────────
   const resizingRef = useRef(false);
@@ -345,6 +358,33 @@ export function GitPanel() {
     else if (op === "pull") doPull(passphrase);
   };
 
+  const doDiscard = async (file: GitFileStatus) => {
+    if (!project) return;
+    setDiscardConfirm(null);
+    try {
+      await gitDiscard(project.path, file.path);
+      refresh();
+      reloadIfOpen(file.path);
+    } catch (e) {
+      setError(String(e));
+    }
+  };
+
+  const doDiscardAll = async () => {
+    if (!project) return;
+    setDiscardAllConfirm(false);
+    // Discard all modified tracked files (not untracked)
+    try {
+      for (const f of unstagedFiles) {
+        await gitDiscard(project.path, f.path);
+        reloadIfOpen(f.path);
+      }
+      refresh();
+    } catch (e) {
+      setError(String(e));
+    }
+  };
+
   // split the panel vertically: top = file list, bottom = diff
   return (
     <>
@@ -353,6 +393,26 @@ export function GitPanel() {
         operation={authModal.operation}
         onConfirm={handleAuthConfirm}
         onCancel={() => setAuthModal(null)}
+      />
+    )}
+    {discardConfirm && (
+      <ConfirmModal
+        title="Discard Changes"
+        message={`Discard all changes in "${discardConfirm.file.path.split("/").pop()}"? This cannot be undone.`}
+        confirmLabel="Discard"
+        danger
+        onConfirm={() => doDiscard(discardConfirm.file)}
+        onCancel={() => setDiscardConfirm(null)}
+      />
+    )}
+    {discardAllConfirm && (
+      <ConfirmModal
+        title="Discard All Changes"
+        message={`Discard changes in all ${unstagedFiles.length} modified file${unstagedFiles.length !== 1 ? "s" : ""}? This cannot be undone.`}
+        confirmLabel="Discard All"
+        danger
+        onConfirm={doDiscardAll}
+        onCancel={() => setDiscardAllConfirm(false)}
       />
     )}
     {diffModal && (
@@ -476,6 +536,7 @@ export function GitPanel() {
               expanded={changesExpanded}
               onToggle={() => setChangesExpanded(v => !v)}
               onStageAll={allChanges.length > 0 ? () => gitStageAll(project.path).then(refresh) : undefined}
+              onDiscardAll={unstagedFiles.length > 0 ? () => setDiscardAllConfirm(true) : undefined}
             />
             {changesExpanded && allChanges.map(f => (
               <FileRow
@@ -486,7 +547,7 @@ export function GitPanel() {
                 onSelect={() => openDiff(f.path, false)}
                 onStage={() => gitStage(project.path, f.path).then(refresh)}
                 onUnstage={() => {}}
-                onDiscard={() => gitDiscard(project.path, f.path).then(() => { refresh(); reloadIfOpen(f.path); })}
+                onDiscard={() => setDiscardConfirm({ file: f })}
               />
             ))}
 
