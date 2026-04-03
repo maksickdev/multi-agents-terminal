@@ -4,7 +4,7 @@ import { ProjectItem } from "./ProjectItem";
 import { useStore } from "../../store/useStore";
 
 export function Sidebar() {
-  const { projects, sidebarWidth, setSidebarWidth } = useStore();
+  const { projects, sidebarOpen, sidebarWidth, setSidebarWidth } = useStore();
 
   const resizingRef = useRef(false);
   const startXRef   = useRef(0);
@@ -31,8 +31,8 @@ export function Sidebar() {
 
   return (
     <aside
-      style={{ width: sidebarWidth, flexShrink: 0, position: "relative" }}
-      className="flex flex-col bg-[var(--c-bg-deep)] border-r border-[var(--c-border)] h-full select-none overflow-hidden"
+      style={{ width: sidebarOpen ? sidebarWidth : 0, flexShrink: 0, position: "relative", overflow: "hidden" }}
+      className="flex flex-col bg-[var(--c-bg-deep)] border-r border-[var(--c-border)] h-full select-none"
     >
       {/* Projects label */}
       <div className="flex items-center px-4 h-8 border-b border-[var(--c-border)]">

@@ -51,6 +51,8 @@ interface AppStore {
   setShellAgentId: (projectId: string, agentId: string) => void;
 
   // File explorer
+  sidebarOpen: boolean;
+  setSidebarOpen: (open: boolean) => void;
   sidebarWidth: number;
   setSidebarWidth: (width: number) => void;
 
@@ -96,6 +98,7 @@ export const useStore = create<AppStore>((set, get) => ({
   bottomPanelHeight: 220,
   shellAgentIds: {},
 
+  sidebarOpen: true,
   sidebarWidth: 192,
 
   fileExplorerOpen: false,
@@ -191,6 +194,7 @@ export const useStore = create<AppStore>((set, get) => ({
   setShellAgentId: (projectId, agentId) =>
     set((s) => ({ shellAgentIds: { ...s.shellAgentIds, [projectId]: agentId } })),
 
+  setSidebarOpen: (open) => set({ sidebarOpen: open }),
   setSidebarWidth: (width) => set({ sidebarWidth: Math.max(140, Math.min(width, 480)) }),
 
   setFileExplorerOpen: (open) => set({ fileExplorerOpen: open }),
