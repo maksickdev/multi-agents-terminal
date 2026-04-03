@@ -81,6 +81,8 @@ interface AppStore {
   setActiveFile: (path: string) => void;
   updateFileContent: (path: string, content: string) => void;
   markFileSaved: (path: string) => void;
+  /** Replace content + clear dirty flag (used after external changes like git discard). */
+  reloadFileContent: (path: string, content: string) => void;
   setEditorPaneHeight: (height: number) => void;
   reorderOpenFiles: (orderedPaths: string[]) => void;
 
@@ -258,6 +260,13 @@ export const useStore = create<AppStore>((set, get) => ({
     set((s) => ({
       openFiles: s.openFiles.map((f) =>
         f.path === path ? { ...f, isDirty: false } : f
+      ),
+    })),
+
+  reloadFileContent: (path, content) =>
+    set((s) => ({
+      openFiles: s.openFiles.map((f) =>
+        f.path === path ? { ...f, content, isDirty: false } : f
       ),
     })),
 

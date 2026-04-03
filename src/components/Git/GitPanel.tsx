@@ -5,6 +5,7 @@ import {
   gitUnstage, gitUnstageAll, gitDiscard, gitCommit,
   gitInit, gitPull, gitPush,
   gitPullWithPassphrase, gitPushWithPassphrase,
+  readFileText,
   type GitFileStatus, type GitStatus,
 } from "../../lib/tauri";
 import { GitAuthModal } from "./GitAuthModal";
@@ -163,7 +164,7 @@ function SectionHeader({
 // ── main panel ────────────────────────────────────────────────────────────────
 
 export function GitPanel() {
-  const { projects, selectedProjectId, gitPanelWidth, setGitPanelWidth, gitPanelOpen, bumpGitStatus } = useStore();
+  const { projects, selectedProjectId, gitPanelWidth, setGitPanelWidth, gitPanelOpen, bumpGitStatus, openFiles, reloadFileContent } = useStore();
   const project = projects.find((p) => p.id === selectedProjectId) ?? null;
 
   const [status, setStatus]           = useState<GitStatus | null>(null);
@@ -228,6 +229,29 @@ export function GitPanel() {
   }, [project?.id, project?.path, gitPanelOpen]);
 
   const refresh = () => refreshRef.current();
+
+  // ── auto-refresh: every 5 s when panel open + on window focus ────────────
+  useEffect(() => {
+    if (!gitPanelOpen) return;
+    const interval = setInterval(() => refresh(), 5000);
+    const onFocus = () => refresh();
+    window.addEventListener("focus", onFocus);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener("focus", onFocus);
+    };
+  }, [gitPanelOpen]);
+
+  // ── reload editor if file is open after external change ──────────────────
+  const reloadIfOpen = (relativePath: string) => {
+    if (!project) return;
+    const fullPath = `${project.path}/${relativePath}`;
+    if (openFiles.some((f) => f.path === fullPath)) {
+      readFileText(fullPath)
+        .then((content) => reloadFileContent(fullPath, content))
+        .catch(() => {});
+    }
+  };
 
   // ── open diff modal ───────────────────────────────────────────────────────
   const openDiff = (path: string, staged: boolean) => {
@@ -462,7 +486,7 @@ export function GitPanel() {
                 onSelect={() => openDiff(f.path, false)}
                 onStage={() => gitStage(project.path, f.path).then(refresh)}
                 onUnstage={() => {}}
-                onDiscard={() => gitDiscard(project.path, f.path).then(refresh)}
+                onDiscard={() => gitDiscard(project.path, f.path).then(() => { refresh(); reloadIfOpen(f.path); })}
               />
             ))}
 
