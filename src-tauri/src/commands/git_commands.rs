@@ -366,6 +366,12 @@ pub fn git_log(cwd: String, limit: Option<u32>) -> Result<Vec<GitLogEntry>, Stri
     Ok(entries)
 }
 
+/// Initialize a new git repository.
+#[tauri::command]
+pub fn git_init(cwd: String) -> Result<(), String> {
+    Repository::init(&cwd).map(|_| ()).map_err(|e| e.to_string())
+}
+
 /// Pull via shell — needs credential helpers / SSH agent from user's env.
 #[tauri::command]
 pub fn git_pull(cwd: String) -> Result<String, String> {

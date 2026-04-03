@@ -2,7 +2,8 @@ import { useEffect, useRef, useState } from "react";
 import { useStore } from "../../store/useStore";
 import {
   gitStatus, gitDiff, gitStage, gitStageAll,
-  gitUnstage, gitUnstageAll, gitDiscard, gitCommit, gitPull, gitPush,
+  gitUnstage, gitUnstageAll, gitDiscard, gitCommit,
+  gitInit, gitPull, gitPush,
   gitPullWithPassphrase, gitPushWithPassphrase,
   type GitFileStatus, type GitStatus,
 } from "../../lib/tauri";
@@ -383,15 +384,37 @@ export function GitPanel() {
       )}
 
       {!status?.isGitRepo ? (
-        <div className="flex-1 flex flex-col items-center justify-center text-[var(--c-text-dim)] text-xs p-4 text-center gap-2">
+        <div className="flex-1 flex flex-col items-center justify-center p-4 text-center gap-3">
           {status === null && !error ? (
-            <span>Loading…</span>
+            <span className="text-xs text-[var(--c-text-dim)]">Loading…</span>
           ) : (
             <>
-              <span>Not a git repository</span>
-              {project && (
-                <span className="text-[10px] opacity-60 break-all">{project.path}</span>
-              )}
+              <div className="flex flex-col items-center gap-1">
+                <span className="text-xs text-[var(--c-text-dim)]">Not a git repository</span>
+                {project && (
+                  <span className="text-[10px] text-[var(--c-text-dim)] opacity-50 break-all">{project.path}</span>
+                )}
+              </div>
+              <button
+                onClick={async () => {
+                  if (!project) return;
+                  try {
+                    await gitInit(project.path);
+                    refresh();
+                  } catch (e) {
+                    setError(String(e));
+                  }
+                }}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-medium transition-colors"
+                style={{
+                  background: "var(--c-accent)/15",
+                  backgroundColor: "color-mix(in srgb, var(--c-accent) 15%, transparent)",
+                  color: "var(--c-accent)",
+                  border: "1px solid color-mix(in srgb, var(--c-accent) 30%, transparent)",
+                }}
+              >
+                Initialize Repository
+              </button>
             </>
           )}
         </div>

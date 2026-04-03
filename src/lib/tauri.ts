@@ -155,6 +155,7 @@ export const gitUnstageAll = (cwd: string) => invoke<void>("git_unstage_all", { 
 export const gitDiscard = (cwd: string, path: string) => invoke<void>("git_discard", { cwd, path });
 export const gitCommit  = (cwd: string, message: string) => invoke<void>("git_commit", { cwd, message });
 export const gitLog     = (cwd: string, limit?: number) => invoke<GitLogEntry[]>("git_log", { cwd, limit });
+export const gitInit    = (cwd: string) => invoke<void>("git_init", { cwd });
 export const gitPull    = (cwd: string) => invoke<string>("git_pull", { cwd });
 export const gitPush    = (cwd: string) => invoke<string>("git_push", { cwd });
 export const gitPullWithPassphrase = (cwd: string, passphrase: string) =>
