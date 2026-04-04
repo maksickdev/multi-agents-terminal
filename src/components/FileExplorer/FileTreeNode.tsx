@@ -152,8 +152,8 @@ export function FileTreeNode({ entry, depth, projectId, onRefresh, renderChildre
         <span className="flex-shrink-0 flex items-center">
           {entry.is_dir
             ? (renderChildren
-                ? <FolderOpen size={13} style={{ color: "var(--c-accent-yellow)" }} />
-                : <Folder size={13} style={{ color: "var(--c-accent-yellow)" }} />)
+                ? <FolderOpen size={13} style={{ color: "var(--c-accent)" }} />
+                : <Folder size={13} style={{ color: "var(--c-accent)" }} />)
             : <FileIcon name={entry.name} size={13} />}
         </span>
 
