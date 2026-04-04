@@ -11,9 +11,10 @@ import {
 import { GitAuthModal } from "./GitAuthModal";
 import { ConfirmModal } from "../shared/ConfirmModal";
 import { GitDiffModal } from "./GitDiffModal";
+import { ContextMenu } from "../FileExplorer/ContextMenu";
 import {
   RefreshCw, Plus, Minus, GitCommit, CloudDownload, CloudUpload,
-  ChevronDown, ChevronRight, RotateCcw, Trash2,
+  ChevronDown, ChevronRight, RotateCcw, Trash2, FolderOpen,
 } from "lucide-react";
 
 // ── status helpers ────────────────────────────────────────────────────────────
@@ -46,7 +47,7 @@ function statusColor(s: string): string {
 // ── file row ──────────────────────────────────────────────────────────────────
 
 function FileRow({
-  file, isSelected, isStaged, onSelect, onStage, onUnstage, onDiscard,
+  file, isSelected, isStaged, onSelect, onStage, onUnstage, onDiscard, onContextMenu,
 }: {
   file: GitFileStatus;
   isSelected: boolean;
@@ -55,6 +56,7 @@ function FileRow({
   onStage: () => void;
   onUnstage: () => void;
   onDiscard: () => void;
+  onContextMenu: (e: React.MouseEvent) => void;
 }) {
   const status = isStaged ? file.stagedStatus : file.unstagedStatus;
   const name = file.path.split("/").pop() ?? file.path;
@@ -63,6 +65,7 @@ function FileRow({
   return (
     <div
       onClick={onSelect}
+      onContextMenu={onContextMenu}
       className={`group flex items-center gap-1.5 px-2 py-0.5 cursor-pointer text-xs select-none transition-colors ${
         isSelected ? "bg-[var(--c-bg-selected)]" : "hover:bg-[var(--c-bg-elevated)]"
       }`}
@@ -175,7 +178,7 @@ function SectionHeader({
 // ── main panel ────────────────────────────────────────────────────────────────
 
 export function GitPanel() {
-  const { projects, selectedProjectId, gitPanelWidth, setGitPanelWidth, gitPanelOpen, bumpGitStatus, openFiles, reloadFileContent } = useStore();
+  const { projects, selectedProjectId, gitPanelWidth, setGitPanelWidth, gitPanelOpen, bumpGitStatus, openFiles, reloadFileContent, openFile } = useStore();
   const project = projects.find((p) => p.id === selectedProjectId) ?? null;
 
   const [status, setStatus]           = useState<GitStatus | null>(null);
@@ -191,6 +194,7 @@ export function GitPanel() {
   const [changesExpanded, setChangesExpanded] = useState(true);
   const [discardConfirm, setDiscardConfirm]   = useState<{ file: GitFileStatus } | null>(null);
   const [discardAllConfirm, setDiscardAllConfirm] = useState(false);
+  const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number; file: GitFileStatus; isStaged: boolean } | null>(null);
 
   // ── resize ──────────────────────────────────────────────────────────────────
   const resizingRef = useRef(false);
@@ -370,6 +374,22 @@ export function GitPanel() {
     }
   };
 
+  const openFileInEditor = async (relativePath: string) => {
+    if (!project) return;
+    const fullPath = `${project.path}/${relativePath}`;
+    try {
+      const content = await readFileText(fullPath);
+      const ext = relativePath.split(".").pop() ?? "";
+      const langMap: Record<string, string> = {
+        ts: "typescript", tsx: "typescript", js: "javascript", jsx: "javascript",
+        css: "css", html: "html", rs: "rust", json: "json", md: "markdown",
+      };
+      openFile({ path: fullPath, projectId: project.id, content, isDirty: false, language: langMap[ext] ?? "" });
+    } catch (e) {
+      setError(String(e));
+    }
+  };
+
   const doDiscardAll = async () => {
     if (!project) return;
     setDiscardAllConfirm(false);
@@ -393,6 +413,22 @@ export function GitPanel() {
         operation={authModal.operation}
         onConfirm={handleAuthConfirm}
         onCancel={() => setAuthModal(null)}
+      />
+    )}
+    {ctxMenu && (
+      <ContextMenu
+        x={ctxMenu.x}
+        y={ctxMenu.y}
+        onClose={() => setCtxMenu(null)}
+        items={[
+          ctxMenu.isStaged
+            ? { label: "Unstage", icon: Minus, onClick: () => gitUnstage(project!.path, ctxMenu.file.path).then(refresh) }
+            : { label: "Stage", icon: Plus, onClick: () => gitStage(project!.path, ctxMenu.file.path).then(refresh) },
+          ...(!ctxMenu.isStaged && ctxMenu.file.unstagedStatus !== "?"
+            ? [{ label: "Discard changes", icon: RotateCcw, danger: true as const, onClick: () => setDiscardConfirm({ file: ctxMenu.file }) }]
+            : []),
+          { label: "Open file", icon: FolderOpen, onClick: () => openFileInEditor(ctxMenu.file.path) },
+        ]}
       />
     )}
     {discardConfirm && (
@@ -526,6 +562,7 @@ export function GitPanel() {
                 onStage={() => {}}
                 onUnstage={() => gitUnstage(project.path, f.path).then(refresh)}
                 onDiscard={() => {}}
+                onContextMenu={(e) => { e.preventDefault(); setCtxMenu({ x: e.clientX, y: e.clientY, file: f, isStaged: true }); }}
               />
             ))}
 
@@ -548,6 +585,7 @@ export function GitPanel() {
                 onStage={() => gitStage(project.path, f.path).then(refresh)}
                 onUnstage={() => {}}
                 onDiscard={() => setDiscardConfirm({ file: f })}
+                onContextMenu={(e) => { e.preventDefault(); setCtxMenu({ x: e.clientX, y: e.clientY, file: f, isStaged: false }); }}
               />
             ))}
 
