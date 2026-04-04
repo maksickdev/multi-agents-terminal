@@ -41,6 +41,28 @@ const tokyoNightTheme = EditorView.theme({
   "&.cm-focused .cm-selectionBackground": { backgroundColor: "#283457" },
 }, { dark: true });
 
+// ── Dark: Grid Mint ───────────────────────────────────────────────────────────
+const gridMintTheme = EditorView.theme({
+  "&": {
+    backgroundColor: "#0a0a0a",
+    color: "#cccccc",
+    height: "100%",
+    fontSize: "13px",
+    fontFamily: '"JetBrains Mono", "Cascadia Code", Menlo, monospace',
+  },
+  ".cm-scroller": { overflow: "auto" },
+  ".cm-content": { caretColor: "#00d4aa", padding: "4px 0" },
+  ".cm-cursor": { borderLeftColor: "#00d4aa" },
+  ".cm-activeLine": { backgroundColor: "#111111" },
+  ".cm-gutters": { backgroundColor: "#0a0a0a", borderRight: "1px solid #1e1e1e", color: "#333333" },
+  ".cm-activeLineGutter": { backgroundColor: "#111111" },
+  ".cm-lineNumbers .cm-gutterElement": { padding: "0 8px" },
+  ".cm-selectionBackground, ::selection": { backgroundColor: "#00d4aa28" },
+  "&.cm-focused .cm-selectionBackground": { backgroundColor: "#00d4aa28" },
+  ".cm-tooltip": { backgroundColor: "#111111", border: "1px solid #1e1e1e", color: "#cccccc" },
+  ".cm-tooltip-autocomplete ul li[aria-selected]": { backgroundColor: "#00d4aa22" },
+}, { dark: true });
+
 // ── Light: Dawn ───────────────────────────────────────────────────────────────
 const dawnTheme = EditorView.theme({
   "&": {
@@ -64,7 +86,8 @@ const dawnTheme = EditorView.theme({
 }, { dark: false });
 
 function getThemeExtensions(themeId: ThemeId) {
-  if (themeId === "dark") return [oneDark, tokyoNightTheme];
+  if (themeId === "dark")  return [oneDark, tokyoNightTheme];
+  if (themeId === "mint")  return [oneDark, gridMintTheme];
   return [dawnTheme, syntaxHighlighting(defaultHighlightStyle)];
 }
 
