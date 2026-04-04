@@ -12,6 +12,7 @@ import { GitAuthModal } from "./GitAuthModal";
 import { ConfirmModal } from "../shared/ConfirmModal";
 import { GitDiffModal } from "./GitDiffModal";
 import { ContextMenu } from "../FileExplorer/ContextMenu";
+import { detectLanguage } from "../../lib/languageDetect";
 import {
   RefreshCw, Plus, Minus, GitCommit, CloudDownload, CloudUpload,
   ChevronDown, ChevronRight, RotateCcw, Trash2, FolderOpen,
@@ -376,16 +377,16 @@ export function GitPanel() {
 
   const openFileInEditor = async (relativePath: string) => {
     if (!project) return;
-    const fullPath = `${project.path}/${relativePath}`;
+    // Capture synchronously before any await — avoids stale closure after re-render
+    const projectId   = project.id;
+    const projectPath = project.path;
+    const fileName    = relativePath.split("/").pop() ?? relativePath;
+    const fullPath    = `${projectPath}/${relativePath}`;
     try {
       const content = await readFileText(fullPath);
-      const ext = relativePath.split(".").pop() ?? "";
-      const langMap: Record<string, string> = {
-        ts: "typescript", tsx: "typescript", js: "javascript", jsx: "javascript",
-        css: "css", html: "html", rs: "rust", json: "json", md: "markdown",
-      };
-      openFile({ path: fullPath, projectId: project.id, content, isDirty: false, language: langMap[ext] ?? "" });
+      openFile({ path: fullPath, projectId, content, isDirty: false, language: detectLanguage(fileName) });
     } catch (e) {
+      console.error("[openFileInEditor] failed:", fullPath, e);
       setError(String(e));
     }
   };
