@@ -4,7 +4,7 @@ import { EditorState, Compartment, Transaction } from "@codemirror/state";
 import { defaultKeymap, history, historyKeymap, indentWithTab } from "@codemirror/commands";
 import { indentOnInput, syntaxHighlighting, defaultHighlightStyle, bracketMatching, foldGutter, foldKeymap } from "@codemirror/language";
 import { autocompletion, completionKeymap, closeBrackets, closeBracketsKeymap } from "@codemirror/autocomplete";
-import { oneDark } from "@codemirror/theme-one-dark";
+import { oneDark, oneDarkHighlightStyle } from "@codemirror/theme-one-dark";
 import { javascript } from "@codemirror/lang-javascript";
 import { css } from "@codemirror/lang-css";
 import { html } from "@codemirror/lang-html";
@@ -87,7 +87,7 @@ const dawnTheme = EditorView.theme({
 
 function getThemeExtensions(themeId: ThemeId) {
   if (themeId === "dark")  return [oneDark, tokyoNightTheme];
-  if (themeId === "mint")  return [oneDark, gridMintTheme];
+  if (themeId === "mint")  return [gridMintTheme, syntaxHighlighting(oneDarkHighlightStyle)];
   return [dawnTheme, syntaxHighlighting(defaultHighlightStyle)];
 }
 
