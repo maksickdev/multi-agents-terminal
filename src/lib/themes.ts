@@ -1,4 +1,4 @@
-export type ThemeId = "dark" | "light";
+export type ThemeId = "dark" | "light" | "mint";
 
 export interface ThemeVars {
   bgDeep: string;
@@ -48,6 +48,29 @@ export const themes: Theme[] = [
       danger: "#f7768e",
       success: "#9ece6a",
       purple: "#bb9af7",
+    },
+  },
+  {
+    id: "mint",
+    name: "Grid Mint",
+    vars: {
+      bgDeep:       "#080c13",
+      bg:           "#0d1219",
+      bgElevated:   "#121b27",
+      bgSelected:   "#172233",
+      bgHover:      "#1c2a3f",
+      dragBg:       "#1e3050",
+      border:       "#1a2535",
+      muted:        "#2e4060",
+      textDim:      "#4a6888",
+      text:         "#7a9ab5",
+      textBright:   "#b8d0e5",
+      accent:       "#00d4aa",
+      accentCyan:   "#00b8d4",
+      accentYellow: "#f0c040",
+      danger:       "#ff4f72",
+      success:      "#00e5a0",
+      purple:       "#9d7af0",
     },
   },
   {

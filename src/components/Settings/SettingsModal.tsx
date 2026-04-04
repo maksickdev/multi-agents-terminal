@@ -23,7 +23,7 @@ export function SettingsModal({ onClose }: Props) {
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
       onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
-      <div className="bg-[var(--c-bg-elevated)] border border-[var(--c-border)] rounded-xl shadow-2xl w-96 flex flex-col overflow-hidden">
+      <div className="bg-[var(--c-bg-elevated)] border border-[var(--c-border)] rounded-xl shadow-2xl w-[480px] flex flex-col overflow-hidden">
         {/* Header */}
         <div className="flex items-center justify-between px-4 h-10 border-b border-[var(--c-border)]">
           <span className="text-sm font-semibold text-[var(--c-text-bright)]">Settings</span>
@@ -44,7 +44,7 @@ export function SettingsModal({ onClose }: Props) {
               Theme
             </span>
 
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-3 gap-2">
               {themes.map((t) => {
                 const isActive = theme === t.id;
                 return (
