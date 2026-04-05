@@ -2,6 +2,32 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Git commit convention
+
+All commits must follow the **Conventional Commits** specification:
+
+```
+<type>(<scope>): <description>
+
+[optional body]
+
+[optional footer]
+```
+
+- **type** (required): `feat`, `fix`, `refactor`, `style`, `docs`, `test`, `perf`, `build`, `ci`, `chore`
+- **scope** (optional): area of the codebase in parentheses, e.g. `feat(git):`, `fix(editor):`
+- **description**: short, lowercase, present tense, no period at end
+- **body**: optional, more detail
+- **footer**: optional, e.g. `Closes #123` or `BREAKING CHANGE:`
+
+Examples:
+```
+feat(git): add graph view with branch lane visualization
+fix(editor): prevent dirty flag on external content reload
+refactor(git): expand history section to fill remaining panel space
+chore: update dependencies
+```
+
 ## Commands
 
 ```bash
