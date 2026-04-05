@@ -242,7 +242,7 @@ export function GitGraphView({ commits, loading }: Props) {
   const rows = computeGraph(commits);
 
   return (
-    <div className="flex-1 overflow-y-auto overflow-x-hidden">
+    <div className="h-full overflow-y-auto overflow-x-hidden">
       {rows.map((row) => (
         <div
           key={row.commit.hash}

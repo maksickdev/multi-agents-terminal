@@ -562,8 +562,8 @@ export function GitPanel() {
         <div className="flex flex-col flex-1 min-h-0">
 
           {/* ── File lists + History ── */}
-          <div className="overflow-y-auto flex-1">
-
+          {/* ── Staged + Changes — fixed area, scrolls if many files ── */}
+          <div className="overflow-y-auto flex-shrink-0" style={{ maxHeight: "45%" }}>
             {/* Staged */}
             <SectionHeader
               label="Staged"
@@ -614,8 +614,10 @@ export function GitPanel() {
                 No changes
               </div>
             )}
+          </div>
 
-            {/* History (graph) section */}
+          {/* ── History — fills all remaining space ── */}
+          <div className="flex flex-col flex-1 min-h-0 border-t border-[var(--c-border)]">
             <SectionHeader
               label="History"
               count={graphCommits.length}
@@ -623,7 +625,7 @@ export function GitPanel() {
               onToggle={() => setHistoryExpanded(v => !v)}
             />
             {historyExpanded && (
-              <div style={{ height: 320 }} className="flex flex-col border-b border-[var(--c-border)]">
+              <div className="flex-1 min-h-0">
                 <GitGraphView commits={graphCommits} loading={graphLoading} />
               </div>
             )}
