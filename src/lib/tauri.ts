@@ -143,6 +143,8 @@ export interface GitLogEntry {
   message: string;
   author: string;
   date: string;
+  parents: string[];
+  refs: string[];
 }
 
 export const gitStatus  = (cwd: string) => invoke<GitStatus>("git_status", { cwd });

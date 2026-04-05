@@ -11,11 +11,15 @@ import {
 import { GitAuthModal } from "./GitAuthModal";
 import { ConfirmModal } from "../shared/ConfirmModal";
 import { GitDiffModal } from "./GitDiffModal";
+import { GitGraphView } from "./GitGraphView";
 import { ContextMenu } from "../FileExplorer/ContextMenu";
 import { detectLanguage } from "../../lib/languageDetect";
 import {
+  gitLog, type GitLogEntry,
+} from "../../lib/tauri";
+import {
   RefreshCw, Plus, Minus, GitCommit, CloudDownload, CloudUpload,
-  ChevronDown, ChevronRight, RotateCcw, Trash2, FolderOpen,
+  ChevronDown, ChevronRight, RotateCcw, Trash2, FolderOpen, GitGraph,
 } from "lucide-react";
 
 // ── status helpers ────────────────────────────────────────────────────────────
@@ -196,6 +200,9 @@ export function GitPanel() {
   const [discardConfirm, setDiscardConfirm]   = useState<{ file: GitFileStatus } | null>(null);
   const [discardAllConfirm, setDiscardAllConfirm] = useState(false);
   const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number; file: GitFileStatus; isStaged: boolean } | null>(null);
+  const [view, setView] = useState<"changes" | "graph">("changes");
+  const [graphCommits, setGraphCommits] = useState<GitLogEntry[]>([]);
+  const [graphLoading, setGraphLoading] = useState(false);
 
   // ── resize ──────────────────────────────────────────────────────────────────
   const resizingRef = useRef(false);
@@ -247,6 +254,17 @@ export function GitPanel() {
   }, [project?.id, project?.path, gitPanelOpen]);
 
   const refresh = () => refreshRef.current();
+
+  // ── load graph when switching to graph view ───────────────────────────────
+  useEffect(() => {
+    if (view !== "graph" || !project || !status?.isGitRepo) return;
+    let cancelled = false;
+    setGraphLoading(true);
+    gitLog(project.path, 200)
+      .then((commits) => { if (!cancelled) { setGraphCommits(commits); setGraphLoading(false); } })
+      .catch(() => { if (!cancelled) setGraphLoading(false); });
+    return () => { cancelled = true; };
+  }, [view, project?.id, project?.path, status?.isGitRepo]);
 
   // ── auto-refresh: every 5 s when panel open + on window focus ────────────
   useEffect(() => {
@@ -479,7 +497,7 @@ export function GitPanel() {
           )}
         </div>
         <div className="flex items-center gap-0.5">
-          {status?.isGitRepo && branch.hasRemote && (
+          {status?.isGitRepo && branch.hasRemote && view === "changes" && (
             <>
               <button onClick={() => doPull()} title="Pull" disabled={pulling}
                 className="p-1 text-[var(--c-text-dim)] hover:text-[var(--c-text-bright)] disabled:opacity-40 rounded transition-colors">
@@ -490,6 +508,19 @@ export function GitPanel() {
                 <CloudUpload size={13} />
               </button>
             </>
+          )}
+          {status?.isGitRepo && (
+            <button
+              onClick={() => setView(v => v === "changes" ? "graph" : "changes")}
+              title={view === "changes" ? "Show graph" : "Show changes"}
+              className={`p-1 rounded transition-colors ${
+                view === "graph"
+                  ? "text-[var(--c-accent)]"
+                  : "text-[var(--c-text-dim)] hover:text-[var(--c-text-bright)]"
+              }`}
+            >
+              <GitGraph size={13} />
+            </button>
           )}
           <button onClick={refresh} title="Refresh" disabled={loading}
             className={`p-1 text-[var(--c-text-dim)] hover:text-[var(--c-text-bright)] rounded transition-colors ${loading ? "animate-spin" : ""}`}>
@@ -542,8 +573,14 @@ export function GitPanel() {
         </div>
       ) : (
         <div className="flex flex-col flex-1 min-h-0">
+
+          {/* ── Graph view ── */}
+          {view === "graph" && (
+            <GitGraphView commits={graphCommits} loading={graphLoading} />
+          )}
+
           {/* ── File lists ── */}
-          <div className="overflow-y-auto flex-1">
+          {view === "changes" && <div className="overflow-y-auto flex-1">
 
             {/* Staged */}
             <SectionHeader
@@ -595,29 +632,31 @@ export function GitPanel() {
                 No changes
               </div>
             )}
-          </div>
+          </div>}
 
-          {/* ── Commit bar ── */}
-          <div className="flex-shrink-0 border-t border-[var(--c-border)] p-2 flex flex-col gap-1.5">
-            <textarea
-              value={commitMsg}
-              onChange={e => setCommitMsg(e.target.value)}
-              onKeyDown={e => {
-                if (e.key === "Enter" && e.metaKey) { e.preventDefault(); doCommit(); }
-              }}
-              placeholder="Commit message (⌘↵)"
-              rows={2}
-              className="w-full text-xs bg-[var(--c-bg-elevated)] text-[var(--c-text-bright)] rounded px-2 py-1.5 outline-none resize-none placeholder:text-[var(--c-text-dim)] border border-[var(--c-border)] focus:border-[var(--c-accent)] transition-colors"
-            />
-            <button
-              onClick={doCommit}
-              disabled={!commitMsg.trim() || stagedFiles.length === 0 || committing}
-              className="flex items-center justify-center gap-1.5 w-full py-1.5 rounded text-xs font-medium transition-colors disabled:opacity-40 bg-[var(--c-accent)]/20 text-[var(--c-accent)] hover:bg-[var(--c-accent)]/30 disabled:cursor-not-allowed"
-            >
-              <GitCommit size={12} />
-              {committing ? "Committing…" : `Commit${stagedFiles.length > 0 ? ` (${stagedFiles.length})` : ""}`}
-            </button>
-          </div>
+          {/* ── Commit bar — only in changes view ── */}
+          {view === "changes" && (
+            <div className="flex-shrink-0 border-t border-[var(--c-border)] p-2 flex flex-col gap-1.5">
+              <textarea
+                value={commitMsg}
+                onChange={e => setCommitMsg(e.target.value)}
+                onKeyDown={e => {
+                  if (e.key === "Enter" && e.metaKey) { e.preventDefault(); doCommit(); }
+                }}
+                placeholder="Commit message (⌘↵)"
+                rows={2}
+                className="w-full text-xs bg-[var(--c-bg-elevated)] text-[var(--c-text-bright)] rounded px-2 py-1.5 outline-none resize-none placeholder:text-[var(--c-text-dim)] border border-[var(--c-border)] focus:border-[var(--c-accent)] transition-colors"
+              />
+              <button
+                onClick={doCommit}
+                disabled={!commitMsg.trim() || stagedFiles.length === 0 || committing}
+                className="flex items-center justify-center gap-1.5 w-full py-1.5 rounded text-xs font-medium transition-colors disabled:opacity-40 bg-[var(--c-accent)]/20 text-[var(--c-accent)] hover:bg-[var(--c-accent)]/30 disabled:cursor-not-allowed"
+              >
+                <GitCommit size={12} />
+                {committing ? "Committing…" : `Commit${stagedFiles.length > 0 ? ` (${stagedFiles.length})` : ""}`}
+              </button>
+            </div>
+          )}
         </div>
       )}
 

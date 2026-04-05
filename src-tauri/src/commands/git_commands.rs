@@ -40,6 +40,10 @@ pub struct GitLogEntry {
     pub message: String,
     pub author: String,
     pub date: String,
+    /// Full hashes of parent commits (0 = root, 1 = first parent, 2+ = merge parents)
+    pub parents: Vec<String>,
+    /// Ref labels pointing at this commit: local branches, remote branches, tags, HEAD
+    pub refs: Vec<String>,
 }
 
 // ── helpers ───────────────────────────────────────────────────────────────────
@@ -335,8 +339,56 @@ pub fn git_log(cwd: String, limit: Option<u32>) -> Result<Vec<GitLogEntry>, Stri
     let repo = open_repo(&cwd)?;
     if repo.head().is_err() { return Ok(vec![]); }
 
+    // ── Build oid → ref-label map ─────────────────────────────────────────────
+    let mut ref_map: std::collections::HashMap<String, Vec<String>> = Default::default();
+
+    // Determine which oid HEAD points to (for "HEAD" label)
+    let head_ref  = repo.head().ok();
+    let head_oid  = head_ref.as_ref().and_then(|h| h.target()).map(|o| o.to_string());
+    // Short name of the branch HEAD is on (to avoid duplicating it as "HEAD -> main")
+    let head_branch = head_ref.as_ref()
+        .and_then(|h| h.shorthand())
+        .map(|s| s.to_string());
+
+    if let Ok(refs) = repo.references() {
+        for r in refs.flatten() {
+            // Resolve to direct OID (dereference tags)
+            let oid = r.resolve().ok()
+                .and_then(|rr| rr.target())
+                .or_else(|| r.target());
+            if let Some(oid) = oid {
+                let key = oid.to_string();
+                if let Some(name) = r.shorthand() {
+                    let label = name.to_string();
+                    ref_map.entry(key).or_default().push(label);
+                }
+            }
+        }
+    }
+
+    // Prepend "HEAD" to whichever commit HEAD points at
+    if let Some(ref oid_str) = head_oid {
+        let labels = ref_map.entry(oid_str.clone()).or_default();
+        // Remove the branch name if it's already there; we'll add "HEAD → branch"
+        if let Some(ref branch) = head_branch {
+            labels.retain(|l| l != branch);
+            labels.insert(0, format!("HEAD → {}", branch));
+        } else {
+            labels.insert(0, "HEAD".to_string());
+        }
+    }
+
+    // ── Walk all local branches + remote tracking branches ────────────────────
     let mut walk = repo.revwalk().map_err(|e| e.to_string())?;
-    walk.push_head().map_err(|e| e.to_string())?;
+    // Push every local branch tip
+    if repo.branches(Some(git2::BranchType::Local)).is_ok() {
+        let _ = walk.push_glob("refs/heads/*");
+    }
+    // Push remote tips too so we see diverged remote commits
+    let _ = walk.push_glob("refs/remotes/*");
+    // Fallback in case there are no refs
+    if walk.push_head().is_err() { return Ok(vec![]); }
+
     walk.set_sorting(Sort::TOPOLOGICAL | Sort::TIME).map_err(|e| e.to_string())?;
 
     let now = std::time::SystemTime::now()
@@ -345,21 +397,23 @@ pub fn git_log(cwd: String, limit: Option<u32>) -> Result<Vec<GitLogEntry>, Stri
         .as_secs() as i64;
 
     let entries = walk
-        .take(limit.unwrap_or(20) as usize)
+        .take(limit.unwrap_or(150) as usize)
         .filter_map(|oid| oid.ok())
         .filter_map(|oid| repo.find_commit(oid).ok())
         .map(|c| {
-            let hash      = c.id().to_string();
+            let hash       = c.id().to_string();
             let short_hash = hash[..7].to_string();
-            let message   = c.summary().unwrap_or("").to_string();
-            let author    = c.author().name().unwrap_or("Unknown").to_string();
-            let diff      = now - c.time().seconds();
+            let message    = c.summary().unwrap_or("").to_string();
+            let author     = c.author().name().unwrap_or("Unknown").to_string();
+            let parents: Vec<String> = c.parent_ids().map(|id| id.to_string()).collect();
+            let refs       = ref_map.get(&hash).cloned().unwrap_or_default();
+            let diff       = now - c.time().seconds();
             let date = if diff < 60          { "just now".into() }
                 else if diff < 3600          { format!("{} min ago", diff / 60) }
                 else if diff < 86400         { format!("{} hr ago", diff / 3600) }
                 else if diff < 86400 * 30    { format!("{} days ago", diff / 86400) }
                 else                         { format!("{} mo ago", diff / (86400 * 30)) };
-            GitLogEntry { hash, short_hash, message, author, date }
+            GitLogEntry { hash, short_hash, message, author, date, parents, refs }
         })
         .collect();
 
