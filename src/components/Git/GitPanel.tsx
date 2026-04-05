@@ -211,6 +211,7 @@ export function GitPanel() {
   const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number; file: GitFileStatus; isStaged: boolean } | null>(null);
   const [graphCommits, setGraphCommits] = useState<GitLogEntry[]>([]);
   const [graphLoading, setGraphLoading] = useState(false);
+  const [graphNonce, setGraphNonce]     = useState(0);
 
   // ── resize ──────────────────────────────────────────────────────────────────
   const resizingRef = useRef(false);
@@ -261,7 +262,10 @@ export function GitPanel() {
     return () => { cancelled = true; };
   }, [project?.id, project?.path, gitPanelOpen]);
 
-  const refresh = () => refreshRef.current();
+  const refresh = () => {
+    refreshRef.current();
+    setGraphNonce(n => n + 1);
+  };
 
   // ── load graph when history section is expanded ───────────────────────────
   useEffect(() => {
@@ -272,7 +276,7 @@ export function GitPanel() {
       .then((commits) => { if (!cancelled) { setGraphCommits(commits); setGraphLoading(false); } })
       .catch(() => { if (!cancelled) setGraphLoading(false); });
     return () => { cancelled = true; };
-  }, [historyExpanded, project?.id, project?.path, status?.isGitRepo]);
+  }, [historyExpanded, project?.id, project?.path, status?.isGitRepo, graphNonce]);
 
   // ── auto-refresh: every 5 s when panel open + on window focus ────────────
   useEffect(() => {
