@@ -3,7 +3,7 @@ import { BarChart2, RefreshCw, X } from "lucide-react";
 import { fetchUsage, type UsageData } from "../../lib/tauri";
 import { useStore } from "../../store/useStore";
 
-function UsageBar({ label, pct }: { label: string; pct: number | null }) {
+function UsageBar({ label, pct, resets }: { label: string; pct: number | null; resets?: string | null }) {
   const value = pct ?? 0;
   const color =
     value >= 90 ? "var(--c-danger)" :
@@ -27,6 +27,9 @@ function UsageBar({ label, pct }: { label: string; pct: number | null }) {
           style={{ width: `${Math.min(value, 100)}%`, background: color }}
         />
       </div>
+      {resets && (
+        <span className="text-[9px] text-[var(--c-muted)] leading-tight">{resets}</span>
+      )}
     </div>
   );
 }
@@ -154,16 +157,16 @@ export function UsageButton() {
             {data && !noData && (
               <>
                 {data.session_pct !== null && (
-                  <UsageBar label="Current session" pct={data.session_pct} />
+                  <UsageBar label="Current session" pct={data.session_pct} resets={data.session_resets} />
                 )}
                 {data.week_all_pct !== null && (
-                  <UsageBar label="Week (all models)" pct={data.week_all_pct} />
+                  <UsageBar label="Week (all models)" pct={data.week_all_pct} resets={data.week_all_resets} />
                 )}
                 {data.week_sonnet_pct !== null && (
-                  <UsageBar label="Week (Sonnet only)" pct={data.week_sonnet_pct} />
+                  <UsageBar label="Week (Sonnet only)" pct={data.week_sonnet_pct} resets={data.week_sonnet_resets} />
                 )}
                 {data.extra_pct !== null && (
-                  <UsageBar label="Extra usage" pct={data.extra_pct} />
+                  <UsageBar label="Extra usage" pct={data.extra_pct} resets={data.extra_resets} />
                 )}
               </>
             )}

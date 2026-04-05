@@ -190,9 +190,13 @@ export const gitPushWithPassphrase = (cwd: string, passphrase: string) =>
 // Usage limits
 export interface UsageData {
   session_pct: number | null;
+  session_resets: string | null;
   week_all_pct: number | null;
+  week_all_resets: string | null;
   week_sonnet_pct: number | null;
+  week_sonnet_resets: string | null;
   extra_pct: number | null;
+  extra_resets: string | null;
 }
 export const fetchUsage = (cwd: string) => invoke<UsageData>("fetch_usage", { cwd });
 
