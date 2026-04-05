@@ -465,6 +465,41 @@ pub fn git_commit_files(cwd: String, hash: String) -> Result<Vec<serde_json::Val
     Ok(files)
 }
 
+/// Returns the unified diff for a single file in a specific commit vs its first parent.
+#[tauri::command]
+pub fn git_commit_file_diff(cwd: String, hash: String, path: String) -> Result<String, String> {
+    let repo = open_repo(&cwd)?;
+    let oid    = git2::Oid::from_str(&hash).map_err(|e| e.to_string())?;
+    let commit = repo.find_commit(oid).map_err(|e| e.to_string())?;
+    let tree   = commit.tree().map_err(|e| e.to_string())?;
+
+    let mut diff_opts = DiffOptions::new();
+    diff_opts.pathspec(&path);
+
+    let diff = if commit.parent_count() == 0 {
+        repo.diff_tree_to_tree(None, Some(&tree), Some(&mut diff_opts))
+    } else {
+        let parent_tree = commit.parent(0)
+            .and_then(|p| p.tree())
+            .map_err(|e| e.to_string())?;
+        repo.diff_tree_to_tree(Some(&parent_tree), Some(&tree), Some(&mut diff_opts))
+    }.map_err(|e| e.to_string())?;
+
+    let mut patch = String::new();
+    diff.print(DiffFormat::Patch, |_delta, _hunk, line| {
+        match line.origin() {
+            '+' | '-' | ' ' => patch.push(line.origin()),
+            _ => {}
+        }
+        if let Ok(s) = std::str::from_utf8(line.content()) {
+            patch.push_str(s);
+        }
+        true
+    }).map_err(|e| e.to_string())?;
+
+    Ok(patch)
+}
+
 /// Initialize a new git repository.
 #[tauri::command]
 pub fn git_init(cwd: String) -> Result<(), String> {

@@ -5,18 +5,16 @@ import {
   gitUnstage, gitUnstageAll, gitDiscard, gitCommit,
   gitInit, gitPull, gitPush,
   gitPullWithPassphrase, gitPushWithPassphrase,
+  gitLog, gitCommitFiles, gitCommitFileDiff,
   readFileText,
-  type GitFileStatus, type GitStatus,
+  type GitFileStatus, type GitStatus, type GitLogEntry,
 } from "../../lib/tauri";
 import { GitAuthModal } from "./GitAuthModal";
 import { ConfirmModal } from "../shared/ConfirmModal";
-import { GitDiffModal } from "./GitDiffModal";
+import { GitDiffModal, type SidebarFile } from "./GitDiffModal";
 import { GitGraphView } from "./GitGraphView";
 import { ContextMenu } from "../FileExplorer/ContextMenu";
 import { detectLanguage } from "../../lib/languageDetect";
-import {
-  gitLog, type GitLogEntry,
-} from "../../lib/tauri";
 import {
   RefreshCw, Plus, Minus, GitCommit, CloudDownload, CloudUpload,
   ChevronDown, ChevronRight, RotateCcw, Trash2, FolderOpen,
@@ -180,6 +178,16 @@ function SectionHeader({
   );
 }
 
+// ── diff modal state ──────────────────────────────────────────────────────────
+
+interface DiffModalState {
+  files: SidebarFile[];
+  initialPath: string;
+  initialStaged?: boolean;
+  onLoadDiff: (file: SidebarFile) => Promise<string>;
+  commitInfo?: { hash: string; message: string; author: string; date: string };
+}
+
 // ── main panel ────────────────────────────────────────────────────────────────
 
 export function GitPanel() {
@@ -189,7 +197,7 @@ export function GitPanel() {
   const [status, setStatus]           = useState<GitStatus | null>(null);
   const [loading, setLoading]         = useState(false);
   const [error, setError]             = useState<string | null>(null);
-  const [diffModal, setDiffModal] = useState<{ path: string; staged: boolean; diff: string; loading: boolean } | null>(null);
+  const [diffModal, setDiffModal] = useState<DiffModalState | null>(null);
   const [commitMsg, setCommitMsg]     = useState("");
   const [committing, setCommitting]   = useState(false);
   const [pulling, setPulling]         = useState(false);
@@ -289,13 +297,46 @@ export function GitPanel() {
     }
   };
 
-  // ── open diff modal ───────────────────────────────────────────────────────
+  // ── file lists (computed early — needed in openDiff) ──────────────────────
+  const stagedFiles    = status?.files.filter(f => f.stagedStatus !== " " && f.stagedStatus !== "?") ?? [];
+  // git2 returns stagedStatus=" " unstagedStatus="?" for untracked files
+  const unstagedFiles  = status?.files.filter(f => f.unstagedStatus !== " " && f.unstagedStatus !== "?") ?? [];
+  const untrackedFiles = status?.files.filter(f => f.unstagedStatus === "?") ?? [];
+  const allChanges     = [...unstagedFiles, ...untrackedFiles];
+
+  // ── open diff modal (working-tree) ────────────────────────────────────────
   const openDiff = (path: string, staged: boolean) => {
     if (!project) return;
-    setDiffModal({ path, staged, diff: "", loading: true });
-    gitDiff(project.path, path, staged)
-      .then((d) => setDiffModal((m) => m && m.path === path ? { ...m, diff: d, loading: false } : m))
-      .catch(() => setDiffModal((m) => m && m.path === path ? { ...m, loading: false } : m));
+    const sidebarFiles: SidebarFile[] = [
+      ...stagedFiles.map(f  => ({ path: f.path, status: f.stagedStatus,   staged: true  as const })),
+      ...allChanges.map(f   => ({ path: f.path, status: f.unstagedStatus, staged: false as const })),
+    ];
+    const projectPath = project.path;
+    setDiffModal({
+      files: sidebarFiles,
+      initialPath: path,
+      initialStaged: staged,
+      onLoadDiff: (file: SidebarFile) => gitDiff(projectPath, file.path, file.staged ?? false),
+    });
+  };
+
+  // ── open diff modal (commit) ──────────────────────────────────────────────
+  const openCommitDiff = async (commit: GitLogEntry) => {
+    if (!project) return;
+    const projectPath = project.path;
+    try {
+      const commitFiles = await gitCommitFiles(projectPath, commit.hash);
+      if (commitFiles.length === 0) return;
+      const files: SidebarFile[] = commitFiles.map(f => ({ path: f.path, status: f.status }));
+      setDiffModal({
+        files,
+        initialPath: files[0].path,
+        onLoadDiff: (file: SidebarFile) => gitCommitFileDiff(projectPath, commit.hash, file.path),
+        commitInfo: { hash: commit.shortHash, message: commit.message, author: commit.author, date: commit.date },
+      });
+    } catch (e) {
+      setError(String(e));
+    }
   };
 
   if (!project) {
@@ -306,12 +347,6 @@ export function GitPanel() {
       />
     );
   }
-
-  const stagedFiles   = status?.files.filter(f => f.stagedStatus !== " " && f.stagedStatus !== "?") ?? [];
-  // git2 returns stagedStatus=" " unstagedStatus="?" for untracked files
-  const unstagedFiles  = status?.files.filter(f => f.unstagedStatus !== " " && f.unstagedStatus !== "?") ?? [];
-  const untrackedFiles = status?.files.filter(f => f.unstagedStatus === "?") ?? [];
-  const allChanges     = [...unstagedFiles, ...untrackedFiles];
 
   const { branch } = status ?? { branch: { branch: "", ahead: 0, behind: 0, hasRemote: false } };
 
@@ -472,10 +507,7 @@ export function GitPanel() {
     )}
     {diffModal && (
       <GitDiffModal
-        path={diffModal.path}
-        staged={diffModal.staged}
-        diff={diffModal.diff}
-        loading={diffModal.loading}
+        {...diffModal}
         onClose={() => setDiffModal(null)}
       />
     )}
@@ -627,7 +659,12 @@ export function GitPanel() {
             />
             {historyExpanded && (
               <div className="flex-1 min-h-0">
-                <GitGraphView commits={graphCommits} loading={graphLoading} projectPath={project.path} />
+                <GitGraphView
+                  commits={graphCommits}
+                  loading={graphLoading}
+                  projectPath={project.path}
+                  onCommitClick={openCommitDiff}
+                />
               </div>
             )}
           </div>

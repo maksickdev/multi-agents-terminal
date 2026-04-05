@@ -223,6 +223,7 @@ interface Props {
   commits: GitLogEntry[];
   loading: boolean;
   projectPath: string;
+  onCommitClick?: (commit: GitLogEntry) => void;
 }
 
 interface HoverState {
@@ -230,7 +231,7 @@ interface HoverState {
   anchorRect: DOMRect;
 }
 
-export function GitGraphView({ commits, loading, projectPath }: Props) {
+export function GitGraphView({ commits, loading, projectPath, onCommitClick }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const hoverTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [hovered, setHovered] = useState<HoverState | null>(null);
@@ -281,10 +282,11 @@ export function GitGraphView({ commits, loading, projectPath }: Props) {
       {rows.map((row) => (
         <div
           key={row.commit.hash}
-          className="flex items-stretch hover:bg-[var(--c-bg-elevated)] transition-colors group"
+          className="flex items-stretch hover:bg-[var(--c-bg-elevated)] transition-colors group cursor-pointer"
           style={{ height: ROW_H, minWidth: 0 }}
           onMouseEnter={(e) => handleMouseEnter(e, row.commit)}
           onMouseLeave={handleMouseLeave}
+          onClick={() => onCommitClick?.(row.commit)}
         >
           {/* Graph column */}
           <div className="flex-shrink-0">
