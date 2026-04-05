@@ -161,6 +161,18 @@ export const gitLog          = (cwd: string, limit?: number) => invoke<GitLogEnt
 export interface CommitFile { path: string; status: string; }
 export const gitCommitFiles     = (cwd: string, hash: string) => invoke<CommitFile[]>("git_commit_files", { cwd, hash });
 export const gitCommitFileDiff  = (cwd: string, hash: string, path: string) => invoke<string>("git_commit_file_diff", { cwd, hash, path });
+
+export interface GitBranchEntry {
+  name: string;
+  isCurrent: boolean;
+  ahead: number;
+  behind: number;
+  upstream: string | null;
+}
+export const gitBranches      = (cwd: string) => invoke<GitBranchEntry[]>("git_branches", { cwd });
+export const gitCheckout      = (cwd: string, branch: string) => invoke<void>("git_checkout", { cwd, branch });
+export const gitCreateBranch  = (cwd: string, name: string, fromRef?: string) => invoke<void>("git_create_branch", { cwd, name, fromRef });
+
 export const gitInit    = (cwd: string) => invoke<void>("git_init", { cwd });
 export const gitPull    = (cwd: string) => invoke<string>("git_pull", { cwd });
 export const gitPush    = (cwd: string) => invoke<string>("git_push", { cwd });

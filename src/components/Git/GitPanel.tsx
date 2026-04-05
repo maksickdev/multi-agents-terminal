@@ -6,18 +6,21 @@ import {
   gitInit, gitPull, gitPush,
   gitPullWithPassphrase, gitPushWithPassphrase,
   gitLog, gitCommitFiles, gitCommitFileDiff,
+  gitBranches, gitCheckout, gitCreateBranch,
   readFileText,
-  type GitFileStatus, type GitStatus, type GitLogEntry,
+  type GitFileStatus, type GitStatus, type GitLogEntry, type GitBranchEntry,
 } from "../../lib/tauri";
 import { GitAuthModal } from "./GitAuthModal";
 import { ConfirmModal } from "../shared/ConfirmModal";
 import { GitDiffModal, type SidebarFile } from "./GitDiffModal";
 import { GitGraphView } from "./GitGraphView";
+import { GitNewBranchModal } from "./GitNewBranchModal";
 import { ContextMenu } from "../FileExplorer/ContextMenu";
 import { detectLanguage } from "../../lib/languageDetect";
 import {
   RefreshCw, Plus, Minus, GitCommit, CloudDownload, CloudUpload,
   ChevronDown, ChevronRight, RotateCcw, Trash2, FolderOpen,
+  GitBranch, Check,
 } from "lucide-react";
 
 // ── status helpers ────────────────────────────────────────────────────────────
@@ -126,7 +129,7 @@ function FileRow({
 
 function SectionHeader({
   label, count, expanded, onToggle,
-  onStageAll, onUnstageAll, onDiscardAll,
+  onStageAll, onUnstageAll, onDiscardAll, onAdd,
 }: {
   label: string;
   count: number;
@@ -135,6 +138,7 @@ function SectionHeader({
   onStageAll?: () => void;
   onUnstageAll?: () => void;
   onDiscardAll?: () => void;
+  onAdd?: () => void;
 }) {
   return (
     <div
@@ -146,6 +150,15 @@ function SectionHeader({
         {label} ({count})
       </span>
       <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+        {onAdd && (
+          <button
+            onClick={(e) => { e.stopPropagation(); onAdd(); }}
+            title="New branch"
+            className="p-0.5 text-[var(--c-text-dim)] hover:text-[var(--c-accent)] rounded"
+          >
+            <Plus size={11} />
+          </button>
+        )}
         {onStageAll && (
           <button
             onClick={(e) => { e.stopPropagation(); onStageAll(); }}
@@ -174,6 +187,68 @@ function SectionHeader({
           </button>
         )}
       </div>
+    </div>
+  );
+}
+
+// ── branch row ────────────────────────────────────────────────────────────────
+
+function BranchRow({
+  branch,
+  checkingOut,
+  onCheckout,
+}: {
+  branch: GitBranchEntry;
+  checkingOut: boolean;
+  onCheckout: () => void;
+}) {
+  return (
+    <div
+      onClick={() => { if (!branch.isCurrent && !checkingOut) onCheckout(); }}
+      className={`group flex items-center gap-1.5 px-2 py-0.5 text-xs select-none transition-colors ${
+        branch.isCurrent
+          ? "cursor-default"
+          : "cursor-pointer hover:bg-[var(--c-bg-elevated)]"
+      }`}
+    >
+      {/* Current indicator */}
+      <span className="flex-shrink-0 w-3.5 flex items-center justify-center">
+        {branch.isCurrent
+          ? <Check size={10} className="text-[var(--c-accent)]" />
+          : <GitBranch size={10} className="text-[var(--c-text-dim)]" />
+        }
+      </span>
+
+      {/* Name */}
+      <span
+        className="flex-1 truncate font-mono text-[11px] leading-relaxed"
+        style={{ color: branch.isCurrent ? "var(--c-accent)" : "var(--c-text)" }}
+      >
+        {branch.name}
+      </span>
+
+      {/* Ahead/behind */}
+      {(branch.ahead > 0 || branch.behind > 0) && (
+        <span className="text-[10px] text-[var(--c-text-dim)] flex-shrink-0 tabular-nums">
+          {branch.ahead > 0 && `↑${branch.ahead}`}
+          {branch.behind > 0 && ` ↓${branch.behind}`}
+        </span>
+      )}
+
+      {/* Checkout button shown on hover for non-current branches */}
+      {!branch.isCurrent && (
+        <button
+          onClick={(e) => { e.stopPropagation(); onCheckout(); }}
+          disabled={checkingOut}
+          title={`Switch to ${branch.name}`}
+          className="flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity p-0.5 rounded text-[var(--c-text-dim)] hover:text-[var(--c-accent)] disabled:opacity-30"
+        >
+          {checkingOut
+            ? <span className="text-[9px] leading-none">…</span>
+            : <Check size={11} />
+          }
+        </button>
+      )}
     </div>
   );
 }
@@ -212,6 +287,11 @@ export function GitPanel() {
   const [graphCommits, setGraphCommits] = useState<GitLogEntry[]>([]);
   const [graphLoading, setGraphLoading] = useState(false);
   const [graphNonce, setGraphNonce]     = useState(0);
+  const [branches, setBranches]               = useState<GitBranchEntry[]>([]);
+  const [branchesExpanded, setBranchesExpanded] = useState(true);
+  const [checkingOut, setCheckingOut]           = useState<string | null>(null);
+  const [newBranchModal, setNewBranchModal]     = useState<{ fromRef?: string } | null>(null);
+  const [creatingBranch, setCreatingBranch]     = useState(false);
 
   // ── resize ──────────────────────────────────────────────────────────────────
   const resizingRef = useRef(false);
@@ -278,6 +358,16 @@ export function GitPanel() {
     return () => { cancelled = true; };
   }, [historyExpanded, project?.id, project?.path, status?.isGitRepo, graphNonce]);
 
+  // ── load branches whenever expanded or after any refresh ─────────────────
+  useEffect(() => {
+    if (!branchesExpanded || !project || !status?.isGitRepo) return;
+    let cancelled = false;
+    gitBranches(project.path)
+      .then((b) => { if (!cancelled) setBranches(b); })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [branchesExpanded, project?.id, project?.path, status?.isGitRepo, graphNonce]);
+
   // ── auto-refresh: every 5 s when panel open + on window focus ────────────
   useEffect(() => {
     if (!gitPanelOpen) return;
@@ -340,6 +430,37 @@ export function GitPanel() {
       });
     } catch (e) {
       setError(String(e));
+    }
+  };
+
+  // ── checkout branch ───────────────────────────────────────────────────────
+  const doCheckout = async (branchName: string) => {
+    if (!project || checkingOut) return;
+    setCheckingOut(branchName);
+    setError(null);
+    try {
+      await gitCheckout(project.path, branchName);
+      refresh();
+    } catch (e) {
+      setError(String(e));
+    } finally {
+      setCheckingOut(null);
+    }
+  };
+
+  // ── create branch ─────────────────────────────────────────────────────────
+  const doCreateBranch = async (name: string, fromRef?: string) => {
+    if (!project) return;
+    setCreatingBranch(true);
+    setError(null);
+    try {
+      await gitCreateBranch(project.path, name, fromRef);
+      setNewBranchModal(null);
+      refresh();
+    } catch (e) {
+      setError(String(e));
+    } finally {
+      setCreatingBranch(false);
     }
   };
 
@@ -515,6 +636,14 @@ export function GitPanel() {
         onClose={() => setDiffModal(null)}
       />
     )}
+    {newBranchModal && (
+      <GitNewBranchModal
+        fromRef={newBranchModal.fromRef}
+        loading={creatingBranch}
+        onConfirm={doCreateBranch}
+        onCancel={() => setNewBranchModal(null)}
+      />
+    )}
     <div
       data-git-panel
       style={{ width: gitPanelOpen ? gitPanelWidth : 0, flexShrink: 0, overflow: "hidden", position: "relative" }}
@@ -599,8 +728,8 @@ export function GitPanel() {
         <div className="flex flex-col flex-1 min-h-0">
 
           {/* ── File lists + History ── */}
-          {/* ── Staged + Changes — fixed area, scrolls if many files ── */}
-          <div className="overflow-y-auto flex-shrink-0" style={{ maxHeight: "45%" }}>
+          {/* ── Staged + Changes + Branches — fixed area, scrolls if many items ── */}
+          <div className="overflow-y-auto flex-shrink-0" style={{ maxHeight: "55%" }}>
             {/* Staged */}
             <SectionHeader
               label="Staged"
@@ -651,6 +780,34 @@ export function GitPanel() {
                 No changes
               </div>
             )}
+
+            {/* ── Branches ── */}
+            <div className="border-t border-[var(--c-border)]">
+              <SectionHeader
+                label="Branches"
+                count={branches.length}
+                expanded={branchesExpanded}
+                onToggle={() => setBranchesExpanded(v => !v)}
+                onAdd={() => setNewBranchModal({})}
+              />
+              {branchesExpanded && (
+                <div className="pb-1">
+                  {branches.map(b => (
+                    <BranchRow
+                      key={b.name}
+                      branch={b}
+                      checkingOut={checkingOut === b.name}
+                      onCheckout={() => doCheckout(b.name)}
+                    />
+                  ))}
+                  {branches.length === 0 && (
+                    <div className="text-[var(--c-text-dim)] text-xs px-3 py-1.5 italic">
+                      No local branches
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
 
           {/* ── History — fills all remaining space ── */}

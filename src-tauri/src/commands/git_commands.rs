@@ -176,6 +176,17 @@ fn shell_git_with_askpass(cwd: &str, subcmd: &str, secret: &str) -> Result<Strin
     }
 }
 
+/// A local git branch with optional ahead/behind vs its upstream.
+#[derive(serde::Serialize, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct GitBranchEntry {
+    pub name: String,
+    pub is_current: bool,
+    pub ahead: i32,
+    pub behind: i32,
+    pub upstream: Option<String>,
+}
+
 // ── commands ──────────────────────────────────────────────────────────────────
 
 #[tauri::command]
@@ -498,6 +509,62 @@ pub fn git_commit_file_diff(cwd: String, hash: String, path: String) -> Result<S
     }).map_err(|e| e.to_string())?;
 
     Ok(patch)
+}
+
+/// Returns all local branches sorted current-first then alphabetically.
+#[tauri::command]
+pub fn git_branches(cwd: String) -> Result<Vec<GitBranchEntry>, String> {
+    let repo = open_repo(&cwd)?;
+
+    let head_branch = repo.head().ok()
+        .and_then(|h| h.shorthand().map(|s| s.to_string()))
+        .unwrap_or_default();
+
+    let branches_iter = repo.branches(Some(git2::BranchType::Local))
+        .map_err(|e| e.to_string())?;
+
+    let mut result: Vec<GitBranchEntry> = branches_iter
+        .filter_map(|b| b.ok())
+        .filter_map(|(branch, _)| {
+            let name = branch.name().ok()??.to_string();
+            let is_current = name == head_branch;
+            let (ahead, behind, upstream) = match branch.upstream() {
+                Ok(up) => {
+                    let uname = up.name().ok().flatten().map(|s| s.to_string());
+                    match (branch.get().target(), up.get().target()) {
+                        (Some(l), Some(u)) => match repo.graph_ahead_behind(l, u) {
+                            Ok((a, b)) => (a as i32, b as i32, uname),
+                            Err(_)     => (0, 0, uname),
+                        },
+                        _ => (0, 0, uname),
+                    }
+                }
+                Err(_) => (0, 0, None),
+            };
+            Some(GitBranchEntry { name, is_current, ahead, behind, upstream })
+        })
+        .collect();
+
+    result.sort_by(|a, b| b.is_current.cmp(&a.is_current).then(a.name.cmp(&b.name)));
+    Ok(result)
+}
+
+/// Switch to an existing local or remote-tracking branch.
+#[tauri::command]
+pub fn git_checkout(cwd: String, branch: String) -> Result<(), String> {
+    let escaped = branch.replace('\'', "'\\''");
+    shell_git(&cwd, &format!("checkout '{escaped}'")).map(|_| ())
+}
+
+/// Create a new branch (optionally from a given ref) and check it out.
+#[tauri::command]
+pub fn git_create_branch(cwd: String, name: String, from_ref: Option<String>) -> Result<(), String> {
+    let esc_name = name.replace('\'', "'\\''");
+    let cmd = match from_ref.filter(|s| !s.is_empty()) {
+        Some(r) => format!("checkout -b '{esc_name}' '{}'", r.replace('\'', "'\\''")),
+        None    => format!("checkout -b '{esc_name}'"),
+    };
+    shell_git(&cwd, &cmd).map(|_| ())
 }
 
 /// Initialize a new git repository.
