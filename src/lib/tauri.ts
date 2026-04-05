@@ -141,6 +141,7 @@ export interface GitLogEntry {
   hash: string;
   shortHash: string;
   message: string;
+  body: string;
   author: string;
   date: string;
   parents: string[];

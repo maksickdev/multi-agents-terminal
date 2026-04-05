@@ -38,6 +38,8 @@ pub struct GitLogEntry {
     pub hash: String,
     pub short_hash: String,
     pub message: String,
+    /// Commit body — everything after the first blank line (may be empty)
+    pub body: String,
     pub author: String,
     pub date: String,
     /// Full hashes of parent commits (0 = root, 1 = first parent, 2+ = merge parents)
@@ -404,6 +406,7 @@ pub fn git_log(cwd: String, limit: Option<u32>) -> Result<Vec<GitLogEntry>, Stri
             let hash       = c.id().to_string();
             let short_hash = hash[..7].to_string();
             let message    = c.summary().unwrap_or("").to_string();
+            let body       = c.body().unwrap_or("").trim().to_string();
             let author     = c.author().name().unwrap_or("Unknown").to_string();
             let parents: Vec<String> = c.parent_ids().map(|id| id.to_string()).collect();
             let refs       = ref_map.get(&hash).cloned().unwrap_or_default();
@@ -413,7 +416,7 @@ pub fn git_log(cwd: String, limit: Option<u32>) -> Result<Vec<GitLogEntry>, Stri
                 else if diff < 86400         { format!("{} hr ago", diff / 3600) }
                 else if diff < 86400 * 30    { format!("{} days ago", diff / 86400) }
                 else                         { format!("{} mo ago", diff / (86400 * 30)) };
-            GitLogEntry { hash, short_hash, message, author, date, parents, refs }
+            GitLogEntry { hash, short_hash, message, body, author, date, parents, refs }
         })
         .collect();
 

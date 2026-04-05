@@ -83,9 +83,14 @@ export function GitCommitTooltip({ commit, projectPath, anchorRect, panelRect }:
             </span>
           ))}
         </div>
-        <p className="text-[11px] text-[var(--c-text-bright)] font-medium leading-snug line-clamp-2">
+        <p className="text-[11px] text-[var(--c-text-bright)] font-medium leading-snug">
           {commit.message}
         </p>
+        {commit.body && (
+          <p className="text-[10px] text-[var(--c-text-dim)] leading-relaxed mt-1 whitespace-pre-wrap line-clamp-4">
+            {commit.body}
+          </p>
+        )}
         <div className="flex items-center gap-2 mt-1">
           <span className="text-[10px] text-[var(--c-text-dim)]">{commit.author}</span>
           <span className="text-[10px] text-[var(--c-muted)]">·</span>
