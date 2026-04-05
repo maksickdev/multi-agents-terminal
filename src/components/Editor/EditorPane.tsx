@@ -148,7 +148,7 @@ export function EditorPane() {
         flexShrink: 0,
         overflow: "hidden",
       }}
-      className="relative flex flex-col bg-[var(--c-bg)]"
+      className="relative flex flex-col bg-[var(--c-bg-deep)]"
     >
       {/* Top resize handle */}
       <div
