@@ -173,6 +173,12 @@ export const gitBranches      = (cwd: string) => invoke<GitBranchEntry[]>("git_b
 export const gitCheckout      = (cwd: string, branch: string) => invoke<void>("git_checkout", { cwd, branch });
 export const gitCreateBranch  = (cwd: string, name: string, fromRef?: string) => invoke<void>("git_create_branch", { cwd, name, fromRef });
 
+export interface GitRemote { name: string; url: string; }
+export const gitRemotes       = (cwd: string) => invoke<GitRemote[]>("git_remotes", { cwd });
+export const gitAddRemote     = (cwd: string, name: string, url: string) => invoke<void>("git_add_remote", { cwd, name, url });
+export const gitRemoveRemote  = (cwd: string, name: string) => invoke<void>("git_remove_remote", { cwd, name });
+export const gitPushUpstream  = (cwd: string, remote: string, branch: string) => invoke<void>("git_push_upstream", { cwd, remote, branch });
+
 export const gitInit    = (cwd: string) => invoke<void>("git_init", { cwd });
 export const gitPull    = (cwd: string) => invoke<string>("git_pull", { cwd });
 export const gitPush    = (cwd: string) => invoke<string>("git_push", { cwd });

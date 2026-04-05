@@ -511,6 +511,53 @@ pub fn git_commit_file_diff(cwd: String, hash: String, path: String) -> Result<S
     Ok(patch)
 }
 
+/// A configured git remote (name + fetch URL).
+#[derive(serde::Serialize, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct GitRemote {
+    pub name: String,
+    pub url: String,
+}
+
+/// Returns all configured remotes for the repository.
+#[tauri::command]
+pub fn git_remotes(cwd: String) -> Result<Vec<GitRemote>, String> {
+    let repo = open_repo(&cwd)?;
+    let names = repo.remotes().map_err(|e| e.to_string())?;
+    let mut result = Vec::new();
+    for name in names.iter().flatten() {
+        if let Ok(remote) = repo.find_remote(name) {
+            let url = remote.url().unwrap_or("").to_string();
+            result.push(GitRemote { name: name.to_string(), url });
+        }
+    }
+    Ok(result)
+}
+
+/// Add a new remote (equivalent to `git remote add <name> <url>`).
+#[tauri::command]
+pub fn git_add_remote(cwd: String, name: String, url: String) -> Result<(), String> {
+    let repo = open_repo(&cwd)?;
+    repo.remote(&name, &url).map(|_| ()).map_err(|e| e.to_string())
+}
+
+/// Remove a configured remote.
+#[tauri::command]
+pub fn git_remove_remote(cwd: String, name: String) -> Result<(), String> {
+    let repo = open_repo(&cwd)?;
+    repo.remote_delete(&name).map_err(|e| e.to_string())
+}
+
+/// Push and set the upstream tracking branch for the first time.
+/// Equivalent to `git push --set-upstream <remote> <branch>`.
+#[tauri::command]
+pub fn git_push_upstream(cwd: String, remote: String, branch: String) -> Result<(), String> {
+    let esc_remote = remote.replace('\'', "'\\''");
+    let esc_branch = branch.replace('\'', "'\\''");
+    shell_git(&cwd, &format!("push --set-upstream '{esc_remote}' '{esc_branch}'"))
+        .map(|_| ())
+}
+
 /// Returns all local branches sorted current-first then alphabetically.
 #[tauri::command]
 pub fn git_branches(cwd: String) -> Result<Vec<GitBranchEntry>, String> {

@@ -17,6 +17,7 @@ use commands::git_commands::{
     git_unstage, git_unstage_all, git_discard,
     git_commit, git_log, git_commit_files, git_commit_file_diff,
     git_branches, git_checkout, git_create_branch,
+    git_remotes, git_add_remote, git_remove_remote, git_push_upstream,
     git_init, git_pull, git_push,
     git_pull_with_passphrase, git_push_with_passphrase,
 };
@@ -73,6 +74,10 @@ pub fn run() {
             git_branches,
             git_checkout,
             git_create_branch,
+            git_remotes,
+            git_add_remote,
+            git_remove_remote,
+            git_push_upstream,
             git_init,
             git_pull,
             git_push,

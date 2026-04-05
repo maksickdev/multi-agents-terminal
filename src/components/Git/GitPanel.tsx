@@ -7,20 +7,22 @@ import {
   gitPullWithPassphrase, gitPushWithPassphrase,
   gitLog, gitCommitFiles, gitCommitFileDiff,
   gitBranches, gitCheckout, gitCreateBranch,
+  gitRemotes, gitAddRemote, gitRemoveRemote, gitPushUpstream,
   readFileText,
-  type GitFileStatus, type GitStatus, type GitLogEntry, type GitBranchEntry,
+  type GitFileStatus, type GitStatus, type GitLogEntry, type GitBranchEntry, type GitRemote,
 } from "../../lib/tauri";
 import { GitAuthModal } from "./GitAuthModal";
 import { ConfirmModal } from "../shared/ConfirmModal";
 import { GitDiffModal, type SidebarFile } from "./GitDiffModal";
 import { GitGraphView } from "./GitGraphView";
 import { GitNewBranchModal } from "./GitNewBranchModal";
+import { GitAddRemoteModal } from "./GitAddRemoteModal";
 import { ContextMenu } from "../FileExplorer/ContextMenu";
 import { detectLanguage } from "../../lib/languageDetect";
 import {
   RefreshCw, Plus, Minus, GitCommit, CloudDownload, CloudUpload,
   ChevronDown, ChevronRight, RotateCcw, Trash2, FolderOpen,
-  GitBranch, Check,
+  GitBranch, Check, Globe, X,
 } from "lucide-react";
 
 // ── status helpers ────────────────────────────────────────────────────────────
@@ -253,6 +255,53 @@ function BranchRow({
   );
 }
 
+// ── remote row ────────────────────────────────────────────────────────────────
+
+function RemoteRow({
+  remote,
+  onRemove,
+}: {
+  remote: GitRemote;
+  onRemove: () => void;
+}) {
+  // Display only the host+path part of the URL, strip credentials
+  let displayUrl = remote.url;
+  try {
+    const u = new URL(remote.url);
+    displayUrl = u.host + u.pathname;
+  } catch {
+    // not a valid URL (e.g. git@github.com:user/repo.git) — show as-is
+  }
+
+  return (
+    <div className="group flex items-center gap-1.5 px-2 py-0.5 text-xs select-none">
+      <Globe size={10} className="flex-shrink-0 text-[var(--c-text-dim)]" />
+
+      {/* Name */}
+      <span className="flex-shrink-0 text-[11px] font-medium text-[var(--c-text)]">
+        {remote.name}
+      </span>
+
+      {/* URL */}
+      <span
+        className="flex-1 truncate text-[10px] text-[var(--c-text-dim)] font-mono"
+        title={remote.url}
+      >
+        {displayUrl}
+      </span>
+
+      {/* Remove */}
+      <button
+        onClick={onRemove}
+        title={`Remove remote ${remote.name}`}
+        className="flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity p-0.5 rounded text-[var(--c-text-dim)] hover:text-[var(--c-danger)]"
+      >
+        <X size={10} />
+      </button>
+    </div>
+  );
+}
+
 // ── diff modal state ──────────────────────────────────────────────────────────
 
 interface DiffModalState {
@@ -292,6 +341,11 @@ export function GitPanel() {
   const [checkingOut, setCheckingOut]           = useState<string | null>(null);
   const [newBranchModal, setNewBranchModal]     = useState<{ fromRef?: string } | null>(null);
   const [creatingBranch, setCreatingBranch]     = useState(false);
+  const [remotes, setRemotes]                     = useState<GitRemote[]>([]);
+  const [remotesExpanded, setRemotesExpanded]     = useState(true);
+  const [addRemoteModal, setAddRemoteModal]       = useState(false);
+  const [addingRemote, setAddingRemote]           = useState(false);
+  const [removeRemoteConfirm, setRemoveRemoteConfirm] = useState<GitRemote | null>(null);
 
   // ── resize ──────────────────────────────────────────────────────────────────
   const resizingRef = useRef(false);
@@ -357,6 +411,16 @@ export function GitPanel() {
       .catch(() => { if (!cancelled) setGraphLoading(false); });
     return () => { cancelled = true; };
   }, [historyExpanded, project?.id, project?.path, status?.isGitRepo, graphNonce]);
+
+  // ── load remotes after any refresh (needed for push/pull button visibility) ─
+  useEffect(() => {
+    if (!project || !status?.isGitRepo) return;
+    let cancelled = false;
+    gitRemotes(project.path)
+      .then((r) => { if (!cancelled) setRemotes(r); })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [project?.id, project?.path, status?.isGitRepo, graphNonce]);
 
   // ── load branches whenever expanded or after any refresh ─────────────────
   useEffect(() => {
@@ -428,6 +492,34 @@ export function GitPanel() {
         onLoadDiff: (file: SidebarFile) => gitCommitFileDiff(projectPath, commit.hash, file.path),
         commitInfo: { hash: commit.shortHash, message: commit.message, author: commit.author, date: commit.date },
       });
+    } catch (e) {
+      setError(String(e));
+    }
+  };
+
+  // ── add/remove remote ────────────────────────────────────────────────────
+  const doAddRemote = async (name: string, url: string) => {
+    if (!project) return;
+    setAddingRemote(true);
+    setError(null);
+    try {
+      await gitAddRemote(project.path, name, url);
+      setAddRemoteModal(false);
+      refresh();
+    } catch (e) {
+      setError(String(e));
+    } finally {
+      setAddingRemote(false);
+    }
+  };
+
+  const doRemoveRemote = async (name: string) => {
+    if (!project) return;
+    setRemoveRemoteConfirm(null);
+    setError(null);
+    try {
+      await gitRemoveRemote(project.path, name);
+      refresh();
     } catch (e) {
       setError(String(e));
     }
@@ -518,9 +610,16 @@ export function GitPanel() {
     setPushing(true);
     setError(null);
     try {
-      await (passphrase
-        ? gitPushWithPassphrase(project.path, passphrase)
-        : gitPush(project.path));
+      // If no upstream tracking branch but remotes exist, set upstream on first push
+      if (!branch.hasRemote && remotes.length > 0 && !passphrase) {
+        const remoteName  = remotes[0].name;
+        const branchName  = branch.branch;
+        await gitPushUpstream(project.path, remoteName, branchName);
+      } else {
+        await (passphrase
+          ? gitPushWithPassphrase(project.path, passphrase)
+          : gitPush(project.path));
+      }
       await refresh();
     } catch (e) {
       const msg = String(e);
@@ -644,6 +743,24 @@ export function GitPanel() {
         onCancel={() => setNewBranchModal(null)}
       />
     )}
+    {addRemoteModal && (
+      <GitAddRemoteModal
+        defaultName={remotes.length === 0 ? "origin" : ""}
+        loading={addingRemote}
+        onConfirm={doAddRemote}
+        onCancel={() => setAddRemoteModal(false)}
+      />
+    )}
+    {removeRemoteConfirm && (
+      <ConfirmModal
+        title="Remove Remote"
+        message={`Remove remote "${removeRemoteConfirm.name}" (${removeRemoteConfirm.url})? This cannot be undone.`}
+        confirmLabel="Remove"
+        danger
+        onConfirm={() => doRemoveRemote(removeRemoteConfirm.name)}
+        onCancel={() => setRemoveRemoteConfirm(null)}
+      />
+    )}
     <div
       data-git-panel
       style={{ width: gitPanelOpen ? gitPanelWidth : 0, flexShrink: 0, overflow: "hidden", position: "relative" }}
@@ -663,7 +780,7 @@ export function GitPanel() {
           )}
         </div>
         <div className="flex items-center gap-0.5">
-          {status?.isGitRepo && branch.hasRemote && (
+          {status?.isGitRepo && (branch.hasRemote || remotes.length > 0) && (
             <>
               <button onClick={() => doPull()} title="Pull" disabled={pulling}
                 className="p-1 text-[var(--c-text-dim)] hover:text-[var(--c-text-bright)] disabled:opacity-40 rounded transition-colors">
@@ -803,6 +920,40 @@ export function GitPanel() {
                   {branches.length === 0 && (
                     <div className="text-[var(--c-text-dim)] text-xs px-3 py-1.5 italic">
                       No local branches
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* ── Remotes ── */}
+            <div className="border-t border-[var(--c-border)]">
+              <SectionHeader
+                label="Remotes"
+                count={remotes.length}
+                expanded={remotesExpanded}
+                onToggle={() => setRemotesExpanded(v => !v)}
+                onAdd={() => setAddRemoteModal(true)}
+              />
+              {remotesExpanded && (
+                <div className="pb-1">
+                  {remotes.map(r => (
+                    <RemoteRow
+                      key={r.name}
+                      remote={r}
+                      onRemove={() => setRemoveRemoteConfirm(r)}
+                    />
+                  ))}
+                  {remotes.length === 0 && (
+                    <div className="flex flex-col gap-1.5 px-2 py-2">
+                      <span className="text-[var(--c-text-dim)] text-xs italic">No remotes configured</span>
+                      <button
+                        onClick={() => setAddRemoteModal(true)}
+                        className="self-start flex items-center gap-1 text-[10px] px-2 py-1 rounded transition-colors text-[var(--c-accent)] bg-[var(--c-accent)]/10 hover:bg-[var(--c-accent)]/20"
+                      >
+                        <Globe size={10} />
+                        Connect remote
+                      </button>
                     </div>
                   )}
                 </div>
