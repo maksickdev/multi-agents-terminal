@@ -15,7 +15,7 @@ use commands::file_commands::{
 use commands::git_commands::{
     git_status, git_diff, git_stage, git_stage_all,
     git_unstage, git_unstage_all, git_discard,
-    git_commit, git_log, git_init, git_pull, git_push,
+    git_commit, git_log, git_commit_files, git_init, git_pull, git_push,
     git_pull_with_passphrase, git_push_with_passphrase,
 };
 
@@ -66,6 +66,7 @@ pub fn run() {
             git_discard,
             git_commit,
             git_log,
+            git_commit_files,
             git_init,
             git_pull,
             git_push,

@@ -1,4 +1,6 @@
+import { useRef, useState } from "react";
 import type { GitLogEntry } from "../../lib/tauri";
+import { GitCommitTooltip } from "./GitCommitTooltip";
 
 // ── constants ─────────────────────────────────────────────────────────────────
 
@@ -220,12 +222,34 @@ function RefBadge({ label }: { label: string }) {
 interface Props {
   commits: GitLogEntry[];
   loading: boolean;
+  projectPath: string;
 }
 
-export function GitGraphView({ commits, loading }: Props) {
+interface HoverState {
+  commit: GitLogEntry;
+  anchorRect: DOMRect;
+}
+
+export function GitGraphView({ commits, loading, projectPath }: Props) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const hoverTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [hovered, setHovered] = useState<HoverState | null>(null);
+
+  const handleMouseEnter = (e: React.MouseEvent, commit: GitLogEntry) => {
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    hoverTimerRef.current = setTimeout(() => {
+      setHovered({ commit, anchorRect: rect });
+    }, 300);
+  };
+
+  const handleMouseLeave = () => {
+    if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current);
+    setHovered(null);
+  };
+
   if (loading) {
     return (
-      <div className="flex-1 flex items-center justify-center text-[var(--c-text-dim)] text-xs">
+      <div className="h-full flex items-center justify-center text-[var(--c-text-dim)] text-xs">
         Loading…
       </div>
     );
@@ -233,22 +257,34 @@ export function GitGraphView({ commits, loading }: Props) {
 
   if (commits.length === 0) {
     return (
-      <div className="flex-1 flex items-center justify-center text-[var(--c-text-dim)] text-xs">
+      <div className="h-full flex items-center justify-center text-[var(--c-text-dim)] text-xs">
         No commits
       </div>
     );
   }
 
   const rows = computeGraph(commits);
+  const panelRect = containerRef.current?.closest("[data-git-panel]")?.getBoundingClientRect()
+    ?? containerRef.current?.getBoundingClientRect()
+    ?? new DOMRect();
 
   return (
-    <div className="h-full overflow-y-auto overflow-x-hidden">
+    <div ref={containerRef} className="h-full overflow-y-auto overflow-x-hidden">
+      {hovered && (
+        <GitCommitTooltip
+          commit={hovered.commit}
+          projectPath={projectPath}
+          anchorRect={hovered.anchorRect}
+          panelRect={panelRect}
+        />
+      )}
       {rows.map((row) => (
         <div
           key={row.commit.hash}
           className="flex items-stretch hover:bg-[var(--c-bg-elevated)] transition-colors group"
           style={{ height: ROW_H, minWidth: 0 }}
-          title={row.commit.hash}
+          onMouseEnter={(e) => handleMouseEnter(e, row.commit)}
+          onMouseLeave={handleMouseLeave}
         >
           {/* Graph column */}
           <div className="flex-shrink-0">

@@ -420,6 +420,48 @@ pub fn git_log(cwd: String, limit: Option<u32>) -> Result<Vec<GitLogEntry>, Stri
     Ok(entries)
 }
 
+/// Returns the list of files changed in a specific commit.
+#[tauri::command]
+pub fn git_commit_files(cwd: String, hash: String) -> Result<Vec<serde_json::Value>, String> {
+    let repo = open_repo(&cwd)?;
+    let oid  = git2::Oid::from_str(&hash).map_err(|e| e.to_string())?;
+    let commit = repo.find_commit(oid).map_err(|e| e.to_string())?;
+    let tree   = commit.tree().map_err(|e| e.to_string())?;
+
+    let diff = if commit.parent_count() == 0 {
+        // Root commit — diff against empty tree
+        repo.diff_tree_to_tree(None, Some(&tree), None)
+    } else {
+        let parent_tree = commit.parent(0)
+            .and_then(|p| p.tree())
+            .map_err(|e| e.to_string())?;
+        repo.diff_tree_to_tree(Some(&parent_tree), Some(&tree), None)
+    }.map_err(|e| e.to_string())?;
+
+    let mut files: Vec<serde_json::Value> = Vec::new();
+    diff.foreach(
+        &mut |delta, _| {
+            let status = match delta.status() {
+                git2::Delta::Added    => "A",
+                git2::Delta::Deleted  => "D",
+                git2::Delta::Modified => "M",
+                git2::Delta::Renamed  => "R",
+                git2::Delta::Copied   => "C",
+                _                     => "?",
+            };
+            let path = delta.new_file().path()
+                .or_else(|| delta.old_file().path())
+                .map(|p| p.to_string_lossy().to_string())
+                .unwrap_or_default();
+            files.push(serde_json::json!({ "path": path, "status": status }));
+            true
+        },
+        None, None, None,
+    ).map_err(|e| e.to_string())?;
+
+    Ok(files)
+}
+
 /// Initialize a new git repository.
 #[tauri::command]
 pub fn git_init(cwd: String) -> Result<(), String> {

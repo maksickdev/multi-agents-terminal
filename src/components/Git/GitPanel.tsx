@@ -480,6 +480,7 @@ export function GitPanel() {
       />
     )}
     <div
+      data-git-panel
       style={{ width: gitPanelOpen ? gitPanelWidth : 0, flexShrink: 0, overflow: "hidden", position: "relative" }}
       className="flex flex-col bg-[var(--c-bg-deep)] border-r border-[var(--c-border)] h-full"
     >
@@ -626,7 +627,7 @@ export function GitPanel() {
             />
             {historyExpanded && (
               <div className="flex-1 min-h-0">
-                <GitGraphView commits={graphCommits} loading={graphLoading} />
+                <GitGraphView commits={graphCommits} loading={graphLoading} projectPath={project.path} />
               </div>
             )}
           </div>
