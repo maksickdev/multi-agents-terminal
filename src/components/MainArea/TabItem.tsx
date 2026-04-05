@@ -18,8 +18,8 @@ interface Props {
 }
 
 const statusColors: Record<Agent["status"], string> = {
-  active: "bg-green-400",
-  waiting: "bg-yellow-400",
+  active: "bg-yellow-400",
+  waiting: "bg-green-400",
   exited: "bg-red-400",
 };
 
