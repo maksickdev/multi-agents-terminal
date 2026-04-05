@@ -12,6 +12,7 @@ use commands::file_commands::{
     read_dir, read_file_text, write_file_text, delete_path,
     create_file, create_dir_all, rename_path, reveal_in_finder,
 };
+use commands::usage_commands::fetch_usage;
 use commands::git_commands::{
     git_status, git_diff, git_stage, git_stage_all,
     git_unstage, git_unstage_all, git_discard,
@@ -83,6 +84,8 @@ pub fn run() {
             git_push,
             git_pull_with_passphrase,
             git_push_with_passphrase,
+            // Usage
+            fetch_usage,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

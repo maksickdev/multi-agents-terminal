@@ -187,6 +187,15 @@ export const gitPullWithPassphrase = (cwd: string, passphrase: string) =>
 export const gitPushWithPassphrase = (cwd: string, passphrase: string) =>
   invoke<string>("git_push_with_passphrase", { cwd, passphrase });
 
+// Usage limits
+export interface UsageData {
+  session_pct: number | null;
+  week_all_pct: number | null;
+  week_sonnet_pct: number | null;
+  extra_pct: number | null;
+}
+export const fetchUsage = (cwd: string) => invoke<UsageData>("fetch_usage", { cwd });
+
 // Event listeners
 export const onPtyOutput = (
   cb: (payload: PtyOutputPayload) => void
