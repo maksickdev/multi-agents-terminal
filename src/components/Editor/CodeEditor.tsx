@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { EditorView, keymap, lineNumbers, highlightActiveLineGutter, highlightSpecialChars, drawSelection, rectangularSelection, crosshairCursor, highlightActiveLine } from "@codemirror/view";
+import { EditorView, keymap, lineNumbers, highlightActiveLineGutter, highlightSpecialChars, drawSelection, rectangularSelection, crosshairCursor } from "@codemirror/view";
 import { EditorState, Compartment, Transaction } from "@codemirror/state";
 import { defaultKeymap, history, historyKeymap, indentWithTab } from "@codemirror/commands";
 import { indentOnInput, syntaxHighlighting, defaultHighlightStyle, bracketMatching, foldGutter, foldKeymap } from "@codemirror/language";
@@ -35,7 +35,6 @@ const tokyoNightTheme = EditorView.theme({
   ".cm-scroller": { overflow: "auto" },
   ".cm-content": { caretColor: "#c0caf5", padding: "4px 0" },
   ".cm-cursor": { borderLeftColor: "#c0caf5" },
-  ".cm-activeLine": { backgroundColor: "rgba(31, 35, 53, 0.5)" },
   ".cm-gutters": { backgroundColor: "#16161e", borderRight: "1px solid #1f2335", color: "#414868" },
   ".cm-activeLineGutter": { backgroundColor: "#1f2335" },
   ".cm-lineNumbers .cm-gutterElement": { padding: "0 8px" },
@@ -55,7 +54,6 @@ const gridMintTheme = EditorView.theme({
   ".cm-scroller": { overflow: "auto" },
   ".cm-content": { caretColor: "#00d4aa", padding: "4px 0" },
   ".cm-cursor": { borderLeftColor: "#00d4aa" },
-  ".cm-activeLine": { backgroundColor: "rgba(30, 30, 30, 0.5)" },
   ".cm-gutters": { backgroundColor: "#0a0a0a", borderRight: "1px solid #1e1e1e", color: "#333333" },
   ".cm-activeLineGutter": { backgroundColor: "#111111" },
   ".cm-lineNumbers .cm-gutterElement": { padding: "0 8px" },
@@ -77,7 +75,6 @@ const dawnTheme = EditorView.theme({
   ".cm-scroller": { overflow: "auto" },
   ".cm-content": { caretColor: "#1a1a3a", padding: "4px 0" },
   ".cm-cursor": { borderLeftColor: "#3878e8" },
-  ".cm-activeLine": { backgroundColor: "rgba(235, 235, 242, 0.5)" },
   ".cm-gutters": { backgroundColor: "#e8e8f0", borderRight: "1px solid #d0d0de", color: "#9898b8" },
   ".cm-activeLineGutter": { backgroundColor: "#ebebf2" },
   ".cm-lineNumbers .cm-gutterElement": { padding: "0 8px" },
@@ -121,7 +118,6 @@ const baseExtensions = [
   autocompletion(),
   rectangularSelection(),
   crosshairCursor(),
-  highlightActiveLine(),
 ];
 
 export function CodeEditor({ content, language, onChange, onSave }: Props) {
