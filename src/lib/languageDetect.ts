@@ -21,6 +21,7 @@ export function detectLanguage(filename: string): string {
     sh: "shell",
     bash: "shell",
     zsh: "shell",
+    cs: "csharp",
   };
   return map[ext] ?? "";
 }

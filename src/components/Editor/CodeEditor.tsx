@@ -11,6 +11,8 @@ import { html } from "@codemirror/lang-html";
 import { rust } from "@codemirror/lang-rust";
 import { json } from "@codemirror/lang-json";
 import { markdown } from "@codemirror/lang-markdown";
+import { StreamLanguage } from "@codemirror/language";
+import { csharp } from "@codemirror/legacy-modes/mode/clike";
 import { useStore } from "../../store/useStore";
 import type { ThemeId } from "../../lib/themes";
 
@@ -100,6 +102,7 @@ function getLanguageExtension(language: string) {
     case "rust": return rust();
     case "json": return json();
     case "markdown": return markdown();
+    case "csharp": return StreamLanguage.define(csharp);
     default: return null;
   }
 }
