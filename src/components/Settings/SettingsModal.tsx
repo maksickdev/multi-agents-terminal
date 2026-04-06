@@ -1,14 +1,25 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useStore } from "../../store/useStore";
 import { themes } from "../../lib/themes";
-import { X } from "lucide-react";
+import { X, FolderOpen } from "lucide-react";
+import { pickFolder } from "../../lib/tauri";
 
 interface Props {
   onClose: () => void;
 }
 
 export function SettingsModal({ onClose }: Props) {
-  const { theme, setTheme } = useStore();
+  const { theme, setTheme, projectsFolder, setProjectsFolder } = useStore();
+  const [folderInput, setFolderInput] = useState(projectsFolder);
+
+  const handlePickFolder = async () => {
+    const picked = await pickFolder();
+    if (picked) setFolderInput(picked);
+  };
+
+  const handleFolderBlur = () => {
+    setProjectsFolder(folderInput);
+  };
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -37,6 +48,35 @@ export function SettingsModal({ onClose }: Props) {
 
         {/* Content */}
         <div className="p-4 flex flex-col gap-4">
+
+          {/* Projects folder */}
+          <div className="flex flex-col gap-2">
+            <span className="text-xs font-semibold text-[var(--c-text-dim)] uppercase tracking-widest">
+              Projects folder
+            </span>
+            <p className="text-xs text-[var(--c-text-dim)]">
+              Default folder for creating new projects.
+            </p>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={folderInput}
+                onChange={(e) => setFolderInput(e.target.value)}
+                onBlur={handleFolderBlur}
+                placeholder="/Users/you/Projects"
+                className="flex-1 px-3 py-1.5 text-sm rounded font-mono outline-none border border-[var(--c-border)] focus:border-[var(--c-accent)] transition-colors"
+                style={{ background: "var(--c-bg-deep)", color: "var(--c-text)" }}
+              />
+              <button
+                onClick={handlePickFolder}
+                title="Pick folder"
+                className="px-2 py-1.5 rounded border border-[var(--c-border)] hover:border-[var(--c-accent)] text-[var(--c-text-dim)] hover:text-[var(--c-text)] transition-colors"
+                style={{ background: "var(--c-bg-deep)" }}
+              >
+                <FolderOpen size={14} />
+              </button>
+            </div>
+          </div>
 
           {/* Theme section */}
           <div className="flex flex-col gap-2">

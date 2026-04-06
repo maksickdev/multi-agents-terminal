@@ -1,16 +1,14 @@
 import { useRef, useState } from "react";
-import { Settings, FolderPlus } from "lucide-react";
+import { FolderPlus } from "lucide-react";
 import { AddProjectButton } from "./AddProjectButton";
 import { ProjectItem } from "./ProjectItem";
 import { UsageButton } from "./UsageButton";
-import { SettingsModal } from "./SettingsModal";
 import { NewProjectModal } from "./NewProjectModal";
 import { useStore } from "../../store/useStore";
 
 export function Sidebar() {
   const { projects, sidebarOpen, sidebarWidth, setSidebarWidth } = useStore();
 
-  const [showSettings, setShowSettings] = useState(false);
   const [showNewProject, setShowNewProject] = useState(false);
 
   const resizingRef = useRef(false);
@@ -38,7 +36,6 @@ export function Sidebar() {
 
   return (
     <>
-      {showSettings && <SettingsModal onClose={() => setShowSettings(false)} />}
       {showNewProject && <NewProjectModal onClose={() => setShowNewProject(false)} />}
 
       <aside
@@ -50,22 +47,13 @@ export function Sidebar() {
           <h1 className="text-xs font-semibold text-[var(--c-text-dim)] uppercase tracking-widest">
             Projects
           </h1>
-          <div className="flex items-center gap-1">
-            <button
-              onClick={() => setShowNewProject(true)}
-              title="New project"
-              className="p-1 rounded text-[var(--c-text-dim)] hover:text-[var(--c-text)] hover:bg-[var(--c-bg)] transition-colors"
-            >
-              <FolderPlus size={13} />
-            </button>
-            <button
-              onClick={() => setShowSettings(true)}
-              title="Settings"
-              className="p-1 rounded text-[var(--c-text-dim)] hover:text-[var(--c-text)] hover:bg-[var(--c-bg)] transition-colors"
-            >
-              <Settings size={13} />
-            </button>
-          </div>
+          <button
+            onClick={() => setShowNewProject(true)}
+            title="New project"
+            className="p-1 rounded text-[var(--c-text-dim)] hover:text-[var(--c-text)] hover:bg-[var(--c-bg)] transition-colors"
+          >
+            <FolderPlus size={13} />
+          </button>
         </div>
 
         <div className="flex-1 overflow-y-auto py-2 px-2 space-y-1">
