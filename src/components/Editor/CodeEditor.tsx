@@ -39,8 +39,8 @@ const tokyoNightTheme = EditorView.theme({
   ".cm-gutters": { backgroundColor: "#16161e", borderRight: "1px solid #1f2335", color: "#414868" },
   ".cm-activeLineGutter": { backgroundColor: "#1f2335" },
   ".cm-lineNumbers .cm-gutterElement": { padding: "0 8px" },
-  ".cm-selectionBackground, ::selection": { backgroundColor: "#283457" },
-  "&.cm-focused .cm-selectionBackground": { backgroundColor: "#283457" },
+  ".cm-selectionBackground, ::selection": { backgroundColor: "#3d59a1" },
+  "&.cm-focused .cm-selectionBackground": { backgroundColor: "#3d59a1" },
 }, { dark: true });
 
 // ── Dark: Grid Mint ───────────────────────────────────────────────────────────
@@ -59,8 +59,8 @@ const gridMintTheme = EditorView.theme({
   ".cm-gutters": { backgroundColor: "#0a0a0a", borderRight: "1px solid #1e1e1e", color: "#333333" },
   ".cm-activeLineGutter": { backgroundColor: "#111111" },
   ".cm-lineNumbers .cm-gutterElement": { padding: "0 8px" },
-  ".cm-selectionBackground, ::selection": { backgroundColor: "#00d4aa28" },
-  "&.cm-focused .cm-selectionBackground": { backgroundColor: "#00d4aa28" },
+  ".cm-selectionBackground, ::selection": { backgroundColor: "#00d4aa3a" },
+  "&.cm-focused .cm-selectionBackground": { backgroundColor: "#00d4aa3a" },
   ".cm-tooltip": { backgroundColor: "#111111", border: "1px solid #1e1e1e", color: "#cccccc" },
   ".cm-tooltip-autocomplete ul li[aria-selected]": { backgroundColor: "#00d4aa22" },
 }, { dark: true });
