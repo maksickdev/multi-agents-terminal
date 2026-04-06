@@ -30,10 +30,15 @@ interface AppStore {
   selectedProjectId: string | null;
   activeAgentId: Record<string, string | null>;
 
+  // Settings
+  projectsFolder: string;
+  setProjectsFolder: (folder: string) => void;
+
   // Project actions
   setProjects: (projects: Project[]) => void;
   addProject: (project: Project) => void;
   removeProject: (projectId: string) => void;
+  renameProject: (projectId: string, newName: string, newPath: string) => void;
 
   // Agent actions
   addAgent: (agent: Agent) => void;
@@ -122,6 +127,12 @@ export const useStore = create<AppStore>((set, get) => ({
   activeFilePath: null,
   editorPaneHeight: 300,
   theme: (localStorage.getItem("theme") as ThemeId | null) ?? "dark",
+  projectsFolder: localStorage.getItem("projectsFolder") ?? "",
+
+  setProjectsFolder: (folder) => {
+    localStorage.setItem("projectsFolder", folder);
+    set({ projectsFolder: folder });
+  },
 
   setProjects: (projects) => set({ projects }),
 
@@ -133,6 +144,13 @@ export const useStore = create<AppStore>((set, get) => ({
       projects: s.projects.filter((p) => p.id !== projectId),
       selectedProjectId:
         s.selectedProjectId === projectId ? null : s.selectedProjectId,
+    })),
+
+  renameProject: (projectId, newName, newPath) =>
+    set((s) => ({
+      projects: s.projects.map((p) =>
+        p.id === projectId ? { ...p, name: newName, path: newPath } : p
+      ),
     })),
 
   addAgent: (agent) =>

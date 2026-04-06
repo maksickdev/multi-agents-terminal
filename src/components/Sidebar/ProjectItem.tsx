@@ -1,24 +1,69 @@
-import { useState } from "react";
-import { spawnAgent, killAgent } from "../../lib/tauri";
+import { useEffect, useRef, useState } from "react";
+import { spawnAgent, killAgent, renamePath, saveProjects } from "../../lib/tauri";
 import { useStore, type Agent } from "../../store/useStore";
 import type { Project } from "../../lib/tauri";
 import { ConfirmModal } from "../shared/ConfirmModal";
 import { ContextMenu, type ContextMenuItem } from "../FileExplorer/ContextMenu";
 import { revealInFinder } from "../../lib/tauri";
-import { Plus, Trash2, ScanSearch } from "lucide-react";
+import { Plus, Trash2, ScanSearch, Pencil } from "lucide-react";
 
 interface Props {
   project: Project;
 }
 
 export function ProjectItem({ project }: Props) {
-  const { selectedProjectId, selectProject, addAgent, removeProject, getProjectAgents } =
+  const { selectedProjectId, selectProject, addAgent, removeProject, renameProject, getProjectAgents, projects } =
     useStore();
   const isSelected = selectedProjectId === project.id;
   const agents = getProjectAgents(project.id);
 
   const [showConfirm, setShowConfirm] = useState(false);
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
+
+  // Rename state
+  const [renaming, setRenaming] = useState(false);
+  const [renameValue, setRenameValue] = useState(project.name);
+  const [renameError, setRenameError] = useState<string | null>(null);
+  const renameInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (renaming) {
+      setRenameValue(project.name);
+      setRenameError(null);
+      setTimeout(() => {
+        renameInputRef.current?.focus();
+        renameInputRef.current?.select();
+      }, 0);
+    }
+  }, [renaming]);
+
+  const commitRename = async () => {
+    const newName = renameValue.trim();
+    if (!newName || newName === project.name) { setRenaming(false); return; }
+    if (newName.includes("/") || newName.includes("\\")) {
+      setRenameError("Name must not contain slashes");
+      return;
+    }
+
+    const parent = project.path.substring(0, project.path.lastIndexOf("/"));
+    const newPath = `${parent}/${newName}`;
+
+    try {
+      await renamePath(project.path, newPath);
+      renameProject(project.id, newName, newPath);
+      await saveProjects(
+        projects.map((p) => p.id === project.id ? { ...p, name: newName, path: newPath } : p)
+      );
+      setRenaming(false);
+    } catch (e) {
+      setRenameError(String(e));
+    }
+  };
+
+  const handleRenameKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter") { e.preventDefault(); commitRename(); }
+    if (e.key === "Escape") { setRenaming(false); }
+  };
 
   const handleNewAgent = async () => {
     selectProject(project.id);
@@ -60,6 +105,11 @@ export function ProjectItem({ project }: Props) {
       onClick: handleNewAgent,
     },
     {
+      label: "Rename Folder",
+      icon: Pencil,
+      onClick: () => setRenaming(true),
+    },
+    {
       label: "Reveal in Finder",
       icon: ScanSearch,
       onClick: () => revealInFinder(project.path),
@@ -95,8 +145,9 @@ export function ProjectItem({ project }: Props) {
       )}
 
       <div
-        onClick={() => selectProject(project.id)}
+        onClick={() => !renaming && selectProject(project.id)}
         onContextMenu={handleContextMenu}
+        onDoubleClick={() => setRenaming(true)}
         className={`flex flex-col px-3 py-2 rounded cursor-pointer transition-colors ${
           isSelected
             ? "bg-[var(--c-bg-elevated)] text-[var(--c-text-bright)]"
@@ -104,12 +155,31 @@ export function ProjectItem({ project }: Props) {
         }`}
       >
         <div className="flex items-center justify-between min-w-0">
-          <span className="text-sm font-medium truncate">{project.name}</span>
-          {agents.length > 0 && (
+          {renaming ? (
+            <div className="flex-1 flex flex-col gap-1 min-w-0">
+              <input
+                ref={renameInputRef}
+                value={renameValue}
+                onChange={(e) => { setRenameValue(e.target.value); setRenameError(null); }}
+                onKeyDown={handleRenameKeyDown}
+                onBlur={commitRename}
+                onClick={(e) => e.stopPropagation()}
+                className="w-full text-sm font-medium rounded px-1 outline-none border border-[var(--c-accent)] bg-[var(--c-bg-deep)] text-[var(--c-text-bright)]"
+              />
+              {renameError && (
+                <span className="text-[10px] text-[var(--c-danger)]">{renameError}</span>
+              )}
+            </div>
+          ) : (
+            <span className="text-sm font-medium truncate">{project.name}</span>
+          )}
+          {!renaming && agents.length > 0 && (
             <span className="text-xs text-[var(--c-accent)] ml-2 flex-shrink-0">{agents.length}</span>
           )}
         </div>
-        <span className="text-xs text-[var(--c-text-dim)] truncate">{project.path}</span>
+        {!renaming && (
+          <span className="text-xs text-[var(--c-text-dim)] truncate">{project.path}</span>
+        )}
       </div>
     </>
   );
