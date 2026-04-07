@@ -13,6 +13,42 @@ const entries = new Map<string, TerminalEntry>();
 /** Scrollback bytes waiting to be replayed when the terminal attaches. */
 const pendingScrollback = new Map<string, Uint8Array>();
 
+// ── Flow-control write queue ──────────────────────────────────────────────────
+//
+// xterm.js 5.x throws a hard Error when _pendingData > 50 MB:
+//   "write data discarded, use flow control to avoid losing data"
+//
+// Queuing writes and only dispatching the next chunk after xterm signals
+// completion (via the write-callback) keeps _pendingData well below the limit.
+
+const writeQueues = new Map<string, (Uint8Array | string)[]>();
+const writeBusy   = new Map<string, boolean>();
+
+function drainQueue(agentId: string, terminal: Terminal) {
+  const queue = writeQueues.get(agentId);
+  if (!queue || queue.length === 0) {
+    writeBusy.set(agentId, false);
+    return;
+  }
+  writeBusy.set(agentId, true);
+  const chunk = queue.shift()!;
+  // terminal.write() accepts Uint8Array | string, callback fires after parsing
+  (terminal.write as (data: Uint8Array | string, cb?: () => void) => void)(
+    chunk,
+    () => drainQueue(agentId, terminal),
+  );
+}
+
+function enqueueWrite(
+  agentId: string,
+  terminal: Terminal,
+  data: Uint8Array | string,
+) {
+  if (!writeQueues.has(agentId)) writeQueues.set(agentId, []);
+  writeQueues.get(agentId)!.push(data);
+  if (!writeBusy.get(agentId)) drainQueue(agentId, terminal);
+}
+
 // ── Per-theme xterm color palettes ───────────────────────────────────────────
 
 const xtermThemes: Record<ThemeId, NonNullable<ConstructorParameters<typeof Terminal>[0]>["theme"]> = {
@@ -135,14 +171,17 @@ export function attach(agentId: string, element: HTMLElement) {
     }
   }
 
-  // Replay historical output if available (session restore)
+  // Replay historical output if available (session restore).
+  // Queued via flow-control so the 50 MB xterm write-buffer never overflows.
   const scrollback = pendingScrollback.get(agentId);
   if (scrollback && scrollback.length > 0) {
     pendingScrollback.delete(agentId);
-    entry.terminal.write(scrollback);
-    // Visual separator between history and new session
-    entry.terminal.write(
-      "\r\n\x1b[2m\x1b[90m─── session restored ───\x1b[0m\r\n\r\n"
+    enqueueWrite(agentId, entry.terminal, scrollback);
+    // Visual separator — enqueued after scrollback so it appears at the end
+    enqueueWrite(
+      agentId,
+      entry.terminal,
+      "\r\n\x1b[2m\x1b[90m─── session restored ───\x1b[0m\r\n\r\n",
     );
   }
 
@@ -159,15 +198,18 @@ export function fit(agentId: string) {
 export function dispose(agentId: string) {
   const entry = entries.get(agentId);
   if (entry) {
+    writeQueues.delete(agentId);
+    writeBusy.delete(agentId);
     entry.terminal.dispose();
     entries.delete(agentId);
   }
 }
 
+/** Write PTY output. Uses a flow-control queue so xterm never overflows. */
 export function write(agentId: string, data: Uint8Array) {
   const entry = entries.get(agentId);
   if (entry) {
-    entry.terminal.write(data);
+    enqueueWrite(agentId, entry.terminal, data);
   }
 }
 
@@ -185,6 +227,9 @@ export function getDimensions(agentId: string): { rows: number; cols: number } |
 export function clearTerminal(agentId: string) {
   const entry = entries.get(agentId);
   if (entry) {
+    // Drain pending writes before clearing so stale data doesn't appear later
+    writeQueues.delete(agentId);
+    writeBusy.delete(agentId);
     entry.terminal.clear();
   }
 }
