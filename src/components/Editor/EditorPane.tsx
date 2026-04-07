@@ -1,6 +1,7 @@
 import { useCallback, useRef, useState } from "react";
 import { useStore } from "../../store/useStore";
 import { writeFileText } from "../../lib/tauri";
+import { useFileWatcher } from "../../hooks/useFileWatcher";
 import { CodeEditor } from "./CodeEditor";
 import { EditorTab } from "./EditorTab";
 import { RenderedPreview } from "./RenderedPreview";
@@ -10,6 +11,8 @@ import { Circle } from "lucide-react";
 const PREVIEWABLE = ["markdown"];
 
 export function EditorPane() {
+  useFileWatcher();
+
   const {
     openFiles, activeFilePath,
     editorPaneHeight, setEditorPaneHeight,
