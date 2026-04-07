@@ -4,6 +4,7 @@ import { EditorState, Compartment, Transaction } from "@codemirror/state";
 import { defaultKeymap, history, historyKeymap, indentWithTab } from "@codemirror/commands";
 import { indentOnInput, syntaxHighlighting, defaultHighlightStyle, bracketMatching, foldGutter, foldKeymap } from "@codemirror/language";
 import { autocompletion, completionKeymap, closeBrackets, closeBracketsKeymap } from "@codemirror/autocomplete";
+import { search, searchKeymap } from "@codemirror/search";
 import { oneDark, oneDarkHighlightStyle } from "@codemirror/theme-one-dark";
 import { javascript } from "@codemirror/lang-javascript";
 import { css } from "@codemirror/lang-css";
@@ -15,6 +16,81 @@ import { StreamLanguage } from "@codemirror/language";
 import { csharp } from "@codemirror/legacy-modes/mode/clike";
 import { useStore } from "../../store/useStore";
 import type { ThemeId } from "../../lib/themes";
+
+// ── Search panel icon patch ───────────────────────────────────────────────────
+const SVG_NS = "http://www.w3.org/2000/svg";
+
+function makeSVGIcon(pathData: string): SVGSVGElement {
+  const svg = document.createElementNS(SVG_NS, "svg");
+  svg.setAttribute("width", "14"); svg.setAttribute("height", "14");
+  svg.setAttribute("viewBox", "0 0 24 24"); svg.setAttribute("fill", "none");
+  svg.setAttribute("stroke", "currentColor"); svg.setAttribute("stroke-width", "2");
+  svg.setAttribute("stroke-linecap", "round"); svg.setAttribute("stroke-linejoin", "round");
+  // pathData contains only d= attributes or point= attributes — no script vectors
+  const parser = new DOMParser();
+  const parsed = parser.parseFromString(`<svg xmlns="${SVG_NS}">${pathData}</svg>`, "image/svg+xml");
+  parsed.documentElement.childNodes.forEach((n) => svg.appendChild(document.importNode(n, true)));
+  return svg;
+}
+
+const SEARCH_ICONS: Record<string, { node: () => SVGSVGElement; title: string }> = {
+  previous:      { node: () => makeSVGIcon('<polyline points="18 15 12 9 6 15"/>'),                                                                              title: "Previous (Shift+Enter)" },
+  next:          { node: () => makeSVGIcon('<polyline points="6 9 12 15 18 9"/>'),                                                                               title: "Next (Enter)" },
+  all:           { node: () => makeSVGIcon('<path d="m3 17 2 2 4-4"/><path d="m3 7 2 2 4-4"/><path d="M13 6h8"/><path d="M13 12h8"/><path d="M13 18h8"/>'),    title: "Select all" },
+  replace:       { node: () => makeSVGIcon('<path d="M5 3 3 5l2 2"/><path d="M3 5h11a4 4 0 0 1 4 4v3"/><path d="M19 21l2-2-2-2"/><path d="M21 19H10a4 4 0 0 1-4-4v-3"/>'), title: "Replace" },
+  "replace all": { node: () => makeSVGIcon('<path d="m3 7 2-2 2 2"/><path d="M5 5v5a4 4 0 0 0 4 4h3"/><path d="m21 17-2 2-2-2"/><path d="M19 19v-5a4 4 0 0 0-4-4h-3"/>'), title: "Replace all" },
+  "×":           { node: () => makeSVGIcon('<line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>'),                                     title: "Close (Escape)" },
+};
+const CHEVRON_RIGHT = '<polyline points="9 18 15 12 9 6"/>';
+const CHEVRON_DOWN  = '<polyline points="6 9 12 15 18 9"/>';
+
+function patchSearchPanel(container: HTMLElement) {
+  const panel = container.querySelector<HTMLElement>(".cm-search");
+  if (!panel || panel.dataset.panelPatched) return;
+  panel.dataset.panelPatched = "1";
+
+  // Patch all button icons
+  panel.querySelectorAll<HTMLElement>(".cm-button").forEach((btn) => {
+    const name = btn.getAttribute("name") ?? "";
+    const key = name === "close" ? "×"
+              : name === "replaceAll" ? "replace all"
+              : name === "replace" ? "replace"
+              : (btn.textContent?.trim().toLowerCase() ?? "");
+    const def = SEARCH_ICONS[key];
+    if (def) { btn.replaceChildren(def.node()); btn.title = def.title; }
+  });
+
+  // Restructure: wrap replace row in collapsible section
+  const br = panel.querySelector("br");
+  const closeBtn = panel.querySelector<HTMLElement>(".cm-button[name='close']");
+  if (!br || !closeBtn) return;
+
+  // Collect nodes after <br> except the close button
+  const replaceNodes: ChildNode[] = [];
+  let node: ChildNode | null = br.nextSibling;
+  while (node) { if (node !== closeBtn) replaceNodes.push(node); node = node.nextSibling; }
+
+  const replaceSection = document.createElement("div");
+  replaceSection.style.cssText = "display:none;align-items:center;gap:4px;flex:1 1 100%;padding-top:2px;";
+  replaceNodes.forEach(n => replaceSection.appendChild(n));
+
+  const toggleBtn = document.createElement("button");
+  toggleBtn.className = "cm-button";
+  toggleBtn.title = "Toggle replace";
+  toggleBtn.appendChild(makeSVGIcon(CHEVRON_RIGHT));
+
+  let expanded = false;
+  toggleBtn.addEventListener("click", () => {
+    expanded = !expanded;
+    replaceSection.style.display = expanded ? "flex" : "none";
+    toggleBtn.replaceChildren(makeSVGIcon(expanded ? CHEVRON_DOWN : CHEVRON_RIGHT));
+  });
+
+  br.replaceWith(toggleBtn);
+  closeBtn.style.marginLeft = "auto";
+  panel.appendChild(replaceSection);
+  panel.appendChild(closeBtn);
+}
 
 interface Props {
   content: string;
@@ -40,6 +116,16 @@ const tokyoNightTheme = EditorView.theme({
   ".cm-lineNumbers .cm-gutterElement": { padding: "0 8px" },
   ".cm-selectionBackground, ::selection": { backgroundColor: "#3d59a1" },
   "&.cm-focused .cm-selectionBackground": { backgroundColor: "#3d59a1" },
+  ".cm-searchMatch": { backgroundColor: "#3d59a180", outline: "1px solid #3d59a1" },
+  ".cm-searchMatch.cm-searchMatch-selected": { backgroundColor: "#7aa2f7", color: "#1a1b26" },
+  ".cm-panels": { backgroundColor: "#16161e", borderTop: "1px solid #1f2335", padding: "0" },
+  ".cm-search": { display: "flex", alignItems: "center", flexWrap: "wrap", gap: "4px", padding: "6px 8px", fontFamily: '"JetBrains Mono","Cascadia Code",Menlo,monospace' },
+  ".cm-textfield": { height: "26px", padding: "0 8px", backgroundColor: "#0d0e17", color: "#c0caf5", border: "1px solid #1f2335", borderRadius: "3px", fontSize: "12px", fontFamily: '"JetBrains Mono","Cascadia Code",Menlo,monospace', outline: "none", minWidth: "150px" },
+  ".cm-textfield:focus": { borderColor: "#7aa2f7" },
+  ".cm-search .cm-button": { display: "inline-flex", alignItems: "center", justifyContent: "center", width: "24px", height: "24px", padding: "0", border: "none", borderRadius: "0", backgroundColor: "transparent", backgroundImage: "none", color: "#414868", cursor: "pointer", flexShrink: "0" },
+  ".cm-search .cm-button:hover": { color: "#7aa2f7" },
+  ".cm-search label": { display: "inline-flex", alignItems: "center", gap: "4px", fontSize: "11px", fontFamily: '"JetBrains Mono","Cascadia Code",Menlo,monospace', color: "#414868", cursor: "pointer", userSelect: "none" },
+  ".cm-search input[type=checkbox]": { accentColor: "#7aa2f7", width: "12px", height: "12px", margin: "0", cursor: "pointer" },
 }, { dark: true });
 
 // ── Dark: Grid Mint ───────────────────────────────────────────────────────────
@@ -59,6 +145,16 @@ const gridMintTheme = EditorView.theme({
   ".cm-lineNumbers .cm-gutterElement": { padding: "0 8px" },
   ".cm-selectionBackground, ::selection": { backgroundColor: "#00d4aa50" },
   "&.cm-focused .cm-selectionBackground": { backgroundColor: "#00d4aa50" },
+  ".cm-searchMatch": { backgroundColor: "#00d4aa30", outline: "1px solid #00d4aa" },
+  ".cm-searchMatch.cm-searchMatch-selected": { backgroundColor: "#00d4aa", color: "#0a0a0a" },
+  ".cm-panels": { backgroundColor: "#0a0a0a", borderTop: "1px solid #1e1e1e", padding: "0" },
+  ".cm-search": { display: "flex", alignItems: "center", flexWrap: "wrap", gap: "4px", padding: "6px 8px", fontFamily: '"JetBrains Mono","Cascadia Code",Menlo,monospace' },
+  ".cm-textfield": { height: "26px", padding: "0 8px", backgroundColor: "#050505", color: "#cccccc", border: "1px solid #1e1e1e", borderRadius: "3px", fontSize: "12px", fontFamily: '"JetBrains Mono","Cascadia Code",Menlo,monospace', outline: "none", minWidth: "150px" },
+  ".cm-textfield:focus": { borderColor: "#00d4aa" },
+  ".cm-search .cm-button": { display: "inline-flex", alignItems: "center", justifyContent: "center", width: "24px", height: "24px", padding: "0", border: "none", borderRadius: "0", backgroundColor: "transparent", backgroundImage: "none", color: "#333333", cursor: "pointer", flexShrink: "0" },
+  ".cm-search .cm-button:hover": { color: "#00d4aa" },
+  ".cm-search label": { display: "inline-flex", alignItems: "center", gap: "4px", fontSize: "11px", fontFamily: '"JetBrains Mono","Cascadia Code",Menlo,monospace', color: "#333333", cursor: "pointer", userSelect: "none" },
+  ".cm-search input[type=checkbox]": { accentColor: "#00d4aa", width: "12px", height: "12px", margin: "0", cursor: "pointer" },
   ".cm-tooltip": { backgroundColor: "#111111", border: "1px solid #1e1e1e", color: "#cccccc" },
   ".cm-tooltip-autocomplete ul li[aria-selected]": { backgroundColor: "#00d4aa22" },
 }, { dark: true });
@@ -80,6 +176,16 @@ const dawnTheme = EditorView.theme({
   ".cm-lineNumbers .cm-gutterElement": { padding: "0 8px" },
   ".cm-selectionBackground, ::selection": { backgroundColor: "#c8d8ff" },
   "&.cm-focused .cm-selectionBackground": { backgroundColor: "#c8d8ff" },
+  ".cm-searchMatch": { backgroundColor: "#c8d8ff80", outline: "1px solid #3878e8" },
+  ".cm-searchMatch.cm-searchMatch-selected": { backgroundColor: "#3878e8", color: "#ffffff" },
+  ".cm-panels": { backgroundColor: "#e8e8f0", borderTop: "1px solid #d0d0de", padding: "0" },
+  ".cm-search": { display: "flex", alignItems: "center", flexWrap: "wrap", gap: "4px", padding: "6px 8px", fontFamily: '"JetBrains Mono","Cascadia Code",Menlo,monospace' },
+  ".cm-textfield": { height: "26px", padding: "0 8px", backgroundColor: "#ffffff", color: "#1a1a3a", border: "1px solid #d0d0de", borderRadius: "3px", fontSize: "12px", fontFamily: '"JetBrains Mono","Cascadia Code",Menlo,monospace', outline: "none", minWidth: "150px" },
+  ".cm-textfield:focus": { borderColor: "#3878e8" },
+  ".cm-search .cm-button": { display: "inline-flex", alignItems: "center", justifyContent: "center", width: "24px", height: "24px", padding: "0", border: "none", borderRadius: "0", backgroundColor: "transparent", backgroundImage: "none", color: "#9898b8", cursor: "pointer", flexShrink: "0" },
+  ".cm-search .cm-button:hover": { color: "#3878e8" },
+  ".cm-search label": { display: "inline-flex", alignItems: "center", gap: "4px", fontSize: "11px", fontFamily: '"JetBrains Mono","Cascadia Code",Menlo,monospace', color: "#9898b8", cursor: "pointer", userSelect: "none" },
+  ".cm-search input[type=checkbox]": { accentColor: "#3878e8", width: "12px", height: "12px", margin: "0", cursor: "pointer" },
   ".cm-tooltip": { backgroundColor: "#ebebf2", border: "1px solid #d0d0de", color: "#1a1a3a" },
   ".cm-tooltip-autocomplete ul li[aria-selected]": { backgroundColor: "#c8d8ff" },
 }, { dark: false });
@@ -118,6 +224,7 @@ const baseExtensions = [
   autocompletion(),
   rectangularSelection(),
   crosshairCursor(),
+  search({ top: false }),
 ];
 
 export function CodeEditor({ content, language, onChange, onSave }: Props) {
@@ -153,6 +260,7 @@ export function CodeEditor({ content, language, onChange, onSave }: Props) {
           ...historyKeymap,
           ...foldKeymap,
           ...completionKeymap,
+          ...searchKeymap,
           indentWithTab,
           { key: "Mod-s", run: () => { onSaveRef.current(); return true; } },
         ]),
@@ -174,7 +282,12 @@ export function CodeEditor({ content, language, onChange, onSave }: Props) {
     viewRef.current = view;
     lastExternalContent.current = content;
 
+    // Patch search panel whenever it opens (icons + replace spoiler)
+    const observer = new MutationObserver(() => patchSearchPanel(containerRef.current!));
+    observer.observe(containerRef.current, { childList: true, subtree: true });
+
     return () => {
+      observer.disconnect();
       view.destroy();
       viewRef.current = null;
     };
