@@ -1,28 +1,18 @@
 /**
  * Handles files dragged into the app window from the OS (e.g. Finder).
  *
- * Drop targets (identified by existing data-* attributes):
- *   data-agent-id   → terminal pane / shell pane
- *                     All dropped paths are joined with spaces and sent as
- *                     keyboard input so Claude / the shell can consume them.
+ * Uses Tauri's onDragDropEvent (the only reliable source for external drags
+ * in WKWebView — DOM dragover/dragenter events do not fire for OS-level drags).
  *
- *   data-folder-path / data-parent-folder → file explorer panel
- *                     Each dropped FILE is copied into the target folder.
- *                     Directories are skipped (copy not supported).
- *
- * Visual feedback:
- *   - Explorer folders get the existing "file-drag-folder-hover" CSS class.
- *   - Terminal panes get a temporary accent-colour outline.
- *
- * Coordinate system:
- *   Tauri's DragDropEvent uses PhysicalPosition (device pixels).
- *   elementsFromPoint() uses CSS/logical pixels, so we divide by
- *   window.devicePixelRatio before querying.
+ * Coordinate note: on macOS/WKWebView, DragDropEvent.position is already in
+ * logical (CSS) pixels relative to the window content area — no scale division
+ * or window-offset subtraction is needed.
  */
 import { useEffect, useRef } from "react";
 import { getCurrentWebview } from "@tauri-apps/api/webview";
 import { useStore } from "../store/useStore";
 import { writeToAgent, copyPath } from "../lib/tauri";
+import * as externalDrop from "../lib/externalDrop";
 
 const FOLDER_HOVER_CLASS = "file-drag-folder-hover";
 
@@ -38,15 +28,8 @@ type DropTarget =
   | { type: "terminal"; agentId: string; highlightEl: HTMLElement }
   | { type: "folder"; folderPath: string; highlightEl: HTMLElement };
 
-/** Convert Tauri physical coordinates → CSS logical coordinates. */
-function toCss(physX: number, physY: number): [number, number] {
-  const dpr = window.devicePixelRatio || 1;
-  return [physX / dpr, physY / dpr];
-}
-
-/** Walk elementsFromPoint to find the best drop target. */
-function resolveTarget(physX: number, physY: number): DropTarget | null {
-  const [x, y] = toCss(physX, physY);
+function resolveTarget(x: number, y: number): DropTarget | null {
+  if (x < 0 || y < 0 || x > window.innerWidth || y > window.innerHeight) return null;
   const els = document.elementsFromPoint(x, y);
 
   let folderResult: DropTarget | null = null;
@@ -54,12 +37,10 @@ function resolveTarget(physX: number, physY: number): DropTarget | null {
   for (const el of els) {
     const h = el as HTMLElement;
 
-    // Terminal pane takes priority over folders
     if (h.dataset.agentId) {
       return { type: "terminal", agentId: h.dataset.agentId, highlightEl: h };
     }
 
-    // Capture the first folder element found; resolve file rows to their parent
     if (folderResult === null) {
       if (h.dataset.folderPath !== undefined) {
         folderResult = { type: "folder", folderPath: h.dataset.folderPath, highlightEl: h };
@@ -68,11 +49,7 @@ function resolveTarget(physX: number, physY: number): DropTarget | null {
           `[data-folder-path="${CSS.escape(h.dataset.parentFolder)}"]`,
         );
         if (parentEl) {
-          folderResult = {
-            type: "folder",
-            folderPath: h.dataset.parentFolder,
-            highlightEl: parentEl,
-          };
+          folderResult = { type: "folder", folderPath: h.dataset.parentFolder, highlightEl: parentEl };
         }
       }
     }
@@ -84,7 +61,6 @@ function resolveTarget(physX: number, physY: number): DropTarget | null {
 export function useExternalFileDrop() {
   const bumpFileTree = useStore((s) => s.bumpFileTree);
 
-  // Stable ref keeps the highlight-clear logic out of the effect deps
   const prevTargetRef = useRef<DropTarget | null>(null);
 
   const clearHighlight = () => {
@@ -104,7 +80,6 @@ export function useExternalFileDrop() {
     if (target.type === "folder") {
       target.highlightEl.classList.add(FOLDER_HOVER_CLASS);
     } else {
-      // Subtle accent outline on the terminal container
       target.highlightEl.style.outline = "2px solid var(--c-accent)";
       target.highlightEl.style.outlineOffset = "-2px";
     }
@@ -120,38 +95,36 @@ export function useExternalFileDrop() {
 
         if (type === "leave") {
           clearHighlight();
+          externalDrop.setActive(null);
           return;
         }
 
         if (type === "enter" || type === "over") {
-          const { position } = event.payload;
-          applyHighlight(resolveTarget(position.x, position.y));
+          const { x, y } = event.payload.position;
+          applyHighlight(resolveTarget(x, y));
           return;
         }
 
         if (type === "drop") {
-          clearHighlight();
           const { paths, position } = event.payload;
-          if (!paths.length) return;
+          const target = resolveTarget(position.x, position.y) ?? prevTargetRef.current;
+          clearHighlight();
+          externalDrop.setActive(null);
 
-          const target = resolveTarget(position.x, position.y);
+          if (!paths.length || !target) return;
 
-          // ── Terminal: paste space-separated paths as keyboard input ───────
-          if (target?.type === "terminal") {
-            writeToAgent(target.agentId, encodeInput(paths.join(" "))).catch(
-              console.error,
-            );
+          if (target.type === "terminal") {
+            writeToAgent(target.agentId, encodeInput(paths.join(" "))).catch(console.error);
             return;
           }
 
-          // ── File Explorer folder: copy each file (not dir) into the folder ─
-          if (target?.type === "folder") {
+          if (target.type === "folder") {
             const { folderPath } = target;
             Promise.all(
               paths.map(async (src) => {
                 const name = src.split("/").pop()!;
-                const dst = `${folderPath}/${name}`;
-                if (dst === src) return; // already in this folder — no-op
+                const dst  = `${folderPath}/${name}`;
+                if (dst === src) return;
                 try {
                   await copyPath(src, dst);
                 } catch (e) {
@@ -162,9 +135,7 @@ export function useExternalFileDrop() {
           }
         }
       })
-      .then((fn) => {
-        unlisten = fn;
-      });
+      .then((fn) => { unlisten = fn; });
 
     return () => {
       clearHighlight();
