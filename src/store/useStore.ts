@@ -73,6 +73,9 @@ interface AppStore {
   fileExplorerWidth: number;
   /** projectId → array of expanded absolute dir paths */
   expandedDirs: Record<string, string[]>;
+  /** Bumped when an external drop copies a file into the explorer tree. */
+  fileTreeVersion: number;
+  bumpFileTree: () => void;
   setFileExplorerOpen: (open: boolean) => void;
   setFileExplorerWidth: (width: number) => void;
   toggleExpandedDir: (projectId: string, dirPath: string) => void;
@@ -122,6 +125,7 @@ export const useStore = create<AppStore>((set, get) => ({
   fileExplorerOpen: false,
   fileExplorerWidth: 240,
   expandedDirs: {},
+  fileTreeVersion: 0,
 
   openFiles: [],
   activeFilePath: null,
@@ -231,6 +235,7 @@ export const useStore = create<AppStore>((set, get) => ({
   setGitPanelWidth: (width) => set({ gitPanelWidth: Math.max(220, Math.min(width, 600)) }),
   bumpGitStatus: () => set((s) => ({ gitStatusVersion: s.gitStatusVersion + 1 })),
 
+  bumpFileTree: () => set((s) => ({ fileTreeVersion: s.fileTreeVersion + 1 })),
   setFileExplorerOpen: (open) => set({ fileExplorerOpen: open }),
   setFileExplorerWidth: (width) => set({ fileExplorerWidth: Math.max(160, Math.min(width, 600)) }),
   toggleExpandedDir: (projectId, dirPath) =>

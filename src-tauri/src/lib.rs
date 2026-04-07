@@ -10,7 +10,7 @@ use commands::pty_commands::{
 use commands::project_commands::{load_projects, pick_folder, save_projects};
 use commands::file_commands::{
     read_dir, read_file_text, write_file_text, delete_path,
-    create_file, create_dir_all, rename_path, reveal_in_finder,
+    create_file, create_dir_all, rename_path, copy_path, reveal_in_finder,
 };
 use commands::usage_commands::fetch_usage;
 use commands::git_commands::{
@@ -57,6 +57,7 @@ pub fn run() {
             write_file_text,
             delete_path,
             create_file,
+            copy_path,
             create_dir_all,
             rename_path,
             reveal_in_finder,

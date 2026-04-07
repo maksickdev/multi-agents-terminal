@@ -80,6 +80,15 @@ pub fn rename_path(old_path: String, new_path: String) -> Result<(), String> {
     std::fs::rename(&old_path, &new_path).map_err(|e| format!("rename_path failed: {e}"))
 }
 
+/// Copy a single file from `src` to `dst` (overwrites dst if it already exists).
+/// Directories are not supported — only plain files.
+#[tauri::command]
+pub fn copy_path(src: String, dst: String) -> Result<(), String> {
+    std::fs::copy(&src, &dst)
+        .map(|_| ())
+        .map_err(|e| format!("copy_path failed: {e}"))
+}
+
 /// Open the containing folder in Finder and select the item (macOS only).
 #[tauri::command]
 pub fn reveal_in_finder(path: String) -> Result<(), String> {

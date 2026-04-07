@@ -1,6 +1,7 @@
 import { useSessionPersistence } from "./hooks/useSessionPersistence";
 import { usePtyEvents } from "./hooks/usePty";
 import { useTheme } from "./hooks/useTheme";
+import { useExternalFileDrop } from "./hooks/useExternalFileDrop";
 import { useStore } from "./store/useStore";
 import { ActivityBar } from "./components/Sidebar/ActivityBar";
 import { Sidebar } from "./components/Sidebar/Sidebar";
@@ -13,6 +14,7 @@ export function App() {
   useSessionPersistence();
   usePtyEvents();
   useTheme();
+  useExternalFileDrop();
 
   const { projects, selectedProjectId } = useStore();
   const activeProject = projects.find((p) => p.id === selectedProjectId) ?? null;

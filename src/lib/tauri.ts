@@ -113,6 +113,9 @@ export const createDirAll = (path: string) =>
 export const renamePath = (oldPath: string, newPath: string) =>
   invoke<void>("rename_path", { oldPath, newPath });
 
+export const copyPath = (src: string, dst: string) =>
+  invoke<void>("copy_path", { src, dst });
+
 export const revealInFinder = (path: string) =>
   invoke<void>("reveal_in_finder", { path });
 

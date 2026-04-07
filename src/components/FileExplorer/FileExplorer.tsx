@@ -10,6 +10,7 @@ export function FileExplorer() {
   const {
     projects, selectedProjectId,
     fileExplorerOpen, fileExplorerWidth,
+    fileTreeVersion,
     setFileExplorerOpen, setFileExplorerWidth,
   } = useStore();
 
@@ -180,7 +181,7 @@ export function FileExplorer() {
             )}
 
             <FileTree
-              key={`${selectedProject.id}-${refreshKey}`}
+              key={`${selectedProject.id}-${refreshKey}-${fileTreeVersion}`}
               project={selectedProject}
               onRefreshRoot={() => setRefreshKey((k) => k + 1)}
             />
