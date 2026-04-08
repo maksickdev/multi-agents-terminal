@@ -75,7 +75,7 @@ PTY process output
 - **`pty/reader.rs`** — `spawn_reader()`: blocking task that reads PTY → appends to scrollback file → emits `pty-output` event. Emits `agent-status: waiting` after 2 s silence, `agent-exited` on EOF/error.
 - **`commands/pty_commands.rs`** — all PTY Tauri commands. `spawn_agent` runs `claude` (located via `zsh -il`). `spawn_shell` runs `$SHELL` with inherited `LANG`/`LC_ALL`/`LC_CTYPE`. Both accept optional `rows`/`cols` and `agent_id` (for session restore). Scrollback files are `{scrollback_dir}/{agent_id}.bin`.
 - **`commands/project_commands.rs`** — load/save projects.json (atomic rename), folder picker.
-- **`commands/file_commands.rs`** — 7 FS commands: `read_dir`, `read_file_text`, `write_file_text`, `delete_path`, `create_file`, `create_dir_all`, `rename_path`. `read_dir` sorts dirs first (alphabetical), then files.
+- **`commands/file_commands.rs`** — 8 FS commands: `read_dir`, `read_file_text`, `write_file_text`, `delete_path`, `create_file`, `create_dir_all`, `rename_path`, `copy_path`. `read_dir` sorts dirs first (alphabetical), then files.
 
 Tauri 2 maps **camelCase JS parameters → snake_case Rust parameters** automatically.
 
@@ -90,6 +90,7 @@ Tauri 2 maps **camelCase JS parameters → snake_case Rust parameters** automati
 - `bottomPanelOpen`, `bottomPanelHeight`, `shellAgentIds: Record<projectId, agentId>`
 - `fileExplorerOpen`, `fileExplorerWidth`, `expandedDirs: Record<projectId, string[]>`
 - `openFiles: OpenFile[]`, `activeFilePath: string | null`, `editorPaneHeight: number` — editor state. `OpenFile` has `path`, `projectId`, `content`, `isDirty`, `language`.
+- `fileTreeVersion: number`, `bumpFileTree: () => void` — incremented after external file operations (e.g. drop copy) to trigger FileExplorer tree refresh.
 
 **Layout (left → right, top → bottom)**
 
@@ -117,6 +118,16 @@ All panel headers and tab bars are **32px tall** (`h-8`).
 **File drag (`src/lib/fileDrag.ts`)**
 
 Mouse-based drag (not HTML5 DnD). Files/folders can be dragged to a different folder in the tree (shows `MoveConfirmModal`) or to a terminal pane (pastes path). Folders in the tree get a highlight class `file-drag-folder-hover` on hover. A drag threshold (mouse must move ≥5px) prevents accidental drags on click.
+
+**External file drop (`src/hooks/useExternalFileDrop.ts`, `src/lib/externalDrop.ts`)**
+
+Handles files dragged from Finder (or any OS file manager) into the app via Tauri's `onDragDropEvent` (DOM drag events don't fire for OS-level drags in WKWebView).
+
+- Drop on a terminal/agent pane → inserts the file path(s) into PTY input.
+- Drop on a FileExplorer folder → copies the file(s) into that folder via `copy_path` Rust command, then calls `bumpFileTree()` to refresh the tree.
+- Highlights the drop target on hover (terminal outline, folder hover class).
+- **Coordinate note**: `DragDropEvent.position` on macOS/WKWebView is already in logical (CSS) pixels relative to the window content area — no scale division or screen-offset subtraction needed. `document.elementsFromPoint(x, y)` is used directly to resolve the drop target.
+- `data-agent-id` on terminal pane elements, `data-folder-path` / `data-parent-folder` on FileExplorer nodes are used for target resolution.
 
 **File icons (`src/lib/fileIcons.tsx`)**
 
@@ -187,3 +198,5 @@ Uses **mouse events** (not HTML5 DnD — unreliable in WKWebView). `draggingRef`
 - **Vite HMR gotcha**: saving any file from `src/` or `index.html` via the editor triggers Vite HMR in dev mode, reloading the app. This does not affect production builds.
 - `EditorPane` filters `openFiles` by `selectedProjectId` — only files of the active project are shown. All project files remain in the store and reappear when switching back.
 - **xterm scrollbar**: WKWebView does not apply webkit-scrollbar CSS to xterm's `.xterm-viewport`. The native scrollbar is hidden with `display: none` and a custom React scrollbar renders alongside the container using direct DOM mutation (not setState) for performance.
+- **xterm write queue**: xterm.js 5.x throws a hard `Error` (not a warning) when `_pendingData > 50 MB`. All writes go through a per-terminal queue using `terminal.write(data, callback)` so the next chunk is only enqueued after the previous one is consumed.
+- **External drop coordinates**: Tauri `DragDropEvent.position` on macOS/WKWebView is in logical CSS pixels relative to the window content area — do NOT divide by `scaleFactor()` or subtract `innerPosition()`. Use the values directly with `document.elementsFromPoint()`.
