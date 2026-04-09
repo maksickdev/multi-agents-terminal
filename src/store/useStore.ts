@@ -20,6 +20,8 @@ export interface Agent {
   status: AgentStatus;
   exitCode?: number;
   createdAt: number;
+  /** Claude session ID saved from `/status` — used to resume via `claude <id>`. */
+  sessionId?: string;
 }
 
 interface AppStore {
@@ -45,6 +47,7 @@ interface AppStore {
   renameAgent: (agentId: string, name: string) => void;
   reorderAgents: (projectId: string, orderedIds: string[]) => void;
   updateAgentStatus: (agentId: string, status: AgentStatus, exitCode?: number) => void;
+  setAgentSessionId: (agentId: string, sessionId: string) => void;
   removeAgent: (agentId: string) => void;
 
   // Bottom panel
@@ -191,6 +194,18 @@ export const useStore = create<AppStore>((set, get) => ({
         agents: {
           ...s.agents,
           [agentId]: { ...agent, status, exitCode: exitCode ?? agent.exitCode },
+        },
+      };
+    }),
+
+  setAgentSessionId: (agentId, sessionId) =>
+    set((s) => {
+      const agent = s.agents[agentId];
+      if (!agent) return s;
+      return {
+        agents: {
+          ...s.agents,
+          [agentId]: { ...agent, sessionId },
         },
       };
     }),

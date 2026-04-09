@@ -5,7 +5,7 @@ A macOS desktop app built with Tauri 2 + React + TypeScript for running and mana
 ## Features
 
 - **Multiple agents per project** — spawn and manage Claude CLI sessions as tabbed terminal panes
-- **Session persistence** — agent PTYs are respawned on restart with scrollback replay
+- **Session persistence** — on close, each agent's Claude session ID is captured via `/status` and saved to `agents.json`; on next launch agents resume with `claude -r <session_id>`, continuing the exact same conversation
 - **File manager** — split-pane file explorer with per-extension color icons (60+ types); drag files/folders to reorder or move
 - **In-app editor** — CodeMirror 6 with syntax highlighting for TypeScript, JavaScript, Rust, CSS, HTML, JSON, Markdown
 - **Auto-reload editor files** — open files reload automatically when changed externally (e.g. by an agent), dirty files are never overwritten
@@ -74,7 +74,7 @@ src-tauri/
 
 ## Configuration
 
-Runtime config is stored at `~/.config/multi-agents-terminal/`:
+Runtime config is stored at `~/Library/Application Support/multi-agents-terminal/`:
 - `projects.json` — saved projects
-- `agents.json` — saved agents (tab order preserved)
+- `agents.json` — saved agents (tab order + Claude `session_id` per agent)
 - `scrollback/` — raw PTY scrollback per agent (`{agent_id}.bin`)

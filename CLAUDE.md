@@ -47,7 +47,7 @@ cargo check --manifest-path src-tauri/Cargo.toml
 npm run tauri build
 ```
 
-Config files live at `~/.config/multi-agents-terminal/` (projects.json, agents.json, scrollback/).
+Config files live at `~/Library/Application Support/multi-agents-terminal/` (projects.json, agents.json, scrollback/).
 
 ## Architecture
 
@@ -73,7 +73,7 @@ PTY process output
 - **`pty/session.rs`** — `AgentSession`: master PTY, writer, child process, atomic status (`STATUS_ACTIVE/WAITING/EXITED`), project_id, cwd.
 - **`pty/manager.rs`** — `PtyManager`: `HashMap<agent_id, AgentSession>`. Methods: insert, remove, write, resize, kill, get_status_u8.
 - **`pty/reader.rs`** — `spawn_reader()`: blocking task that reads PTY → appends to scrollback file → emits `pty-output` event. Emits `agent-status: waiting` after 2 s silence, `agent-exited` on EOF/error.
-- **`commands/pty_commands.rs`** — all PTY Tauri commands. `spawn_agent` runs `claude` (located via `zsh -il`). `spawn_shell` runs `$SHELL` with inherited `LANG`/`LC_ALL`/`LC_CTYPE`. Both accept optional `rows`/`cols` and `agent_id` (for session restore). Scrollback files are `{scrollback_dir}/{agent_id}.bin`.
+- **`commands/pty_commands.rs`** — all PTY Tauri commands. `spawn_agent` runs `claude` (or `claude -r <session_id>` for resume), located via `zsh -il`. `spawn_shell` runs `$SHELL` with inherited `LANG`/`LC_ALL`/`LC_CTYPE`. Both accept optional `rows`/`cols` and `agent_id` (for session restore). Scrollback files are `{scrollback_dir}/{agent_id}.bin`. Additional commands: `get_scrollback_size`, `truncate_scrollback`, `is_session_nonempty`, `get_agent_session_id`, `exit_app`.
 - **`commands/project_commands.rs`** — load/save projects.json (atomic rename), folder picker.
 - **`commands/file_commands.rs`** — 8 FS commands: `read_dir`, `read_file_text`, `write_file_text`, `delete_path`, `create_file`, `create_dir_all`, `rename_path`, `copy_path`. `read_dir` sorts dirs first (alphabetical), then files.
 
@@ -174,7 +174,18 @@ xterm cannot be re-opened once closed. Two patterns used:
 
 **Session persistence (`src/hooks/useSessionPersistence.ts`)**
 
-On mount: loads projects + agents.json → stages scrollback via `ptyManager.setPendingScrollback()` → respawns each agent PTY reusing the saved `agent_id` → adds to store. On change: saves projects and agents (in tab order, excluding `exited`) to disk.
+On mount: loads projects + agents.json → stages scrollback via `ptyManager.setPendingScrollback()` → respawns each agent PTY reusing the saved `agent_id`; if `session_id` is present spawns as `claude -r <session_id>` to resume the conversation → adds to store. On change: saves projects and agents (in tab order, excluding `exited`) to disk. Accepts a `pausedRef: MutableRefObject<boolean>` — when true, skips auto-save (used during the close sequence to prevent race conditions).
+
+**Close sequence (App.tsx)**
+
+X / Cmd+Q → Rust intercepts `CloseRequested` / `ExitRequested` → emits `"close-requested"` → frontend shows `ConfirmModal` → on confirm:
+1. `savingRef.current = true` — pauses `useSessionPersistence` auto-save
+2. Records scrollback file sizes for all active Claude agents
+3. Sends `/status\r` to each agent in parallel, listens for `pty-output` events, strips ANSI, matches `Session\s*ID:\s*<uuid>` (5 s timeout)
+4. Validates each UUID via `is_session_nonempty` — skips empty sessions Claude cannot resume
+5. Truncates each scrollback file back to the pre-`/status` size (removes the `/status` I/O so it doesn't replay on next launch)
+6. Saves `agents.json` with `session_id` fields
+7. Calls `exit_app` → sets `confirmed_exit` flag → `app.exit(0)`
 
 **PTY events (`src/hooks/usePty.ts`)**
 

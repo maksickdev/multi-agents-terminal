@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import type React from "react";
 import {
   loadProjects,
   saveProjects,
@@ -16,8 +17,12 @@ import * as ptyManager from "../lib/ptyManager";
  *  - Loads projects and agents (in saved order) from disk on mount
  *  - Replays scrollback into each terminal before the new PTY starts
  *  - Saves projects and agents (in tab order) whenever they change
+ *
+ * @param pausedRef  When `pausedRef.current === true` the auto-save is
+ *                   suspended.  Set this before starting the close sequence so
+ *                   status-change events cannot overwrite the final save.
  */
-export function useSessionPersistence() {
+export function useSessionPersistence(pausedRef: React.MutableRefObject<boolean>) {
   const { projects, agents, agentOrder, setProjects, addAgent } = useStore();
   const restored = useRef(false);
 
@@ -44,9 +49,9 @@ export function useSessionPersistence() {
           console.warn("[session] failed to load scrollback for", meta.id, e);
         }
 
-        // Spawn a fresh PTY reusing the same agent ID
+        // Spawn a fresh PTY reusing the same agent ID (and Claude session ID if saved)
         try {
-          await spawnAgent(meta.project_id, meta.cwd, undefined, undefined, meta.id);
+          await spawnAgent(meta.project_id, meta.cwd, undefined, undefined, meta.id, meta.session_id);
         } catch (e) {
           console.warn("[session] failed to respawn agent", meta.id, e);
           continue;
@@ -60,6 +65,7 @@ export function useSessionPersistence() {
           cwd: meta.cwd,
           status: "waiting",
           createdAt: meta.created_at,
+          sessionId: meta.session_id ?? undefined,
         };
         addAgent(agent);
       }
@@ -79,7 +85,7 @@ export function useSessionPersistence() {
   // ── Persist agents in tab order ────────────────────────────────────────────
   // Watch both `agents` (name / status changes) and `agentOrder` (reorder / rename)
   useEffect(() => {
-    if (!restored.current) return;
+    if (!restored.current || pausedRef.current) return;
 
     const metas: AgentMeta[] = [];
     for (const [, ids] of Object.entries(agentOrder)) {
@@ -92,6 +98,7 @@ export function useSessionPersistence() {
             name: a.name,
             cwd: a.cwd,
             created_at: a.createdAt,
+            session_id: a.sessionId ?? null,
           });
         }
       }

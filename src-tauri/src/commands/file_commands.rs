@@ -89,6 +89,46 @@ pub fn copy_path(src: String, dst: String) -> Result<(), String> {
         .map_err(|e| format!("copy_path failed: {e}"))
 }
 
+/// Returns the Claude session ID for the given working directory by finding the
+/// most-recently-modified `.jsonl` file under `~/.claude/projects/<encoded-cwd>/`.
+/// Claude Code stores each conversation as `<session-uuid>.jsonl` in that directory.
+/// The encoding maps every `/` in the cwd to `-` (e.g. `/Users/foo/bar` → `-Users-foo-bar`).
+/// Returns `None` if the directory doesn't exist or has no session files.
+#[tauri::command]
+pub fn get_latest_session_id(cwd: String) -> Option<String> {
+    let home = std::env::var("HOME").ok()?;
+    let encoded = cwd.replace('/', "-");
+    let project_dir = std::path::PathBuf::from(&home)
+        .join(".claude")
+        .join("projects")
+        .join(&encoded);
+
+    if !project_dir.exists() {
+        return None;
+    }
+
+    let mut files: Vec<(std::time::SystemTime, std::ffi::OsString)> =
+        std::fs::read_dir(&project_dir)
+            .ok()?
+            .filter_map(|e| e.ok())
+            .filter(|e| {
+                let name = e.file_name();
+                let s = name.to_string_lossy();
+                s.ends_with(".jsonl") && !s.starts_with('.')
+            })
+            .filter_map(|e| {
+                let mtime = e.metadata().ok()?.modified().ok()?;
+                Some((mtime, e.file_name()))
+            })
+            .collect();
+
+    // Newest file first
+    files.sort_by(|a, b| b.0.cmp(&a.0));
+
+    let name = files.first()?.1.to_string_lossy().to_string();
+    Some(name.trim_end_matches(".jsonl").to_string())
+}
+
 /// Open the containing folder in Finder and select the item (macOS only).
 #[tauri::command]
 pub fn reveal_in_finder(path: String) -> Result<(), String> {

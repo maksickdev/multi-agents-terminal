@@ -32,11 +32,18 @@ function drainQueue(agentId: string, terminal: Terminal) {
   }
   writeBusy.set(agentId, true);
   const chunk = queue.shift()!;
-  // terminal.write() accepts Uint8Array | string, callback fires after parsing
-  (terminal.write as (data: Uint8Array | string, cb?: () => void) => void)(
-    chunk,
-    () => drainQueue(agentId, terminal),
-  );
+  // terminal.write() accepts Uint8Array | string, callback fires after parsing.
+  // Wrap in try-catch: xterm throws "write data discarded" if _pendingData > 50 MB.
+  // On overflow, drop the queue and reset so future writes aren't blocked.
+  try {
+    (terminal.write as (data: Uint8Array | string, cb?: () => void) => void)(
+      chunk,
+      () => drainQueue(agentId, terminal),
+    );
+  } catch {
+    writeQueues.delete(agentId);
+    writeBusy.delete(agentId);
+  }
 }
 
 function enqueueWrite(

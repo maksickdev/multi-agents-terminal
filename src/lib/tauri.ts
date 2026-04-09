@@ -14,6 +14,8 @@ export interface AgentMeta {
   name: string;
   cwd: string;
   created_at: number;
+  /** Claude session ID from `/status` output — used to resume via `claude <id>`. */
+  session_id?: string | null;
 }
 
 export type AgentStatus = "active" | "waiting" | "exited";
@@ -35,14 +37,32 @@ export interface AgentStatusPayload {
 
 // PTY commands — Tauri 2 maps camelCase JS params → snake_case Rust params
 
-/** agentId is optional — pass it to restore a saved session with the same ID. */
+/** agentId is optional — pass it to restore a saved session with the same ID.
+ *  sessionId is the Claude session ID — when provided, claude is launched as `claude <sessionId>`. */
 export const spawnAgent = (
   projectId: string,
   cwd: string,
   rows?: number,
   cols?: number,
   agentId?: string,
-) => invoke<string>("spawn_agent", { projectId, cwd, rows, cols, agentId });
+  sessionId?: string | null,
+) => invoke<string>("spawn_agent", { projectId, cwd, rows, cols, agentId, sessionId });
+
+/** Forcefully exits the application (called after sessions are saved). */
+export const exitApp = () => invoke<void>("exit_app");
+
+/** Returns the current byte-length of the scrollback file for `agentId`. */
+export const getScrollbackSize = (agentId: string) =>
+  invoke<number>("get_scrollback_size", { agentId });
+
+/** Truncates the scrollback file to `size` bytes (strips /status I/O). */
+export const truncateScrollback = (agentId: string, size: number) =>
+  invoke<void>("truncate_scrollback", { agentId, size });
+
+/** Returns true if the Claude session file has actual conversation content.
+ *  A session with only the initial snapshot line cannot be resumed. */
+export const isSessionNonempty = (sessionId: string, cwd: string) =>
+  invoke<boolean>("is_session_nonempty", { sessionId, cwd });
 
 export const spawnShell = (
   cwd: string,
@@ -118,6 +138,12 @@ export const copyPath = (src: string, dst: string) =>
 
 export const revealInFinder = (path: string) =>
   invoke<void>("reveal_in_finder", { path });
+
+/** Returns the Claude session ID for a specific agent by diffing the current
+ *  ~/.claude/projects/<encoded-cwd>/ contents against the pre-spawn snapshot.
+ *  Returns null if no new session file was created (e.g. resumed session). */
+export const getAgentSessionId = (agentId: string, cwd: string) =>
+  invoke<string | null>("get_agent_session_id", { agentId, cwd });
 
 // Git
 

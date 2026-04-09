@@ -1,12 +1,20 @@
 use base64::engine::general_purpose::STANDARD as B64;
 use base64::Engine;
 use portable_pty::{native_pty_system, CommandBuilder, PtySize};
-use tauri::{AppHandle, State};
+use std::collections::HashSet;
+use std::sync::atomic::Ordering;
+use tauri::{AppHandle, Emitter, State};
 use uuid::Uuid;
 
 use crate::pty::reader::spawn_reader;
 use crate::pty::session::{AgentSession, STATUS_ACTIVE, STATUS_EXITED, STATUS_WAITING};
 use crate::state::app_state::{AgentMeta, AgentStatus, AppState};
+
+#[derive(Clone, serde::Serialize)]
+struct AgentSessionIdPayload {
+    agent_id: String,
+    session_id: String,
+}
 
 /// Find claude's absolute path and the user's shell PATH by running `zsh -il`.
 fn find_claude_env() -> (String, String) {
@@ -111,6 +119,7 @@ fn make_pty_pair_and_spawn(
     cwd: &str,
     rows: u16,
     cols: u16,
+    session_id: Option<&str>,
 ) -> Result<
     (
         Box<dyn portable_pty::MasterPty + Send>,
@@ -135,6 +144,12 @@ fn make_pty_pair_and_spawn(
         .map_err(|e| format!("openpty error: {e}"))?;
 
     let mut cmd = CommandBuilder::new(&claude_bin);
+    // Resume a saved Claude session with `claude -r <session_id>`
+    if let Some(sid) = session_id {
+        cmd.arg("-r");
+        cmd.arg(sid);
+        eprintln!("[spawn] resuming session {}", sid);
+    }
     cmd.env("TERM", "xterm-256color");
     cmd.env("COLORTERM", "truecolor");
     cmd.env("PATH", &shell_path);
@@ -159,6 +174,75 @@ fn make_pty_pair_and_spawn(
     Ok((pair.master, writer, child, reader))
 }
 
+/// Spawns a background Tokio task that polls the Claude project directory every
+/// 500 ms (for up to 5 minutes) looking for a new `.jsonl` session file that
+/// wasn't in `snapshot`.  When found, emits `"agent-session-id"` to the
+/// frontend so the store can persist it immediately.
+fn watch_for_session_id(app: AppHandle, agent_id: String, cwd: String, snapshot: HashSet<String>) {
+    tokio::spawn(async move {
+        let Ok(home) = std::env::var("HOME") else { return };
+        let encoded = cwd.replace('/', "-");
+        let dir = std::path::PathBuf::from(&home)
+            .join(".claude")
+            .join("projects")
+            .join(&encoded);
+
+        // Poll up to 600 times × 500 ms = 5 minutes
+        for _ in 0..600 {
+            tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
+
+            let Ok(entries) = std::fs::read_dir(&dir) else { continue };
+
+            let mut new_files: Vec<(std::time::SystemTime, String)> = entries
+                .filter_map(|e| e.ok())
+                .filter_map(|e| {
+                    let name = e.file_name().to_string_lossy().to_string();
+                    if !name.ends_with(".jsonl") || name.starts_with('.') {
+                        return None;
+                    }
+                    let stem = name.trim_end_matches(".jsonl").to_string();
+                    if snapshot.contains(&stem) {
+                        return None;
+                    }
+                    let mtime = e.metadata().ok()?.modified().ok()?;
+                    Some((mtime, stem))
+                })
+                .collect();
+
+            if !new_files.is_empty() {
+                new_files.sort_by(|a, b| b.0.cmp(&a.0));
+                let session_id = new_files.remove(0).1;
+                eprintln!("[session_watcher] agent={} → session_id={}", agent_id, session_id);
+                app.emit(
+                    "agent-session-id",
+                    AgentSessionIdPayload { agent_id, session_id },
+                )
+                .ok();
+                return;
+            }
+        }
+
+        eprintln!("[session_watcher] agent={} timed out, no new session file found", agent_id);
+    });
+}
+
+/// Returns the set of `.jsonl` file-stems currently present in the Claude
+/// project directory for the given cwd.  Used to detect newly-created session
+/// files after a claude process is spawned.
+fn snapshot_claude_sessions(cwd: &str) -> HashSet<String> {
+    let Ok(home) = std::env::var("HOME") else { return HashSet::new() };
+    let encoded = cwd.replace('/', "-");
+    let dir = std::path::PathBuf::from(&home).join(".claude").join("projects").join(&encoded);
+    std::fs::read_dir(&dir)
+        .into_iter()
+        .flatten()
+        .filter_map(|e| e.ok())
+        .map(|e| e.file_name().to_string_lossy().to_string())
+        .filter(|name| name.ends_with(".jsonl") && !name.starts_with('.'))
+        .map(|name| name.trim_end_matches(".jsonl").to_string())
+        .collect()
+}
+
 #[tauri::command]
 pub async fn spawn_agent(
     app: AppHandle,
@@ -168,18 +252,25 @@ pub async fn spawn_agent(
     rows: Option<u16>,
     cols: Option<u16>,
     agent_id: Option<String>,
+    session_id: Option<String>,
 ) -> Result<String, String> {
     let agent_id = agent_id.unwrap_or_else(|| Uuid::new_v4().to_string());
     let rows = rows.unwrap_or(24);
     let cols = cols.unwrap_or(80);
     eprintln!("[spawn_agent] agent_id={} cwd={} size={}x{}", agent_id, cwd, cols, rows);
 
+    // Snapshot existing Claude session files BEFORE spawning so we can later
+    // identify which new .jsonl file belongs to this specific agent.
+    let snapshot = snapshot_claude_sessions(&cwd);
+    state.session_snapshots.lock().await.insert(agent_id.clone(), snapshot.clone());
+
     std::fs::create_dir_all(&state.scrollback_dir)
         .map_err(|e| format!("create scrollback dir: {e}"))?;
     let scrollback_path = state.scrollback_dir.join(format!("{}.bin", agent_id));
 
-    let (master, writer, child, reader) = make_pty_pair_and_spawn(&cwd, rows, cols)?;
-    let session = AgentSession::new(master, writer, child, project_id, cwd);
+    let (master, writer, child, reader) =
+        make_pty_pair_and_spawn(&cwd, rows, cols, session_id.as_deref())?;
+    let session = AgentSession::new(master, writer, child, project_id, cwd.clone());
     let status = session.status.clone();
 
     {
@@ -260,7 +351,7 @@ pub async fn restart_agent(
         .map_err(|e| format!("create scrollback dir: {e}"))?;
     let scrollback_path = state.scrollback_dir.join(format!("{}.bin", agent_id));
 
-    let (master, writer, child, reader) = make_pty_pair_and_spawn(&cwd, rows, cols)?;
+    let (master, writer, child, reader) = make_pty_pair_and_spawn(&cwd, rows, cols, None)?;
     let session = AgentSession::new(master, writer, child, project_id, cwd);
     let status = session.status.clone();
 
@@ -369,4 +460,119 @@ pub async fn delete_scrollback(
         std::fs::remove_file(&path).map_err(|e| e.to_string())?;
     }
     Ok(())
+}
+
+/// Returns the Claude session ID for a specific agent by comparing the
+/// current `.jsonl` files in `~/.claude/projects/<encoded-cwd>/` against
+/// the pre-spawn snapshot stored for this agent.
+///
+/// - New files (in current but not in snapshot) = sessions created by THIS
+///   agent.  The newest of those is returned.
+/// - If no new files exist (e.g. the agent resumed a previous session and
+///   didn't create a new file), returns `None` — the caller should fall back
+///   to the session ID stored in the agent's metadata.
+#[tauri::command]
+pub async fn get_agent_session_id(
+    state: State<'_, AppState>,
+    agent_id: String,
+    cwd: String,
+) -> Result<Option<String>, String> {
+    let snapshot = {
+        let map = state.session_snapshots.lock().await;
+        map.get(&agent_id).cloned().unwrap_or_default()
+    };
+
+    let Ok(home) = std::env::var("HOME") else { return Ok(None) };
+    let encoded = cwd.replace('/', "-");
+    let dir = std::path::PathBuf::from(&home).join(".claude").join("projects").join(&encoded);
+
+    if !dir.exists() {
+        return Ok(None);
+    }
+
+    // Collect (mtime, stem) for every .jsonl file not in the snapshot
+    let mut new_files: Vec<(std::time::SystemTime, String)> = std::fs::read_dir(&dir)
+        .map_err(|e| e.to_string())?
+        .filter_map(|e| e.ok())
+        .filter_map(|e| {
+            let name = e.file_name().to_string_lossy().to_string();
+            if !name.ends_with(".jsonl") || name.starts_with('.') {
+                return None;
+            }
+            let stem = name.trim_end_matches(".jsonl").to_string();
+            if snapshot.contains(&stem) {
+                return None; // was already there before this agent spawned
+            }
+            let mtime = e.metadata().ok()?.modified().ok()?;
+            Some((mtime, stem))
+        })
+        .collect();
+
+    // Newest new file first
+    new_files.sort_by(|a, b| b.0.cmp(&a.0));
+    Ok(new_files.into_iter().next().map(|(_, stem)| stem))
+}
+
+/// Returns the current byte size of the scrollback file for an agent.
+/// Used to record a "checkpoint" before sending /status so we can truncate
+/// the file afterwards and remove the /status I/O from the replay.
+#[tauri::command]
+pub async fn get_scrollback_size(
+    state: State<'_, AppState>,
+    agent_id: String,
+) -> Result<u64, String> {
+    let path = state.scrollback_dir.join(format!("{}.bin", agent_id));
+    if !path.exists() {
+        return Ok(0);
+    }
+    Ok(std::fs::metadata(&path).map_err(|e| e.to_string())?.len())
+}
+
+/// Truncates the scrollback file to `size` bytes, discarding anything written
+/// after the checkpoint.  Called after /status collection to strip that I/O.
+#[tauri::command]
+pub async fn truncate_scrollback(
+    state: State<'_, AppState>,
+    agent_id: String,
+    size: u64,
+) -> Result<(), String> {
+    let path = state.scrollback_dir.join(format!("{}.bin", agent_id));
+    if !path.exists() {
+        return Ok(());
+    }
+    let file = std::fs::OpenOptions::new()
+        .write(true)
+        .open(&path)
+        .map_err(|e| e.to_string())?;
+    file.set_len(size).map_err(|e| e.to_string())
+}
+
+/// Returns true only if the Claude session `.jsonl` file for the given
+/// session_id / cwd exists AND contains actual conversation content
+/// (not just the initial snapshot entry written when Claude starts).
+/// Used to avoid restoring an empty session that Claude cannot resume.
+#[tauri::command]
+pub fn is_session_nonempty(session_id: String, cwd: String) -> bool {
+    let Ok(home) = std::env::var("HOME") else { return false };
+    let encoded = cwd.replace('/', "-");
+    let path = std::path::PathBuf::from(home)
+        .join(".claude")
+        .join("projects")
+        .join(encoded)
+        .join(format!("{}.jsonl", session_id));
+
+    match std::fs::read_to_string(&path) {
+        // More than one JSONL line means Claude wrote conversation turns
+        Ok(content) => content.lines().count() > 1,
+        Err(_) => false,
+    }
+}
+
+/// Exit the application (called after sessions are saved on close).
+/// Sets the confirmed_exit flag first so that our CloseRequested /
+/// ExitRequested handlers don't intercept and prevent this exit.
+#[tauri::command]
+pub fn exit_app(app: AppHandle, state: State<'_, AppState>) {
+    state.confirmed_exit.store(true, Ordering::SeqCst);
+    app.exit(0);
 }

@@ -3,14 +3,18 @@ mod pty;
 mod state;
 
 use state::app_state::AppState;
+use std::sync::atomic::Ordering;
+use tauri::{Emitter, Manager};
 use commands::pty_commands::{
-    delete_scrollback, get_agent_status, kill_agent, load_agents, load_scrollback, resize_agent,
-    restart_agent, save_agents, spawn_agent, spawn_shell, write_to_agent,
+    delete_scrollback, exit_app, get_agent_session_id, get_agent_status, get_scrollback_size,
+    is_session_nonempty, kill_agent, load_agents, load_scrollback, resize_agent, restart_agent,
+    save_agents, spawn_agent, spawn_shell, truncate_scrollback, write_to_agent,
 };
 use commands::project_commands::{load_projects, pick_folder, save_projects};
 use commands::file_commands::{
     read_dir, read_file_text, write_file_text, delete_path,
     create_file, create_dir_all, rename_path, copy_path, reveal_in_finder,
+    get_latest_session_id,
 };
 use commands::usage_commands::fetch_usage;
 use commands::git_commands::{
@@ -33,6 +37,24 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
         .manage(AppState::new(config_path))
+        .setup(|app| {
+            // Intercept window X-button close → prevent and let frontend handle it,
+            // unless exit_app already set confirmed_exit (then allow the close through).
+            let confirmed_exit = app.state::<AppState>().confirmed_exit.clone();
+            let handle = app.handle().clone();
+            app.get_webview_window("main")
+                .expect("no main window")
+                .on_window_event(move |event| {
+                    if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+                        if confirmed_exit.load(Ordering::SeqCst) {
+                            return; // exit_app already confirmed — allow close
+                        }
+                        api.prevent_close();
+                        handle.emit("close-requested", ()).ok();
+                    }
+                });
+            Ok(())
+        })
         .invoke_handler(tauri::generate_handler![
             // PTY
             spawn_agent,
@@ -61,6 +83,7 @@ pub fn run() {
             create_dir_all,
             rename_path,
             reveal_in_finder,
+            get_latest_session_id,
             // Git
             git_status,
             git_diff,
@@ -87,7 +110,26 @@ pub fn run() {
             git_push_with_passphrase,
             // Usage
             fetch_usage,
+            // App lifecycle
+            get_agent_session_id,
+            get_scrollback_size,
+            truncate_scrollback,
+            is_session_nonempty,
+            exit_app,
         ])
-        .run(tauri::generate_context!())
-        .expect("error while running tauri application");
+        // Use .build().run() so we can also intercept Cmd+Q (RunEvent::ExitRequested)
+        .build(tauri::generate_context!())
+        .expect("error building tauri application")
+        .run(|app, event| {
+            // Cmd+Q on macOS fires ExitRequested at the app level.
+            // Prevent it and show the save-sessions modal — unless exit_app already
+            // set confirmed_exit, in which case we allow the exit through.
+            if let tauri::RunEvent::ExitRequested { api, .. } = event {
+                let confirmed = app.state::<AppState>().confirmed_exit.load(Ordering::SeqCst);
+                if !confirmed {
+                    api.prevent_exit();
+                    app.emit("close-requested", ()).ok();
+                }
+            }
+        });
 }
