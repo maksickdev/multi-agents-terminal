@@ -2,6 +2,7 @@ import { useEffect, useRef, useCallback } from "react";
 import * as ptyManager from "../../lib/ptyManager";
 import { useAgentInput } from "../../hooks/usePty";
 import { resizeAgent } from "../../lib/tauri";
+import { ChevronDown } from "lucide-react";
 
 interface Props {
   agentId: string;
@@ -21,6 +22,7 @@ export function TerminalPane({ agentId, isVisible }: Props) {
   const isDraggingRef = useRef(false);
   const dragStartYRef = useRef(0);
   const dragStartThumbTopRef = useRef(0);
+  const scrollBtnRef = useRef<HTMLButtonElement>(null);
 
   const applyThumb = useCallback((th: number, tp: number) => {
     thumbHeightRef.current = th;
@@ -45,9 +47,13 @@ export function TerminalPane({ agentId, isVisible }: Props) {
     const buf = terminal.buffer.active;
     const totalLines = buf.length;
     const visibleRows = terminal.rows;
+    const scrollY = viewportY ?? buf.viewportY;
+    const atBottom = totalLines <= visibleRows || scrollY >= totalLines - visibleRows;
+    if (scrollBtnRef.current) {
+      scrollBtnRef.current.style.display = atBottom ? "none" : "flex";
+    }
     if (totalLines <= visibleRows) { applyThumb(100, 0); return; }
     const th = Math.max((visibleRows / totalLines) * 100, 5);
-    const scrollY = viewportY ?? buf.viewportY;
     const tp = Math.max(0, Math.min(100 - th, (scrollY / (totalLines - visibleRows)) * (100 - th)));
     applyThumb(th, tp);
   }, [applyThumb]);
@@ -143,11 +149,17 @@ export function TerminalPane({ agentId, isVisible }: Props) {
     terminal.scrollToLine(Math.round(((e.clientY - rect.top) / rect.height) * (buf.length - terminal.rows)));
   };
 
+  const handleScrollToBottom = useCallback(() => {
+    const terminal = ptyManager.getTerminal(agentId);
+    if (!terminal) return;
+    terminal.scrollToBottom();
+  }, [agentId]);
+
   return (
     <div
       style={
         isVisible
-          ? { width: "100%", height: "100%", overflow: "hidden", display: "flex" }
+          ? { width: "100%", height: "100%", overflow: "hidden", display: "flex", position: "relative" }
           : { position: "absolute", visibility: "hidden", pointerEvents: "none", width: "100%", height: "100%", overflow: "hidden", display: "flex" }
       }
     >
@@ -157,6 +169,34 @@ export function TerminalPane({ agentId, isVisible }: Props) {
         style={{ flex: 1, overflow: "hidden" }}
         className="p-1"
       />
+
+      {/* Scroll to bottom button */}
+      <button
+        ref={scrollBtnRef}
+        onClick={handleScrollToBottom}
+        style={{
+          display: "none",
+          position: "absolute",
+          bottom: 24,
+          right: 18,
+          width: 28,
+          height: 28,
+          alignItems: "center",
+          justifyContent: "center",
+          background: "var(--c-surface-2)",
+          border: "1px solid var(--c-border)",
+          borderRadius: 6,
+          cursor: "pointer",
+          color: "var(--c-text-dim)",
+          zIndex: 10,
+          opacity: 0.85,
+        }}
+        onMouseEnter={(e) => { e.currentTarget.style.opacity = "1"; e.currentTarget.style.color = "var(--c-text)"; }}
+        onMouseLeave={(e) => { e.currentTarget.style.opacity = "0.85"; e.currentTarget.style.color = "var(--c-text-dim)"; }}
+        title="Scroll to bottom"
+      >
+        <ChevronDown size={16} />
+      </button>
 
       {/* Custom scrollbar track */}
       <div
