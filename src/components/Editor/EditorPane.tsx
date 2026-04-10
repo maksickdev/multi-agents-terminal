@@ -141,6 +141,7 @@ export function EditorPane() {
     {fullscreen && activeFile && (
       <FullscreenFileModal
         file={activeFile}
+        initialPreviewMode={isPreviewable ? previewMode : "raw"}
         onChange={(content) => updateFileContent(activeFile.path, content)}
         onSave={handleSave}
         onClose={() => setFullscreen(false)}

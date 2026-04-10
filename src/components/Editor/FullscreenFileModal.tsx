@@ -9,14 +9,15 @@ const PREVIEWABLE = ["markdown"];
 
 interface Props {
   file: OpenFile;
+  initialPreviewMode?: "raw" | "rendered";
   onChange: (content: string) => void;
   onSave: () => void;
   onClose: () => void;
 }
 
-export function FullscreenFileModal({ file, onChange, onSave, onClose }: Props) {
+export function FullscreenFileModal({ file, initialPreviewMode = "raw", onChange, onSave, onClose }: Props) {
   const isPreviewable = PREVIEWABLE.includes(file.language);
-  const [previewMode, setPreviewMode] = useState<"raw" | "rendered">("raw");
+  const [previewMode, setPreviewMode] = useState<"raw" | "rendered">(initialPreviewMode);
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
