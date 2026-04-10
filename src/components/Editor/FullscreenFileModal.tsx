@@ -28,7 +28,7 @@ export function FullscreenFileModal({ file, onChange, onSave, onClose }: Props) 
 
   return ReactDOM.createPortal(
     <div
-      className="fixed inset-0 z-50 flex flex-col bg-[var(--c-bg-deep)]"
+      className="fixed inset-0 top-8 z-50 flex flex-col bg-[var(--c-bg-deep)]"
       style={{ backdropFilter: "none" }}
     >
       {/* Header */}
