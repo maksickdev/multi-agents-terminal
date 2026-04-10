@@ -104,15 +104,20 @@ export function TerminalPane({ agentId, isVisible }: Props) {
 
   useEffect(() => {
     if (!containerRef.current) return;
+    let rafId: number | null = null;
     const observer = new ResizeObserver(() => {
       if (!isVisible) return;
-      ptyManager.fit(agentId);
-      const dims = ptyManager.getDimensions(agentId);
-      if (dims) resizeAgent(agentId, dims.rows, dims.cols).catch(() => {});
-      updateScrollbar(agentId);
+      if (rafId !== null) cancelAnimationFrame(rafId);
+      rafId = requestAnimationFrame(() => {
+        rafId = null;
+        ptyManager.fit(agentId);
+        const dims = ptyManager.getDimensions(agentId);
+        if (dims) resizeAgent(agentId, dims.rows, dims.cols).catch(() => {});
+        updateScrollbar(agentId);
+      });
     });
     observer.observe(containerRef.current);
-    return () => observer.disconnect();
+    return () => { observer.disconnect(); if (rafId !== null) cancelAnimationFrame(rafId); };
   }, [agentId, isVisible]);
 
   const handleThumbMouseDown = (e: React.MouseEvent) => {
@@ -167,7 +172,6 @@ export function TerminalPane({ agentId, isVisible }: Props) {
         ref={containerRef}
         data-agent-id={agentId}
         style={{ flex: 1, overflow: "hidden" }}
-        className="p-1"
       />
 
       {/* Scroll to bottom button */}

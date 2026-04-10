@@ -70,11 +70,18 @@ html, body, #root {
 
 .xterm-viewport {
   scrollbar-width: none !important;
-  background-color: transparent !important;
 }
 
 .xterm-viewport::-webkit-scrollbar {
   display: none;
+}
+
+/* Canvas addon: canvas is inline by default which leaves a gap below;
+   also clear any browser-default outline/border. */
+.xterm canvas {
+  display: block;
+  outline: none;
+  border: none;
 }
 
 /* File drag — folder drop target highlight */

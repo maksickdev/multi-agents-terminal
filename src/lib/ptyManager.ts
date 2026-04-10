@@ -1,6 +1,7 @@
 import { Terminal } from "@xterm/xterm";
 import { FitAddon } from "@xterm/addon-fit";
 import { WebLinksAddon } from "@xterm/addon-web-links";
+import { CanvasAddon } from "@xterm/addon-canvas";
 import type { ThemeId } from "./themes";
 
 interface TerminalEntry {
@@ -154,6 +155,7 @@ export function getOrCreate(agentId: string): TerminalEntry {
     const fitAddon = new FitAddon();
     terminal.loadAddon(fitAddon);
     terminal.loadAddon(new WebLinksAddon());
+    terminal.loadAddon(new CanvasAddon());
 
     entries.set(agentId, { terminal, fitAddon });
   }

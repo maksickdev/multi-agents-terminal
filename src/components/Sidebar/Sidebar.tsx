@@ -11,6 +11,7 @@ export function Sidebar() {
 
   const [showNewProject, setShowNewProject] = useState(false);
 
+  const panelRef    = useRef<HTMLElement>(null);
   const resizingRef = useRef(false);
   const startXRef   = useRef(0);
   const startWRef   = useRef(0);
@@ -39,6 +40,7 @@ export function Sidebar() {
       {showNewProject && <NewProjectModal onClose={() => setShowNewProject(false)} />}
 
       <aside
+        ref={panelRef}
         style={{ width: sidebarOpen ? sidebarWidth : 0, flexShrink: 0, position: "relative", overflow: "hidden" }}
         className="flex flex-col bg-[var(--c-bg-deep)] border-r border-[var(--c-border)] h-full select-none"
       >

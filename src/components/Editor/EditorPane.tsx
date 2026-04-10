@@ -35,6 +35,7 @@ export function EditorPane() {
   const isPreviewable = activeFile ? PREVIEWABLE.includes(activeFile.language) : false;
 
   // ── Resize handle (bottom edge — grows downward into terminal area) ───────
+  const panelRef    = useRef<HTMLDivElement>(null);
   const resizingRef = useRef(false);
   const startYRef   = useRef(0);
   const startHRef   = useRef(0);
@@ -156,6 +157,7 @@ export function EditorPane() {
       />
     )}
     <div
+      ref={panelRef}
       style={{
         height: isVisible ? editorPaneHeight : 0,
         flexShrink: 0,

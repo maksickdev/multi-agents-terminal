@@ -17,6 +17,7 @@ export function FileExplorer() {
   const selectedProject = projects.find((p) => p.id === selectedProjectId) ?? null;
 
   // ── Resize ───────────────────────────────────────────────────────────────
+  const panelRef    = useRef<HTMLDivElement>(null);
   const resizingRef = useRef(false);
   const startXRef   = useRef(0);
   const startWRef   = useRef(0);
@@ -116,6 +117,7 @@ export function FileExplorer() {
       />
     )}
     <div
+      ref={panelRef}
       style={{
         width: fileExplorerOpen ? fileExplorerWidth : 0,
         flexShrink: 0,

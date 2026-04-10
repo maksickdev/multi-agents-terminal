@@ -138,7 +138,7 @@ function ShellPane({ agentId, isVisible, height }: {
           : { position: "absolute", inset: 0, visibility: "hidden", pointerEvents: "none", overflow: "hidden", display: "flex" }
       }
     >
-      <div ref={containerRef} style={{ flex: 1, overflow: "hidden" }} className="p-1" />
+      <div ref={containerRef} style={{ flex: 1, overflow: "hidden" }} />
       <div
         ref={trackRef}
         onClick={handleTrackClick}
@@ -186,6 +186,7 @@ export function BottomPanel() {
   const selectedProject = projects.find((p) => p.id === selectedProjectId) ?? null;
   useShellForProject(selectedProject, bottomPanelOpen);
 
+  const panelRef    = useRef<HTMLDivElement>(null);
   const resizingRef = useRef(false);
   const startYRef   = useRef(0);
   const startHRef   = useRef(0);
@@ -215,6 +216,7 @@ export function BottomPanel() {
   // ShellPane never unmounts and xterm stays attached to its container.
   return (
     <div
+      ref={panelRef}
       style={{
         height: bottomPanelOpen ? bottomPanelHeight : 0,
         flexShrink: 0,

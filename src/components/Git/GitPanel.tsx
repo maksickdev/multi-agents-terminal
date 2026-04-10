@@ -348,6 +348,7 @@ export function GitPanel() {
   const [removeRemoteConfirm, setRemoveRemoteConfirm] = useState<GitRemote | null>(null);
 
   // ── resize ──────────────────────────────────────────────────────────────────
+  const panelRef    = useRef<HTMLDivElement>(null);
   const resizingRef = useRef(false);
   const startXRef   = useRef(0);
   const startWRef   = useRef(0);
@@ -762,6 +763,7 @@ export function GitPanel() {
       />
     )}
     <div
+      ref={panelRef}
       data-git-panel
       style={{ width: gitPanelOpen ? gitPanelWidth : 0, flexShrink: 0, overflow: "hidden", position: "relative" }}
       className="flex flex-col bg-[var(--c-bg-deep)] border-r border-[var(--c-border)] h-full"
