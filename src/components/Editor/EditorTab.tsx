@@ -10,13 +10,14 @@ interface Props {
   onClose: () => void;
   onMouseDown: () => void;
   onMouseEnter: () => void;
+  onDoubleClick: () => void;
   suppressClick: () => boolean;
 }
 
 export function EditorTab({
   file, isActive, isDragging, isDragOver,
   onSelect, onClose,
-  onMouseDown, onMouseEnter, suppressClick,
+  onMouseDown, onMouseEnter, onDoubleClick, suppressClick,
 }: Props) {
   const basename = file.path.split("/").pop() ?? file.path;
 
@@ -44,6 +45,7 @@ export function EditorTab({
   return (
     <div
       onClick={handleClick}
+      onDoubleClick={onDoubleClick}
       onMouseDown={handleMouseDown}
       onAuxClick={handleAuxClick}
       onMouseEnter={onMouseEnter}

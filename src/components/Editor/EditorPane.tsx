@@ -6,7 +6,8 @@ import { CodeEditor } from "./CodeEditor";
 import { EditorTab } from "./EditorTab";
 import { RenderedPreview } from "./RenderedPreview";
 import { ConfirmModal } from "../shared/ConfirmModal";
-import { Circle } from "lucide-react";
+import { FullscreenFileModal } from "./FullscreenFileModal";
+import { Circle, Maximize2 } from "lucide-react";
 
 const PREVIEWABLE = ["markdown"];
 
@@ -66,6 +67,7 @@ export function EditorPane() {
   const [dragOverPath, setDragOverPath] = useState<string | null>(null);
   const [previewMode, setPreviewMode] = useState<"raw" | "rendered">("raw");
   const [pendingClosePath, setPendingClosePath] = useState<string | null>(null);
+  const [fullscreen, setFullscreen] = useState(false);
 
   const doReorder = useCallback((fromPath: string, toPath: string) => {
     const paths = projectFiles.map((f) => f.path);
@@ -135,6 +137,14 @@ export function EditorPane() {
 
   return (
     <>
+    {fullscreen && activeFile && (
+      <FullscreenFileModal
+        file={activeFile}
+        onChange={(content) => updateFileContent(activeFile.path, content)}
+        onSave={handleSave}
+        onClose={() => setFullscreen(false)}
+      />
+    )}
     {pendingClosePath && (
       <ConfirmModal
         title="Unsaved changes"
@@ -172,6 +182,7 @@ export function EditorPane() {
             onClose={() => handleClose(file.path)}
             onMouseDown={() => startDrag(file.path)}
             onMouseEnter={() => enterTab(file.path)}
+            onDoubleClick={() => { setActiveFile(file.path); setFullscreen(true); }}
             suppressClick={() => movedRef.current}
           />
         ))}
@@ -222,6 +233,13 @@ export function EditorPane() {
                 </span>
               )}
             </span>
+            <button
+              onClick={() => setFullscreen(true)}
+              title="Fullscreen (double-click tab)"
+              className="flex items-center text-[var(--c-muted)] hover:text-[var(--c-text)] transition-colors"
+            >
+              <Maximize2 size={11} />
+            </button>
           </div>
         </div>
       )}
