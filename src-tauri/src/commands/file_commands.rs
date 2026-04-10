@@ -80,13 +80,33 @@ pub fn rename_path(old_path: String, new_path: String) -> Result<(), String> {
     std::fs::rename(&old_path, &new_path).map_err(|e| format!("rename_path failed: {e}"))
 }
 
-/// Copy a single file from `src` to `dst` (overwrites dst if it already exists).
-/// Directories are not supported — only plain files.
+/// Copy a file or directory (recursively) from `src` to `dst`.
 #[tauri::command]
 pub fn copy_path(src: String, dst: String) -> Result<(), String> {
-    std::fs::copy(&src, &dst)
-        .map(|_| ())
-        .map_err(|e| format!("copy_path failed: {e}"))
+    let src_path = Path::new(&src);
+    if src_path.is_dir() {
+        copy_dir_recursive(src_path, Path::new(&dst))
+            .map_err(|e| format!("copy_path failed: {e}"))
+    } else {
+        std::fs::copy(&src, &dst)
+            .map(|_| ())
+            .map_err(|e| format!("copy_path failed: {e}"))
+    }
+}
+
+fn copy_dir_recursive(src: &Path, dst: &Path) -> Result<()> {
+    std::fs::create_dir_all(dst)?;
+    for entry in std::fs::read_dir(src)? {
+        let entry = entry?;
+        let src_child = entry.path();
+        let dst_child = dst.join(entry.file_name());
+        if src_child.is_dir() {
+            copy_dir_recursive(&src_child, &dst_child)?;
+        } else {
+            std::fs::copy(&src_child, &dst_child)?;
+        }
+    }
+    Ok(())
 }
 
 /// Returns the Claude session ID for the given working directory by finding the
