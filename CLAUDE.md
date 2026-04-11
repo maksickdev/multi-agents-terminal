@@ -142,10 +142,11 @@ Handles files dragged from Finder (or any OS file manager) into the app via Taur
 
 **Editor Pane (`src/components/Editor/`)**
 
-- `EditorPane.tsx` — tab bar with drag-to-reorder (same mouse-event pattern as agent TabBar), CodeEditor or RenderedPreview, status bar at bottom. Filters `openFiles` by `selectedProjectId` so only active project's files are shown. Uses `ConfirmModal` when closing a dirty file.
+- `EditorPane.tsx` — tab bar with drag-to-reorder (same mouse-event pattern as agent TabBar), CodeEditor or RenderedPreview, status bar at bottom. Filters `openFiles` by `selectedProjectId` so only active project's files are shown. Uses `ConfirmModal` when closing a dirty file. Double-clicking a tab or clicking the Maximize button opens `FullscreenFileModal`, passing `initialPreviewMode` so the modal inherits the current RAW/RENDERED state.
 - `CodeEditor.tsx` — CodeMirror 6, Tokyo Night theme, language via `Compartment`. Uses **ref pattern** for `onSave`/`onChange` callbacks (`onSaveRef`, `onChangeRef` updated each render via `useEffect`) to avoid stale closures in keymap and updateListener.
 - `EditorTab.tsx` — drag props, dirty indicator (●), middle-click closes tab (`onAuxClick`).
 - `RenderedPreview.tsx` — markdown rendered via `marked` + `DOMPurify`. RAW/RENDERED toggle in status bar for `.md` files only.
+- `FullscreenFileModal.tsx` — portal-based fullscreen overlay (covers everything below the title bar). Accepts `initialPreviewMode` prop so the calling pane can pass its current RAW/RENDERED state; the modal maintains its own local `previewMode` state from that initial value.
 
 **xterm.js lifecycle (`src/lib/ptyManager.ts`)**
 
