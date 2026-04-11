@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Folder, SquareTerminal, Settings, PanelLeft, GitBranch } from "lucide-react";
 import { useStore } from "../../store/useStore";
 import { SettingsModal } from "../Settings/SettingsModal";
+import { UsageButton } from "./UsageButton";
 
 export function ActivityBar() {
   const {
@@ -83,6 +84,7 @@ export function ActivityBar() {
 
         {/* Bottom actions */}
         <div className="flex flex-col items-center gap-1 pb-2">
+          <UsageButton />
           <button
             onClick={() => setSettingsOpen(true)}
             title="Settings"

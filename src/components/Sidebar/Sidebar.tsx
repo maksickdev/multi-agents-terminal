@@ -2,7 +2,6 @@ import { useRef, useState } from "react";
 import { FolderPlus } from "lucide-react";
 import { AddProjectButton } from "./AddProjectButton";
 import { ProjectItem } from "./ProjectItem";
-import { UsageButton } from "./UsageButton";
 import { NewProjectModal } from "./NewProjectModal";
 import { useStore } from "../../store/useStore";
 
@@ -66,8 +65,7 @@ export function Sidebar() {
           )}
         </div>
 
-        <div className="border-t border-[var(--c-border)] p-2 flex flex-col gap-1">
-          <UsageButton />
+        <div className="border-t border-[var(--c-border)] p-2">
           <AddProjectButton />
         </div>
 
