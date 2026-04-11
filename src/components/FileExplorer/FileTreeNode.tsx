@@ -3,6 +3,7 @@ import { useStore } from "../../store/useStore";
 import { readFileText, deletePath, renamePath, revealInFinder } from "../../lib/tauri";
 import type { FileEntry } from "../../lib/tauri";
 import { ContextMenu, type ContextMenuItem } from "./ContextMenu";
+import { ConfirmModal } from "../shared/ConfirmModal";
 import { detectLanguage } from "../../lib/languageDetect";
 import { startFileDrag } from "../../lib/fileDrag";
 import { ChevronRight, ChevronDown, Folder, FolderOpen, Pencil, Copy, Trash2, ScanSearch } from "lucide-react";
@@ -25,6 +26,7 @@ export function FileTreeNode({ entry, depth, projectId, onRefresh, renderChildre
   const [contextMenu, setContextMenu] = useState<ContextState | null>(null);
   const [renaming, setRenaming] = useState(false);
   const [renameValue, setRenameValue] = useState(entry.name);
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const renameInputRef = useRef<HTMLInputElement>(null);
 
   const indent = depth * 12;
@@ -102,23 +104,36 @@ export function FileTreeNode({ entry, depth, projectId, onRefresh, renderChildre
       label: entry.is_dir ? "Delete Folder" : "Delete File",
       icon: Trash2,
       danger: true,
-      onClick: async () => {
-        const confirmed = window.confirm(
-          `Delete "${entry.name}"?${entry.is_dir ? "\n\nThis will delete the folder and all its contents." : ""}`
-        );
-        if (!confirmed) return;
-        try {
-          await deletePath(entry.path);
-          onRefresh();
-        } catch (e) {
-          console.error("delete failed", e);
-        }
-      },
+      onClick: () => setConfirmDelete(true),
     },
   ];
 
+  const handleDeleteConfirm = async () => {
+    setConfirmDelete(false);
+    try {
+      await deletePath(entry.path);
+      onRefresh();
+    } catch (e) {
+      console.error("delete failed", e);
+    }
+  };
+
   return (
     <>
+      {confirmDelete && (
+        <ConfirmModal
+          title={entry.is_dir ? "Delete Folder" : "Delete File"}
+          message={
+            entry.is_dir
+              ? `Delete "${entry.name}" and all its contents?`
+              : `Delete "${entry.name}"?`
+          }
+          confirmLabel="Delete"
+          danger
+          onConfirm={handleDeleteConfirm}
+          onCancel={() => setConfirmDelete(false)}
+        />
+      )}
       {contextMenu && (
         <ContextMenu
           x={contextMenu.x}
