@@ -1,6 +1,13 @@
 /** Maps a filename to a CodeMirror language identifier. */
 export function detectLanguage(filename: string): string {
-  const ext = filename.split(".").pop()?.toLowerCase() ?? "";
+  const lower = filename.toLowerCase();
+
+  // Special full-name matches (before extension splitting)
+  if (lower === ".env" || lower.startsWith(".env.")) return "properties";
+  if (lower === "dockerfile") return "dockerfile";
+  if (lower === "docker-compose.yml" || lower === "docker-compose.yaml") return "yaml";
+
+  const ext = lower.split(".").pop() ?? "";
   const map: Record<string, string> = {
     ts: "typescript",
     tsx: "typescript",
@@ -22,6 +29,9 @@ export function detectLanguage(filename: string): string {
     bash: "shell",
     zsh: "shell",
     cs: "csharp",
+    rb: "ruby",
+    yml: "yaml",
+    yaml: "yaml",
   };
   return map[ext] ?? "";
 }

@@ -12,8 +12,14 @@ import { html } from "@codemirror/lang-html";
 import { rust } from "@codemirror/lang-rust";
 import { json } from "@codemirror/lang-json";
 import { markdown } from "@codemirror/lang-markdown";
+import { python } from "@codemirror/lang-python";
+import { yaml } from "@codemirror/lang-yaml";
 import { StreamLanguage } from "@codemirror/language";
 import { csharp } from "@codemirror/legacy-modes/mode/clike";
+import { ruby } from "@codemirror/legacy-modes/mode/ruby";
+import { dockerFile } from "@codemirror/legacy-modes/mode/dockerfile";
+import { shell } from "@codemirror/legacy-modes/mode/shell";
+import { properties } from "@codemirror/legacy-modes/mode/properties";
 import { useStore } from "../../store/useStore";
 import type { ThemeId } from "../../lib/themes";
 
@@ -198,15 +204,21 @@ function getThemeExtensions(themeId: ThemeId) {
 
 function getLanguageExtension(language: string) {
   switch (language) {
-    case "typescript": return javascript({ typescript: true, jsx: true });
-    case "javascript": return javascript({ jsx: true });
-    case "css": return css();
-    case "html": return html();
-    case "rust": return rust();
-    case "json": return json();
-    case "markdown": return markdown();
-    case "csharp": return StreamLanguage.define(csharp);
-    default: return null;
+    case "typescript":  return javascript({ typescript: true, jsx: true });
+    case "javascript":  return javascript({ jsx: true });
+    case "css":         return css();
+    case "html":        return html();
+    case "rust":        return rust();
+    case "json":        return json();
+    case "markdown":    return markdown();
+    case "python":      return python();
+    case "yaml":        return yaml();
+    case "csharp":      return StreamLanguage.define(csharp);
+    case "ruby":        return StreamLanguage.define(ruby);
+    case "dockerfile":  return StreamLanguage.define(dockerFile);
+    case "shell":       return StreamLanguage.define(shell);
+    case "properties":  return StreamLanguage.define(properties);
+    default:            return null;
   }
 }
 
