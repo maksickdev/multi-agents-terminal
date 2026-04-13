@@ -18,12 +18,17 @@ export function ConfirmModal({
   onCancel,
 }: Props) {
   useEffect(() => {
+    // Defer activation by one frame so the keydown event that opened the modal
+    // (e.g. Enter in an input) doesn't immediately trigger onConfirm.
+    let active = false;
+    const raf = requestAnimationFrame(() => { active = true; });
     const handler = (e: KeyboardEvent) => {
+      if (!active) return;
       if (e.key === "Escape") onCancel();
       if (e.key === "Enter") onConfirm();
     };
     window.addEventListener("keydown", handler);
-    return () => window.removeEventListener("keydown", handler);
+    return () => { cancelAnimationFrame(raf); window.removeEventListener("keydown", handler); };
   }, [onConfirm, onCancel]);
 
   return (
