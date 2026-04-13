@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import ReactDOM from "react-dom";
 
 interface Props {
   title: string;
@@ -31,9 +32,10 @@ export function ConfirmModal({
     return () => { cancelAnimationFrame(raf); window.removeEventListener("keydown", handler); };
   }, [onConfirm, onCancel]);
 
-  return (
+  return ReactDOM.createPortal(
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+      className="fixed inset-0 flex items-center justify-center bg-black/50"
+      style={{ zIndex: 500 }}
       onMouseDown={(e) => { if (e.target === e.currentTarget) onCancel(); }}
     >
       <div className="bg-[var(--c-bg-elevated)] border border-[var(--c-muted)] rounded-lg shadow-2xl p-5 w-80 flex flex-col gap-4">
@@ -61,6 +63,7 @@ export function ConfirmModal({
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
