@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import ReactDOM from "react-dom";
 import { useStore } from "../../store/useStore";
-import { writeFileText } from "../../lib/tauri";
+import { writeFileText, renamePath } from "../../lib/tauri";
 import { useFileWatcher } from "../../hooks/useFileWatcher";
 import { CodeEditor } from "./CodeEditor";
 import { EditorTab } from "./EditorTab";
@@ -19,7 +19,7 @@ export function EditorPane() {
     editorPaneHeight, setEditorPaneHeight,
     setActiveFile, closeFile,
     updateFileContent, markFileSaved,
-    reorderOpenFiles,
+    reorderOpenFiles, renameOpenFile,
     selectedProjectId,
   } = useStore();
 
@@ -146,6 +146,17 @@ export function EditorPane() {
     setPendingClosePath(null);
   };
 
+  const handleRename = async (oldPath: string, newName: string) => {
+    const lastSlash = oldPath.lastIndexOf("/");
+    const newPath = `${oldPath.slice(0, lastSlash)}/${newName}`;
+    try {
+      await renamePath(oldPath, newPath);
+      renameOpenFile(oldPath, newPath);
+    } catch (e) {
+      console.error("rename failed", e);
+    }
+  };
+
   // ── Shared inner content (tab bar + editor + status bar) ─────────────────
   const tabBar = (
     <div className="flex h-8 bg-[var(--c-bg-deep)] border-b border-[var(--c-border)] flex-shrink-0">
@@ -169,9 +180,9 @@ export function EditorPane() {
             isDragOver={file.path === dragOverPath}
             onSelect={() => setActiveFile(file.path)}
             onClose={() => handleClose(file.path)}
+            onRename={(newName) => handleRename(file.path, newName)}
             onMouseDown={() => startDrag(file.path)}
             onMouseEnter={() => enterTab(file.path)}
-            onDoubleClick={() => { setActiveFile(file.path); setFullscreen(true); }}
             suppressClick={() => movedRef.current}
           />
         ))}

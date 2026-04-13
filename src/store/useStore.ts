@@ -96,6 +96,7 @@ interface AppStore {
   reloadFileContent: (path: string, content: string) => void;
   setEditorPaneHeight: (height: number) => void;
   reorderOpenFiles: (orderedPaths: string[]) => void;
+  renameOpenFile: (oldPath: string, newPath: string) => void;
 
   // Theme
   theme: ThemeId;
@@ -317,6 +318,14 @@ export const useStore = create<AppStore>((set, get) => ({
       const next = orderedPaths.map((p) => map.get(p)).filter(Boolean) as typeof s.openFiles;
       return { openFiles: next };
     }),
+
+  renameOpenFile: (oldPath, newPath) =>
+    set((s) => ({
+      openFiles: s.openFiles.map((f) =>
+        f.path === oldPath ? { ...f, path: newPath, isDirty: false } : f
+      ),
+      activeFilePath: s.activeFilePath === oldPath ? newPath : s.activeFilePath,
+    })),
 
   setTheme: (theme) => {
     localStorage.setItem("theme", theme);
