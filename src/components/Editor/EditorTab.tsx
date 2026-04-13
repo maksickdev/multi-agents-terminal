@@ -69,9 +69,9 @@ export function EditorTab({
     <>
     {pendingName && (
       <ConfirmModal
-        title="Переименовать файл"
-        message={`Переименовать "${basename}" в "${pendingName}"?`}
-        confirmLabel="Переименовать"
+        title="Rename file"
+        message={`Rename "${basename}" to "${pendingName}"?`}
+        confirmLabel="Rename"
         onConfirm={() => { onRename(pendingName); setPendingName(null); }}
         onCancel={() => setPendingName(null)}
       />

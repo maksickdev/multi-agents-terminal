@@ -2,6 +2,10 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Language
+
+All text in the codebase must be in **English only** — UI labels, button text, placeholder text, error messages, tooltips, comments, and commit messages. No Russian or other non-English text is allowed anywhere in source files.
+
 ## Git commit convention
 
 All commits must follow the **Conventional Commits** specification:
