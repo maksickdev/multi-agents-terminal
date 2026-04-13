@@ -1,4 +1,5 @@
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import ReactDOM from "react-dom";
 import { useStore } from "../../store/useStore";
 import { writeFileText } from "../../lib/tauri";
 import { useFileWatcher } from "../../hooks/useFileWatcher";
@@ -6,8 +7,7 @@ import { CodeEditor } from "./CodeEditor";
 import { EditorTab } from "./EditorTab";
 import { RenderedPreview } from "./RenderedPreview";
 import { ConfirmModal } from "../shared/ConfirmModal";
-import { FullscreenFileModal } from "./FullscreenFileModal";
-import { Circle, Maximize2 } from "lucide-react";
+import { Circle, Maximize2, Minimize2 } from "lucide-react";
 
 const PREVIEWABLE = ["markdown"];
 
@@ -69,6 +69,16 @@ export function EditorPane() {
   const [previewMode, setPreviewMode] = useState<"raw" | "rendered">("raw");
   const [pendingClosePath, setPendingClosePath] = useState<string | null>(null);
   const [fullscreen, setFullscreen] = useState(false);
+
+  // Escape closes fullscreen
+  useEffect(() => {
+    if (!fullscreen) return;
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setFullscreen(false);
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [fullscreen]);
 
   const doReorder = useCallback((fromPath: string, toPath: string) => {
     const paths = projectFiles.map((f) => f.path);
@@ -136,124 +146,130 @@ export function EditorPane() {
     setPendingClosePath(null);
   };
 
+  // ── Shared inner content (tab bar + editor + status bar) ─────────────────
+  const tabBar = (
+    <div className="flex h-8 bg-[var(--c-bg-deep)] border-b border-[var(--c-border)] flex-shrink-0">
+      {/* Fullscreen toggle — pinned left */}
+      {activeFile && (
+        <button
+          onClick={() => setFullscreen((v) => !v)}
+          title={fullscreen ? "Exit fullscreen (Esc)" : "Fullscreen (double-click tab)"}
+          className="flex items-center justify-center w-8 flex-shrink-0 border-r border-[var(--c-border)] text-[var(--c-text-dim)] hover:text-[var(--c-text)] hover:bg-[var(--c-bg)] transition-colors"
+        >
+          {fullscreen ? <Minimize2 size={13} /> : <Maximize2 size={13} />}
+        </button>
+      )}
+      <div className="flex flex-1 overflow-x-auto scrollbar-none">
+        {projectFiles.map((file) => (
+          <EditorTab
+            key={file.path}
+            file={file}
+            isActive={file.path === activeFile?.path}
+            isDragging={file.path === draggingPath}
+            isDragOver={file.path === dragOverPath}
+            onSelect={() => setActiveFile(file.path)}
+            onClose={() => handleClose(file.path)}
+            onMouseDown={() => startDrag(file.path)}
+            onMouseEnter={() => enterTab(file.path)}
+            onDoubleClick={() => { setActiveFile(file.path); setFullscreen(true); }}
+            suppressClick={() => movedRef.current}
+          />
+        ))}
+      </div>
+    </div>
+  );
+
+  const editorArea = (
+    <div className="flex-1 overflow-hidden">
+      {activeFile && (
+        isPreviewable && previewMode === "rendered"
+          ? <RenderedPreview content={activeFile.content} language={activeFile.language} />
+          : <CodeEditor
+              key={activeFile.path}
+              content={activeFile.content}
+              language={activeFile.language}
+              onChange={(content) => updateFileContent(activeFile.path, content)}
+              onSave={handleSave}
+            />
+      )}
+    </div>
+  );
+
+  const statusBar = activeFile && (
+    <div className="flex items-center justify-between px-3 h-6 bg-[var(--c-bg-deep)] border-t border-[var(--c-border)] flex-shrink-0">
+      <span className="text-[10px] text-[var(--c-muted)] truncate">{activeFile.path}</span>
+      <div className="flex items-center gap-2 flex-shrink-0 ml-2">
+        {isPreviewable && (
+          <div className="flex items-center rounded overflow-hidden border border-[var(--c-bg-selected)]">
+            {(["raw", "rendered"] as const).map((mode) => (
+              <button
+                key={mode}
+                onClick={() => setPreviewMode(mode)}
+                className={`px-2 h-4 text-[9px] leading-none uppercase tracking-wide transition-colors ${
+                  previewMode === mode
+                    ? "bg-[var(--c-accent)] text-[var(--c-bg)]"
+                    : "text-[var(--c-muted)] hover:text-[var(--c-text)]"
+                }`}
+              >
+                {mode}
+              </button>
+            ))}
+          </div>
+        )}
+        <span className="text-[10px] text-[var(--c-muted)]">
+          {activeFile.language || "plain text"}
+          {activeFile.isDirty && (
+            <span className="ml-2 inline-flex items-center gap-1 text-[var(--c-accent-yellow)]">
+              <Circle size={6} className="fill-[var(--c-accent-yellow)]" /> unsaved
+            </span>
+          )}
+        </span>
+      </div>
+    </div>
+  );
+
   return (
     <>
-    {fullscreen && activeFile && (
-      <FullscreenFileModal
-        file={activeFile}
-        initialPreviewMode={isPreviewable ? previewMode : "raw"}
-        onChange={(content) => updateFileContent(activeFile.path, content)}
-        onSave={handleSave}
-        onClose={() => setFullscreen(false)}
-      />
-    )}
-    {pendingClosePath && (
-      <ConfirmModal
-        title="Unsaved changes"
-        message={`"${pendingClosePath.split("/").pop()}" has unsaved changes. Close anyway?`}
-        confirmLabel="Close"
-        danger
-        onConfirm={confirmClose}
-        onCancel={() => setPendingClosePath(null)}
-      />
-    )}
-    <div
-      ref={panelRef}
-      style={{
-        height: isVisible ? editorPaneHeight : 0,
-        flexShrink: 0,
-        overflow: "hidden",
-      }}
-      className="relative flex flex-col bg-[var(--c-bg-deep)]"
-    >
-      {/* Top resize handle */}
-      <div
-        onMouseDown={isVisible ? onHandleMouseDown : undefined}
-        className="absolute top-0 left-0 right-0 h-[6px] border-t border-[var(--c-border)] cursor-ns-resize hover:bg-[var(--c-accent)]/20 transition-colors z-10 flex flex-col justify-center"
-      />
-
-      {/* Tab bar */}
-      <div className="flex h-8 bg-[var(--c-bg-deep)] border-b border-[var(--c-border)] flex-shrink-0">
-        {/* Fullscreen button — pinned left */}
-        {activeFile && (
-          <button
-            onClick={() => setFullscreen(true)}
-            title="Fullscreen (double-click tab)"
-            className="flex items-center justify-center w-8 flex-shrink-0 border-r border-[var(--c-border)] text-[var(--c-text-dim)] hover:text-[var(--c-text)] hover:bg-[var(--c-bg)] transition-colors"
-          >
-            <Maximize2 size={13} />
-          </button>
-        )}
-        <div className="flex flex-1 overflow-x-auto scrollbar-none">
-          {projectFiles.map((file) => (
-            <EditorTab
-              key={file.path}
-              file={file}
-              isActive={file.path === activeFile?.path}
-              isDragging={file.path === draggingPath}
-              isDragOver={file.path === dragOverPath}
-              onSelect={() => setActiveFile(file.path)}
-              onClose={() => handleClose(file.path)}
-              onMouseDown={() => startDrag(file.path)}
-              onMouseEnter={() => enterTab(file.path)}
-              onDoubleClick={() => { setActiveFile(file.path); setFullscreen(true); }}
-              suppressClick={() => movedRef.current}
-            />
-          ))}
-        </div>
-      </div>
-
-      {/* Editor / Preview */}
-      <div className="flex-1 overflow-hidden">
-        {activeFile && (
-          isPreviewable && previewMode === "rendered"
-            ? <RenderedPreview content={activeFile.content} language={activeFile.language} />
-            : <CodeEditor
-                key={activeFile.path}
-                content={activeFile.content}
-                language={activeFile.language}
-                onChange={(content) => updateFileContent(activeFile.path, content)}
-                onSave={handleSave}
-              />
-        )}
-      </div>
-
-      {/* Status bar — bottom */}
-      {activeFile && (
-        <div className="flex items-center justify-between px-3 h-6 bg-[var(--c-bg-deep)] border-t border-[var(--c-border)] flex-shrink-0">
-          <span className="text-[10px] text-[var(--c-muted)] truncate">{activeFile.path}</span>
-          <div className="flex items-center gap-2 flex-shrink-0 ml-2">
-            {isPreviewable && (
-              <div className="flex items-center rounded overflow-hidden border border-[var(--c-bg-selected)]">
-                {(["raw", "rendered"] as const).map((mode) => (
-                  <button
-                    key={mode}
-                    onClick={() => setPreviewMode(mode)}
-                    className={`px-2 h-4 text-[9px] leading-none uppercase tracking-wide transition-colors ${
-                      previewMode === mode
-                        ? "bg-[var(--c-accent)] text-[var(--c-bg)]"
-                        : "text-[var(--c-muted)] hover:text-[var(--c-text)]"
-                    }`}
-                  >
-                    {mode}
-                  </button>
-                ))}
-              </div>
-            )}
-            <span className="text-[10px] text-[var(--c-muted)]">
-              {activeFile.language || "plain text"}
-              {activeFile.isDirty && (
-                <span className="ml-2 inline-flex items-center gap-1 text-[var(--c-accent-yellow)]">
-                  <Circle size={6} className="fill-[var(--c-accent-yellow)]" /> unsaved
-                </span>
-              )}
-            </span>
-
-          </div>
-        </div>
+      {pendingClosePath && (
+        <ConfirmModal
+          title="Unsaved changes"
+          message={`"${pendingClosePath.split("/").pop()}" has unsaved changes. Close anyway?`}
+          confirmLabel="Close"
+          danger
+          onConfirm={confirmClose}
+          onCancel={() => setPendingClosePath(null)}
+        />
       )}
 
-    </div>
+      {/* Fullscreen overlay via portal */}
+      {fullscreen && isVisible && ReactDOM.createPortal(
+        <div className="fixed inset-0 top-8 z-50 flex flex-col bg-[var(--c-bg-deep)]">
+          {tabBar}
+          {editorArea}
+          {statusBar}
+        </div>,
+        document.body,
+      )}
+
+      {/* Normal panel */}
+      <div
+        ref={panelRef}
+        style={{
+          height: isVisible ? editorPaneHeight : 0,
+          flexShrink: 0,
+          overflow: "hidden",
+        }}
+        className="relative flex flex-col bg-[var(--c-bg-deep)]"
+      >
+        {/* Top resize handle */}
+        <div
+          onMouseDown={isVisible ? onHandleMouseDown : undefined}
+          className="absolute top-0 left-0 right-0 h-[6px] border-t border-[var(--c-border)] cursor-ns-resize hover:bg-[var(--c-accent)]/20 transition-colors z-10 flex flex-col justify-center"
+        />
+        {tabBar}
+        {editorArea}
+        {statusBar}
+      </div>
     </>
   );
 }
