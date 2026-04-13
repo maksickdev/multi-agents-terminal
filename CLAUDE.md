@@ -111,7 +111,7 @@ All panel headers and tab bars are **32px tall** (`h-8`).
 
 - `FileExplorer.tsx` — outer panel with resize handle, header buttons (New File, New Folder, Refresh), Cmd+E shortcut.
 - `FileTree.tsx` — loads one directory level via `readDir`, renders `FileTreeNode` entries.
-- `FileTreeNode.tsx` — click opens file/expands folder, double-click triggers inline rename, right-click shows `ContextMenu`. Uses `<FileIcon>` for files and lucide `<Folder>`/`<FolderOpen>` (color `#e0af68`) for dirs.
+- `FileTreeNode.tsx` — click opens file/expands folder, double-click triggers inline rename, right-click shows `ContextMenu`. Delete action shows `ConfirmModal` (replaced `window.confirm`). Uses `<FileIcon>` for files and lucide `<Folder>`/`<FolderOpen>` (color `#e0af68`) for dirs.
 - `ContextMenu.tsx` — `ReactDOM.createPortal` to `document.body`, `position: fixed`, closes on outside click (capture phase) or Escape. Each item can have a `lucide-react` icon.
 - `MoveConfirmModal.tsx` — confirmation modal shown when dragging a file/folder to a new folder.
 
@@ -138,15 +138,14 @@ Handles files dragged from Finder (or any OS file manager) into the app via Taur
 
 **Shared components (`src/components/shared/`)**
 
-- `ConfirmModal.tsx` — reusable modal with title, message, confirm/cancel buttons; `danger` prop for red confirm; closes on Escape, Enter confirms, click-outside cancels. Used for: agent kill, file close with unsaved changes, project removal, file move.
+- `ConfirmModal.tsx` — reusable modal with title, message, confirm/cancel buttons; `danger` prop for red confirm; closes on Escape, Enter confirms, click-outside cancels. Renders via `ReactDOM.createPortal` into `document.body` at `z-index: 500` so it always appears above fullscreen overlays. Keydown listener is deferred by one `requestAnimationFrame` to avoid immediately triggering confirm when opened by an Enter key press. Used for: agent kill, file close with unsaved changes, project removal, file move, file/tab rename, file delete.
 
 **Editor Pane (`src/components/Editor/`)**
 
-- `EditorPane.tsx` — tab bar with drag-to-reorder (same mouse-event pattern as agent TabBar), CodeEditor or RenderedPreview, status bar at bottom. Filters `openFiles` by `selectedProjectId` so only active project's files are shown. Uses `ConfirmModal` when closing a dirty file. Double-clicking a tab or clicking the Maximize button opens `FullscreenFileModal`, passing `initialPreviewMode` so the modal inherits the current RAW/RENDERED state.
-- `CodeEditor.tsx` — CodeMirror 6, Tokyo Night theme, language via `Compartment`. Uses **ref pattern** for `onSave`/`onChange` callbacks (`onSaveRef`, `onChangeRef` updated each render via `useEffect`) to avoid stale closures in keymap and updateListener.
-- `EditorTab.tsx` — drag props, dirty indicator (●), middle-click closes tab (`onAuxClick`).
+- `EditorPane.tsx` — tab bar with drag-to-reorder (same mouse-event pattern as agent TabBar), CodeEditor or RenderedPreview, status bar at bottom. Filters `openFiles` by `selectedProjectId` so only active project's files are shown. `Maximize2`/`Minimize2` button pinned left in the tab bar toggles fullscreen mode. In fullscreen, the entire pane (tabs + editor + status bar) is portaled to `document.body` via `ReactDOM.createPortal` at `z-50`. Escape exits fullscreen.
+- `CodeEditor.tsx` — CodeMirror 6, Tokyo Night theme, language via `Compartment`. Supports: TypeScript, JavaScript, CSS, HTML, Rust, JSON, Markdown, Python, YAML, Ruby, Dockerfile, shell, `.env` (properties). Uses **ref pattern** for `onSave`/`onChange` callbacks to avoid stale closures in keymap and updateListener.
+- `EditorTab.tsx` — drag props, dirty indicator (●), middle-click closes tab (`onAuxClick`). Double-click triggers inline rename (input with border-b styling); on commit shows `ConfirmModal` before calling `renamePath` + `renameOpenFile`.
 - `RenderedPreview.tsx` — markdown rendered via `marked` + `DOMPurify`. RAW/RENDERED toggle in status bar for `.md` files only.
-- `FullscreenFileModal.tsx` — portal-based fullscreen overlay (covers everything below the title bar). Accepts `initialPreviewMode` prop so the calling pane can pass its current RAW/RENDERED state; the modal maintains its own local `previewMode` state from that initial value.
 
 **xterm.js lifecycle (`src/lib/ptyManager.ts`)**
 
@@ -166,12 +165,21 @@ The native xterm scrollbar is hidden via CSS (`.xterm-viewport { scrollbar-width
 
 All non-xterm scrollbars use Tokyo Night colors: `scrollbar-color: #414868 #16161e`, 6px width. The `.scrollbar-none` utility class hides scrollbars (used on the agent TabBar).
 
+**Activity Bar (`src/components/Sidebar/ActivityBar.tsx`)**
+
+Icon-only vertical toolbar (w-12) on the far left. Top section: sidebar toggle, file explorer, terminal, git. Bottom section: `UsageButton` (above) and Settings (below). `UsageButton` renders an icon-only button; the usage panel opens via `ReactDOM.createPortal` (position fixed, `z-index: 200`) to the right of the ActivityBar, positioned from `getBoundingClientRect()` of the trigger button.
+
+**Terminal fullscreen (`src/components/MainArea/`)**
+
+`MainArea` holds a `terminalFullscreen` boolean state. When true, the wrapper div containing `TabBar` + terminal area switches from `flex-1` to `position: fixed; inset: 0; top: 32px; z-index: 50`. This is a **CSS-only approach** — no portal, no remount — because xterm.js cannot be re-attached once opened. `TabBar` receives `fullscreen` + `onToggleFullscreen` props and renders `Maximize2`/`Minimize2` pinned left (before tabs, separated by border). Escape exits fullscreen.
+
 **Avoiding xterm re-mount problems**
 
 xterm cannot be re-opened once closed. Two patterns used:
 1. **All project TerminalGrids stay mounted** in `MainArea` — inactive ones use `visibility: hidden; pointer-events: none` (not `display: none`, which breaks rendering).
 2. **BottomPanel** stays mounted with `height: 0; overflow: hidden` when closed — so `ShellPane`/xterm never unmounts.
 3. **EditorPane** stays mounted with `height: 0; overflow: hidden` when no files are open.
+4. **Terminal fullscreen** uses CSS `position: fixed` on the existing container — never remounts the terminals.
 
 **Session persistence (`src/hooks/useSessionPersistence.ts`)**
 

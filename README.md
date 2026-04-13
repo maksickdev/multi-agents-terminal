@@ -7,15 +7,17 @@ A macOS desktop app built with Tauri 2 + React + TypeScript for running and mana
 - **Multiple agents per project** — spawn and manage Claude CLI sessions as tabbed terminal panes
 - **Session persistence** — on close, each agent's Claude session ID is captured via `/status` and saved to `agents.json`; on next launch agents resume with `claude -r <session_id>`, continuing the exact same conversation
 - **File manager** — split-pane file explorer with per-extension color icons (60+ types); drag files/folders to reorder or move
-- **In-app editor** — CodeMirror 6 with syntax highlighting for TypeScript, JavaScript, Rust, CSS, HTML, JSON, Markdown
+- **In-app editor** — CodeMirror 6 with syntax highlighting for TypeScript, JavaScript, Rust, CSS, HTML, JSON, Markdown, Python, Ruby, YAML, Dockerfile, shell, `.env`
 - **Auto-reload editor files** — open files reload automatically when changed externally (e.g. by an agent), dirty files are never overwritten
 - **Markdown preview** — RAW/RENDERED toggle for `.md` files (via `marked` + `DOMPurify`)
+- **Fullscreen mode** — both the editor pane and the agent terminal panel can be expanded to fill the entire window; Escape or the minimize button exits
 - **Shell panel** — persistent bottom panel with a zsh shell per project
 - **Drag-to-reorder** — both agent tabs and file editor tabs support mouse-based drag reorder
 - **Drag-to-terminal** — drag files/folders from the explorer to a terminal to paste the path
 - **External file drop** — drag files from Finder into the app: drop on a terminal to insert the path, drop on an Explorer folder to copy the file there
-- **Tab management** — rename on double-click, close on middle-click, dirty indicator for unsaved files
-- **Confirmation modals** — shown before killing an agent, closing an unsaved file, removing a project, or moving a file
+- **Tab management** — rename on double-click (with confirmation), close on middle-click, dirty indicator for unsaved files
+- **Confirmation modals** — shown before killing an agent, closing an unsaved file, removing a project, moving or deleting a file, renaming a file tab
+- **Usage monitor** — Claude Code usage limits panel accessible from the ActivityBar (icon-only button above Settings)
 - **Themed scrollbars** — Tokyo Night styled scrollbars everywhere; custom scrollbar in xterm terminals (native one hidden)
 
 ## Tech stack
