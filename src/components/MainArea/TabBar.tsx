@@ -97,7 +97,17 @@ export function TabBar({ project, agents, activeAgentId, getTerminalSize, fullsc
   };
 
   return (
-    <div className="flex items-center h-8 bg-[var(--c-bg-deep)] border-b border-[var(--c-border)] overflow-x-auto scrollbar-none">
+    <div className="flex items-center h-8 bg-[var(--c-bg-deep)] border-b border-[var(--c-border)]">
+      {/* Fullscreen toggle — pinned left */}
+      <button
+        onClick={onToggleFullscreen}
+        title={fullscreen ? "Exit fullscreen (Esc)" : "Fullscreen"}
+        className="flex items-center justify-center flex-shrink-0 w-8 h-full border-r border-[var(--c-border)] text-[var(--c-text-dim)] hover:text-[var(--c-text)] hover:bg-[var(--c-bg)] transition-colors"
+      >
+        {fullscreen ? <Minimize2 size={13} /> : <Maximize2 size={13} />}
+      </button>
+
+      <div className="flex flex-1 items-center overflow-x-auto scrollbar-none">
       {agents.map((agent) => (
         <TabItem
           key={agent.id}
@@ -121,14 +131,7 @@ export function TabBar({ project, agents, activeAgentId, getTerminalSize, fullsc
       >
         <Plus size={15} />
       </button>
-
-      <button
-        onClick={onToggleFullscreen}
-        title={fullscreen ? "Exit fullscreen (Esc)" : "Fullscreen"}
-        className="flex items-center justify-center flex-shrink-0 w-8 h-full border-l border-[var(--c-border)] text-[var(--c-text-dim)] hover:text-[var(--c-text)] hover:bg-[var(--c-bg)] transition-colors"
-      >
-        {fullscreen ? <Minimize2 size={13} /> : <Maximize2 size={13} />}
-      </button>
+      </div>
     </div>
   );
 }
