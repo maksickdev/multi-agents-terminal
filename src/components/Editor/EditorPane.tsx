@@ -173,22 +173,34 @@ export function EditorPane() {
       />
 
       {/* Tab bar */}
-      <div className="flex h-8 bg-[var(--c-bg-deep)] border-b border-[var(--c-border)] overflow-x-auto flex-shrink-0 scrollbar-none">
-        {projectFiles.map((file) => (
-          <EditorTab
-            key={file.path}
-            file={file}
-            isActive={file.path === activeFile?.path}
-            isDragging={file.path === draggingPath}
-            isDragOver={file.path === dragOverPath}
-            onSelect={() => setActiveFile(file.path)}
-            onClose={() => handleClose(file.path)}
-            onMouseDown={() => startDrag(file.path)}
-            onMouseEnter={() => enterTab(file.path)}
-            onDoubleClick={() => { setActiveFile(file.path); setFullscreen(true); }}
-            suppressClick={() => movedRef.current}
-          />
-        ))}
+      <div className="flex h-8 bg-[var(--c-bg-deep)] border-b border-[var(--c-border)] flex-shrink-0">
+        {/* Fullscreen button — pinned left */}
+        {activeFile && (
+          <button
+            onClick={() => setFullscreen(true)}
+            title="Fullscreen (double-click tab)"
+            className="flex items-center justify-center w-8 flex-shrink-0 border-r border-[var(--c-border)] text-[var(--c-text-dim)] hover:text-[var(--c-text)] hover:bg-[var(--c-bg)] transition-colors"
+          >
+            <Maximize2 size={13} />
+          </button>
+        )}
+        <div className="flex flex-1 overflow-x-auto scrollbar-none">
+          {projectFiles.map((file) => (
+            <EditorTab
+              key={file.path}
+              file={file}
+              isActive={file.path === activeFile?.path}
+              isDragging={file.path === draggingPath}
+              isDragOver={file.path === dragOverPath}
+              onSelect={() => setActiveFile(file.path)}
+              onClose={() => handleClose(file.path)}
+              onMouseDown={() => startDrag(file.path)}
+              onMouseEnter={() => enterTab(file.path)}
+              onDoubleClick={() => { setActiveFile(file.path); setFullscreen(true); }}
+              suppressClick={() => movedRef.current}
+            />
+          ))}
+        </div>
       </div>
 
       {/* Editor / Preview */}
@@ -236,13 +248,7 @@ export function EditorPane() {
                 </span>
               )}
             </span>
-            <button
-              onClick={() => setFullscreen(true)}
-              title="Fullscreen (double-click tab)"
-              className="flex items-center text-[var(--c-muted)] hover:text-[var(--c-text)] transition-colors"
-            >
-              <Maximize2 size={11} />
-            </button>
+
           </div>
         </div>
       )}
