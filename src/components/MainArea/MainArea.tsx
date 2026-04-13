@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useStore } from "../../store/useStore";
 import { EmptyState } from "./EmptyState";
 import { TabBar } from "./TabBar";
@@ -17,6 +17,7 @@ export function MainArea() {
     bottomPanelOpen, setBottomPanelOpen } = useStore();
   void agentOrder;
   const terminalAreaRef = useRef<HTMLDivElement>(null);
+  const [terminalFullscreen, setTerminalFullscreen] = useState(false);
 
   const getTerminalSize = (): { rows: number; cols: number } => {
     const el = terminalAreaRef.current;
@@ -28,17 +29,20 @@ export function MainArea() {
     };
   };
 
-  // Cmd+J toggles bottom panel
+  // Cmd+J toggles bottom panel; Escape exits terminal fullscreen
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "j" && e.metaKey) {
         e.preventDefault();
         setBottomPanelOpen(!bottomPanelOpen);
       }
+      if (e.key === "Escape" && terminalFullscreen) {
+        setTerminalFullscreen(false);
+      }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [bottomPanelOpen, setBottomPanelOpen]);
+  }, [bottomPanelOpen, setBottomPanelOpen, terminalFullscreen]);
 
   const project = projects.find((p) => p.id === selectedProjectId);
   const allProjects = projects;
@@ -53,39 +57,50 @@ export function MainArea() {
         </div>
       ) : (
         <>
-          <TabBar
-            project={project}
-            agents={getProjectAgents(project.id)}
-            activeAgentId={activeAgentId[project.id] ?? null}
-            getTerminalSize={getTerminalSize}
-          />
+          {/* Terminal panel — CSS fullscreen (no remount) via position:fixed */}
+          <div
+            className={terminalFullscreen
+              ? "fixed inset-0 top-8 z-50 flex flex-col bg-[var(--c-bg)]"
+              : "flex flex-col overflow-hidden min-h-0"
+            }
+            style={terminalFullscreen ? undefined : { flex: "1 1 0%" }}
+          >
+            <TabBar
+              project={project}
+              agents={getProjectAgents(project.id)}
+              activeAgentId={activeAgentId[project.id] ?? null}
+              getTerminalSize={getTerminalSize}
+              fullscreen={terminalFullscreen}
+              onToggleFullscreen={() => setTerminalFullscreen((v) => !v)}
+            />
 
-          {/* Terminal area — keep ALL projects mounted to preserve xterm state */}
-          <div ref={terminalAreaRef} className="flex-1 overflow-hidden relative min-h-0">
-            {getProjectAgents(project.id).length === 0 && (
-              <div className="absolute inset-0 flex items-center justify-center text-[var(--c-text-dim)] text-sm">
-                Click <span className="mx-1 text-[var(--c-accent)]">+</span> to start a new agent
-              </div>
-            )}
-
-            {allProjects.map((p) => {
-              const pAgents = getProjectAgents(p.id);
-              if (pAgents.length === 0) return null;
-              const pActiveId = activeAgentId[p.id] ?? null;
-              const isActive = p.id === selectedProjectId;
-              return (
-                <div
-                  key={p.id}
-                  style={
-                    isActive
-                      ? { position: "absolute", inset: 0, display: "flex", flexDirection: "column" }
-                      : { position: "absolute", inset: 0, display: "flex", flexDirection: "column", visibility: "hidden", pointerEvents: "none" }
-                  }
-                >
-                  <TerminalGrid agents={pAgents} activeAgentId={pActiveId} />
+            {/* Terminal area — keep ALL projects mounted to preserve xterm state */}
+            <div ref={terminalAreaRef} className="flex-1 overflow-hidden relative min-h-0">
+              {getProjectAgents(project.id).length === 0 && (
+                <div className="absolute inset-0 flex items-center justify-center text-[var(--c-text-dim)] text-sm">
+                  Click <span className="mx-1 text-[var(--c-accent)]">+</span> to start a new agent
                 </div>
-              );
-            })}
+              )}
+
+              {allProjects.map((p) => {
+                const pAgents = getProjectAgents(p.id);
+                if (pAgents.length === 0) return null;
+                const pActiveId = activeAgentId[p.id] ?? null;
+                const isActive = p.id === selectedProjectId;
+                return (
+                  <div
+                    key={p.id}
+                    style={
+                      isActive
+                        ? { position: "absolute", inset: 0, display: "flex", flexDirection: "column" }
+                        : { position: "absolute", inset: 0, display: "flex", flexDirection: "column", visibility: "hidden", pointerEvents: "none" }
+                    }
+                  >
+                    <TerminalGrid agents={pAgents} activeAgentId={pActiveId} />
+                  </div>
+                );
+              })}
+            </div>
           </div>
 
           {/* Editor pane — sits between terminal area and bottom shell panel */}

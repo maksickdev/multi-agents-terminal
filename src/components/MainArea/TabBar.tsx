@@ -3,7 +3,7 @@ import { spawnAgent } from "../../lib/tauri";
 import { useStore, type Agent } from "../../store/useStore";
 import { TabItem } from "./TabItem";
 import type { Project } from "../../lib/tauri";
-import { Plus } from "lucide-react";
+import { Maximize2, Minimize2, Plus } from "lucide-react";
 import { isDraggingFile } from "../../lib/fileDrag";
 
 interface Props {
@@ -11,9 +11,11 @@ interface Props {
   agents: Agent[];
   activeAgentId: string | null;
   getTerminalSize?: () => { rows: number; cols: number };
+  fullscreen?: boolean;
+  onToggleFullscreen?: () => void;
 }
 
-export function TabBar({ project, agents, activeAgentId, getTerminalSize }: Props) {
+export function TabBar({ project, agents, activeAgentId, getTerminalSize, fullscreen, onToggleFullscreen }: Props) {
   const { addAgent, setActiveAgent, getProjectAgents, renameAgent, reorderAgents } = useStore();
 
   // Refs hold the live values; state drives rendering
@@ -118,6 +120,14 @@ export function TabBar({ project, agents, activeAgentId, getTerminalSize }: Prop
         title="New agent"
       >
         <Plus size={15} />
+      </button>
+
+      <button
+        onClick={onToggleFullscreen}
+        title={fullscreen ? "Exit fullscreen (Esc)" : "Fullscreen"}
+        className="flex items-center justify-center flex-shrink-0 w-8 h-full border-l border-[var(--c-border)] text-[var(--c-text-dim)] hover:text-[var(--c-text)] hover:bg-[var(--c-bg)] transition-colors"
+      >
+        {fullscreen ? <Minimize2 size={13} /> : <Maximize2 size={13} />}
       </button>
     </div>
   );
