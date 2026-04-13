@@ -1,5 +1,6 @@
 import { useRef, useState } from "react";
 import type { OpenFile } from "../../store/useStore";
+import { ConfirmModal } from "../shared/ConfirmModal";
 import { X, Circle } from "lucide-react";
 
 interface Props {
@@ -24,6 +25,7 @@ export function EditorTab({
 
   const [editing, setEditing] = useState(false);
   const [editValue, setEditValue] = useState(basename);
+  const [pendingName, setPendingName] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const startEdit = (e: React.MouseEvent) => {
@@ -34,8 +36,8 @@ export function EditorTab({
 
   const commitEdit = () => {
     const trimmed = editValue.trim();
-    if (trimmed && trimmed !== basename) onRename(trimmed);
     setEditing(false);
+    if (trimmed && trimmed !== basename) setPendingName(trimmed);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -64,6 +66,16 @@ export function EditorTab({
     : {};
 
   return (
+    <>
+    {pendingName && (
+      <ConfirmModal
+        title="Переименовать файл"
+        message={`Переименовать "${basename}" в "${pendingName}"?`}
+        confirmLabel="Переименовать"
+        onConfirm={() => { onRename(pendingName); setPendingName(null); }}
+        onCancel={() => setPendingName(null)}
+      />
+    )}
     <div
       onClick={handleClick}
       onDoubleClick={!editing ? startEdit : undefined}
@@ -108,5 +120,6 @@ export function EditorTab({
         </button>
       )}
     </div>
+    </>
   );
 }
