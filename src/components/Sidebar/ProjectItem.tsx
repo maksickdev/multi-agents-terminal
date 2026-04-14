@@ -5,7 +5,7 @@ import type { Project } from "../../lib/tauri";
 import { ConfirmModal } from "../shared/ConfirmModal";
 import { ContextMenu, type ContextMenuItem } from "../FileExplorer/ContextMenu";
 import { revealInFinder } from "../../lib/tauri";
-import { Plus, Trash2, ScanSearch, Pencil } from "lucide-react";
+import { Plus, Trash2, ScanSearch, Pencil, Copy } from "lucide-react";
 
 interface Props {
   project: Project;
@@ -108,6 +108,11 @@ export function ProjectItem({ project }: Props) {
       label: "Rename Folder",
       icon: Pencil,
       onClick: () => setRenaming(true),
+    },
+    {
+      label: "Copy Path",
+      icon: Copy,
+      onClick: () => navigator.clipboard.writeText(project.path),
     },
     {
       label: "Reveal in Finder",
