@@ -16,14 +16,17 @@ export function ActivityBar() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
 
-  // ⌘B — toggle sidebar (matches VS Code convention)
+  // ⌘B — toggle sidebar | ⌘G — toggle git panel | ⌘⇧F — global search
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (e.metaKey && e.key === "b") {
         e.preventDefault();
         setSidebarOpen(!sidebarOpen);
       }
-      // ⌘⇧F — global search
+      if (e.metaKey && e.key === "g") {
+        e.preventDefault();
+        setGitPanelOpen(!gitPanelOpen);
+      }
       if (e.metaKey && e.shiftKey && e.key === "f") {
         e.preventDefault();
         setSearchOpen((v) => !v);
@@ -31,7 +34,7 @@ export function ActivityBar() {
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [sidebarOpen, setSidebarOpen]);
+  }, [sidebarOpen, setSidebarOpen, gitPanelOpen, setGitPanelOpen]);
 
   return (
     <>
@@ -79,7 +82,7 @@ export function ActivityBar() {
 
           <button
             onClick={() => setGitPanelOpen(!gitPanelOpen)}
-            title="Git"
+            title="Git (⌘G)"
             className={`flex items-center justify-center w-9 h-9 rounded transition-colors ${
               gitPanelOpen
                 ? "text-[var(--c-accent)] bg-[var(--c-bg)]"
