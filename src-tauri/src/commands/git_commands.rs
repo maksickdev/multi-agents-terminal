@@ -643,3 +643,34 @@ pub fn git_pull_with_passphrase(cwd: String, passphrase: String) -> Result<Strin
 pub fn git_push_with_passphrase(cwd: String, passphrase: String) -> Result<String, String> {
     shell_git_with_askpass(&cwd, "push", &passphrase)
 }
+
+/// Check whether a remote URL is reachable by running `git ls-remote --exit-code <url> HEAD`.
+/// Returns Ok(()) if the remote exists and is accessible.
+/// Returns Err("AUTH_REQUIRED: ...") if authentication is needed (repo may still exist).
+/// Returns Err(message) if the URL is invalid or the repository does not exist.
+#[tauri::command]
+pub fn git_ls_remote(url: String) -> Result<(), String> {
+    let esc_url = url.replace('\'', "'\\''");
+    let _ = Command::new("/usr/bin/ssh-add")
+        .args(["--apple-load-keychain"])
+        .env_remove("GIT_DIR")
+        .output();
+
+    let out = Command::new("/bin/zsh")
+        .args(["-l", "-c", &format!("git -c core.askPass= ls-remote --exit-code '{esc_url}' HEAD")])
+        .env_remove("GIT_DIR")
+        .env_remove("GIT_WORK_TREE")
+        .env("GIT_TERMINAL_PROMPT", "0")
+        .output()
+        .map_err(|e| format!("shell exec failed: {e}"))?;
+
+    if out.status.success() {
+        return Ok(());
+    }
+    let stderr = String::from_utf8_lossy(&out.stderr).trim().to_string();
+    if is_auth_error(&stderr) {
+        Err(format!("AUTH_REQUIRED: {stderr}"))
+    } else {
+        Err(stderr)
+    }
+}

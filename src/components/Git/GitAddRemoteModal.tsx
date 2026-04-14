@@ -1,5 +1,22 @@
 import { useEffect, useRef, useState } from "react";
-import { Globe } from "lucide-react";
+import { Globe, Loader2 } from "lucide-react";
+import { gitLsRemote } from "../../lib/tauri";
+
+/** Accepted git remote URL patterns:
+ *  - https://github.com/user/repo.git
+ *  - git@github.com:user/repo.git
+ *  - ssh://git@github.com/user/repo.git
+ *  - git://github.com/user/repo.git
+ */
+const GIT_REMOTE_URL_RE = /^(https?:\/\/.+|git@[\w.-]+:.+|ssh:\/\/.+|git:\/\/.+)/;
+
+function validateUrl(raw: string): string | null {
+  const u = raw.trim();
+  if (!u) return "URL is required";
+  if (!GIT_REMOTE_URL_RE.test(u))
+    return "Invalid remote URL — expected https://, git@host:, ssh:// or git://";
+  return null;
+}
 
 interface Props {
   /** Pre-fill name with "origin" when no remotes exist yet */
@@ -12,6 +29,8 @@ interface Props {
 export function GitAddRemoteModal({ defaultName = "", loading, onConfirm, onCancel }: Props) {
   const [name, setName] = useState(defaultName);
   const [url,  setUrl]  = useState("");
+  const [urlError, setUrlError] = useState<string | null>(null);
+  const [checking, setChecking] = useState(false);
   const urlRef  = useRef<HTMLInputElement>(null);
   const nameRef = useRef<HTMLInputElement>(null);
 
@@ -26,11 +45,31 @@ export function GitAddRemoteModal({ defaultName = "", loading, onConfirm, onCanc
     return () => window.removeEventListener("keydown", onKey);
   }, [onCancel]);
 
-  const submit = () => {
+  const submit = async () => {
     const n = name.trim();
     const u = url.trim();
-    if (!n || !u || loading) return;
-    onConfirm(n, u);
+    if (!n || loading || checking) return;
+
+    const fmtErr = validateUrl(u);
+    if (fmtErr) { setUrlError(fmtErr); return; }
+
+    setChecking(true);
+    setUrlError(null);
+    try {
+      await gitLsRemote(u);
+      // Remote is reachable — proceed
+      onConfirm(n, u);
+    } catch (e) {
+      const msg = String(e);
+      if (msg.startsWith("AUTH_REQUIRED:")) {
+        // Repo likely exists but needs credentials — allow adding
+        onConfirm(n, u);
+      } else {
+        setUrlError("Repository not found or not accessible");
+      }
+    } finally {
+      setChecking(false);
+    }
   };
 
   return (
@@ -76,12 +115,17 @@ export function GitAddRemoteModal({ defaultName = "", loading, onConfirm, onCanc
             <input
               ref={urlRef}
               value={url}
-              onChange={(e) => setUrl(e.target.value)}
+              onChange={(e) => { setUrl(e.target.value); setUrlError(null); }}
               onKeyDown={(e) => { if (e.key === "Enter") submit(); }}
               placeholder="https://github.com/user/repo.git"
               spellCheck={false}
-              className="w-full text-xs bg-[var(--c-bg-elevated)] text-[var(--c-text-bright)] rounded px-2 py-1.5 outline-none border border-[var(--c-border)] focus:border-[var(--c-accent)] placeholder:text-[var(--c-muted)] transition-colors font-mono"
+              className={`w-full text-xs bg-[var(--c-bg-elevated)] text-[var(--c-text-bright)] rounded px-2 py-1.5 outline-none border placeholder:text-[var(--c-muted)] transition-colors font-mono ${
+                urlError ? "border-[var(--c-danger)]" : "border-[var(--c-border)] focus:border-[var(--c-accent)]"
+              }`}
             />
+            {urlError && (
+              <p className="text-[10px] text-[var(--c-danger)] leading-tight">{urlError}</p>
+            )}
           </div>
         </div>
 
@@ -98,11 +142,13 @@ export function GitAddRemoteModal({ defaultName = "", loading, onConfirm, onCanc
           </button>
           <button
             onClick={submit}
-            disabled={!name.trim() || !url.trim() || loading}
+            disabled={!name.trim() || !url.trim() || loading || checking}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed bg-[var(--c-accent)]/20 text-[var(--c-accent)] hover:bg-[var(--c-accent)]/30"
           >
-            <Globe size={11} />
-            {loading ? "Adding…" : "Add Remote"}
+            {checking
+              ? <Loader2 size={11} className="animate-spin" />
+              : <Globe size={11} />}
+            {checking ? "Checking…" : loading ? "Adding…" : "Add Remote"}
           </button>
         </div>
       </div>

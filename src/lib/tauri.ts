@@ -208,7 +208,8 @@ export const gitAddRemote     = (cwd: string, name: string, url: string) => invo
 export const gitRemoveRemote  = (cwd: string, name: string) => invoke<void>("git_remove_remote", { cwd, name });
 export const gitPushUpstream  = (cwd: string, remote: string, branch: string) => invoke<void>("git_push_upstream", { cwd, remote, branch });
 
-export const gitInit    = (cwd: string) => invoke<void>("git_init", { cwd });
+export const gitInit       = (cwd: string) => invoke<void>("git_init", { cwd });
+export const gitLsRemote   = (url: string) => invoke<void>("git_ls_remote", { url });
 export const gitPull    = (cwd: string) => invoke<string>("git_pull", { cwd });
 export const gitPush    = (cwd: string) => invoke<string>("git_push", { cwd });
 export const gitPullWithPassphrase = (cwd: string, passphrase: string) =>
