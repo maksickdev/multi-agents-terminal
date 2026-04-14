@@ -30,6 +30,7 @@ export function GitAddRemoteModal({ defaultName = "", loading, onConfirm, onCanc
   const [name, setName] = useState(defaultName);
   const [url,  setUrl]  = useState("");
   const [urlError, setUrlError] = useState<string | null>(null);
+  const [urlWarning, setUrlWarning] = useState<string | null>(null);
   const [checking, setChecking] = useState(false);
   const urlRef  = useRef<HTMLInputElement>(null);
   const nameRef = useRef<HTMLInputElement>(null);
@@ -45,27 +46,31 @@ export function GitAddRemoteModal({ defaultName = "", loading, onConfirm, onCanc
     return () => window.removeEventListener("keydown", onKey);
   }, [onCancel]);
 
-  const submit = async () => {
+  const submit = async (force = false) => {
     const n = name.trim();
     const u = url.trim();
     if (!n || loading || checking) return;
 
     const fmtErr = validateUrl(u);
-    if (fmtErr) { setUrlError(fmtErr); return; }
+    if (fmtErr) { setUrlError(fmtErr); setUrlWarning(null); return; }
+
+    // If user confirmed despite the warning — add without re-checking
+    if (force) { onConfirm(n, u); return; }
 
     setChecking(true);
+    setUrlWarning(null);
     setUrlError(null);
     try {
       await gitLsRemote(u);
-      // Remote is reachable — proceed
       onConfirm(n, u);
     } catch (e) {
       const msg = String(e);
       if (msg.startsWith("AUTH_REQUIRED:")) {
-        // Repo likely exists but needs credentials — allow adding
+        // Clearly auth-gated — allow adding directly
         onConfirm(n, u);
       } else {
-        setUrlError("Repository not found or not accessible");
+        // GitHub returns "not found" for private repos too — show warning, let user decide
+        setUrlWarning("Could not reach the repository. It may be private or require authentication.");
       }
     } finally {
       setChecking(false);
@@ -115,16 +120,27 @@ export function GitAddRemoteModal({ defaultName = "", loading, onConfirm, onCanc
             <input
               ref={urlRef}
               value={url}
-              onChange={(e) => { setUrl(e.target.value); setUrlError(null); }}
-              onKeyDown={(e) => { if (e.key === "Enter") submit(); }}
+              onChange={(e) => { setUrl(e.target.value); setUrlError(null); setUrlWarning(null); }}
+              onKeyDown={(e) => { if (e.key === "Enter") submit(false); }}
               placeholder="https://github.com/user/repo.git"
               spellCheck={false}
               className={`w-full text-xs bg-[var(--c-bg-elevated)] text-[var(--c-text-bright)] rounded px-2 py-1.5 outline-none border placeholder:text-[var(--c-muted)] transition-colors font-mono ${
-                urlError ? "border-[var(--c-danger)]" : "border-[var(--c-border)] focus:border-[var(--c-accent)]"
+                urlError ? "border-[var(--c-danger)]" : urlWarning ? "border-yellow-500/50" : "border-[var(--c-border)] focus:border-[var(--c-accent)]"
               }`}
             />
             {urlError && (
               <p className="text-[10px] text-[var(--c-danger)] leading-tight">{urlError}</p>
+            )}
+            {urlWarning && (
+              <div className="flex flex-col gap-1.5 rounded px-2 py-1.5 bg-yellow-500/10 border border-yellow-500/30">
+                <p className="text-[10px] text-yellow-400 leading-tight">{urlWarning}</p>
+                <button
+                  onClick={() => submit(true)}
+                  className="self-start text-[10px] font-medium text-yellow-400 hover:text-yellow-300 underline underline-offset-2 transition-colors"
+                >
+                  Add anyway
+                </button>
+              </div>
             )}
           </div>
         </div>
@@ -141,7 +157,7 @@ export function GitAddRemoteModal({ defaultName = "", loading, onConfirm, onCanc
             Cancel
           </button>
           <button
-            onClick={submit}
+            onClick={() => submit(false)}
             disabled={!name.trim() || !url.trim() || loading || checking}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed bg-[var(--c-accent)]/20 text-[var(--c-accent)] hover:bg-[var(--c-accent)]/30"
           >
