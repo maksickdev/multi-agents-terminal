@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useStore } from "../../store/useStore";
 import { createFile, createDirAll, renamePath } from "../../lib/tauri";
+import { matchesHotkey } from "../../lib/hotkeys";
 import { FileTree } from "./FileTree";
 import { MoveConfirmModal } from "./MoveConfirmModal";
 import { setOnFolderDrop } from "../../lib/fileDrag";
@@ -12,6 +13,7 @@ export function FileExplorer() {
     fileExplorerOpen, fileExplorerWidth,
     fileTreeVersion,
     setFileExplorerOpen, setFileExplorerWidth,
+    hotkeys,
   } = useStore();
 
   const selectedProject = projects.find((p) => p.id === selectedProjectId) ?? null;
@@ -41,17 +43,17 @@ export function FileExplorer() {
     window.addEventListener("mouseup", onUp);
   };
 
-  // ── Keyboard shortcut: Cmd+E ─────────────────────────────────────────────
+  // ── Keyboard shortcut (configurable, default Cmd+E) ─────────────────────
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === "e") {
+      if (matchesHotkey(e, hotkeys.toggleFileExplorer)) {
         e.preventDefault();
         setFileExplorerOpen(!fileExplorerOpen);
       }
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [fileExplorerOpen, setFileExplorerOpen]);
+  }, [fileExplorerOpen, setFileExplorerOpen, hotkeys.toggleFileExplorer]);
 
   // ── Root-level file/folder creation ──────────────────────────────────────
   const [creating, setCreating] = useState<"file" | "dir" | null>(null);

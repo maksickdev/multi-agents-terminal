@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useStore } from "../../store/useStore";
+import { matchesHotkey } from "../../lib/hotkeys";
 import { EmptyState } from "./EmptyState";
 import { TabBar } from "./TabBar";
 import { TerminalGrid } from "../Terminal/TerminalGrid";
@@ -14,7 +15,7 @@ export function MainArea() {
   // agentOrder is subscribed explicitly so MainArea re-renders when tabs
   // are reordered and getProjectAgents returns the updated sequence.
   const { projects, selectedProjectId, activeAgentId, getProjectAgents, agentOrder,
-    bottomPanelOpen, setBottomPanelOpen } = useStore();
+    bottomPanelOpen, setBottomPanelOpen, hotkeys } = useStore();
   void agentOrder;
   const terminalAreaRef = useRef<HTMLDivElement>(null);
   const [terminalFullscreen, setTerminalFullscreen] = useState(false);
@@ -29,10 +30,10 @@ export function MainArea() {
     };
   };
 
-  // Cmd+J toggles bottom panel; Escape exits terminal fullscreen
+  // Toggle terminal (configurable, default Cmd+J); Escape exits terminal fullscreen
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "j" && e.metaKey) {
+      if (matchesHotkey(e, hotkeys.toggleTerminal)) {
         e.preventDefault();
         setBottomPanelOpen(!bottomPanelOpen);
       }
@@ -42,7 +43,7 @@ export function MainArea() {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [bottomPanelOpen, setBottomPanelOpen, terminalFullscreen]);
+  }, [bottomPanelOpen, setBottomPanelOpen, terminalFullscreen, hotkeys.toggleTerminal]);
 
   const project = projects.find((p) => p.id === selectedProjectId);
   const allProjects = projects;

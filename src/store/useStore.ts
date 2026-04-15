@@ -1,6 +1,10 @@
 import { create } from "zustand";
 import type { AgentStatus, Project } from "../lib/tauri";
 import type { ThemeId } from "../lib/themes";
+import {
+  type HotkeyAction, type HotkeyMap, type Hotkey,
+  hotkeysFromStorage, DEFAULT_HOTKEYS,
+} from "../lib/hotkeys";
 
 export interface OpenFile {
   /** Absolute path — used as a unique key. */
@@ -102,6 +106,11 @@ interface AppStore {
   theme: ThemeId;
   setTheme: (theme: ThemeId) => void;
 
+  // Hotkeys
+  hotkeys: HotkeyMap;
+  setHotkey: (action: HotkeyAction, hotkey: Hotkey) => void;
+  resetHotkeys: () => void;
+
   // UI actions
   selectProject: (projectId: string) => void;
   setActiveAgent: (projectId: string, agentId: string | null) => void;
@@ -136,6 +145,7 @@ export const useStore = create<AppStore>((set, get) => ({
   editorPaneHeight: 300,
   theme: (localStorage.getItem("theme") as ThemeId | null) ?? "dark",
   projectsFolder: localStorage.getItem("projectsFolder") ?? "",
+  hotkeys: hotkeysFromStorage(),
 
   setProjectsFolder: (folder) => {
     localStorage.setItem("projectsFolder", folder);
@@ -330,6 +340,17 @@ export const useStore = create<AppStore>((set, get) => ({
   setTheme: (theme) => {
     localStorage.setItem("theme", theme);
     set({ theme });
+  },
+
+  setHotkey: (action, hotkey) => {
+    const next = { ...get().hotkeys, [action]: hotkey };
+    localStorage.setItem("hotkeys", JSON.stringify(next));
+    set({ hotkeys: next });
+  },
+
+  resetHotkeys: () => {
+    localStorage.setItem("hotkeys", JSON.stringify(DEFAULT_HOTKEYS));
+    set({ hotkeys: { ...DEFAULT_HOTKEYS } });
   },
 
   selectProject: (projectId) => set({ selectedProjectId: projectId }),

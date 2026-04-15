@@ -1,15 +1,93 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useStore } from "../../store/useStore";
 import { themes } from "../../lib/themes";
-import { X, FolderOpen } from "lucide-react";
+import { X, FolderOpen, RotateCcw } from "lucide-react";
 import { pickFolder } from "../../lib/tauri";
+import {
+  type HotkeyAction, type Hotkey,
+  HOTKEY_LABELS, formatHotkey,
+} from "../../lib/hotkeys";
 
 interface Props {
   onClose: () => void;
 }
 
+// ── Hotkey recorder ──────────────────────────────────────────────────────────
+
+interface HotkeyRowProps {
+  action: HotkeyAction;
+  binding: Hotkey;
+  conflict: boolean;
+  onChange: (action: HotkeyAction, hotkey: Hotkey) => void;
+}
+
+function HotkeyRow({ action, binding, conflict, onChange }: HotkeyRowProps) {
+  const [recording, setRecording] = useState(false);
+  const btnRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    if (!recording) return;
+
+    const onKey = (e: KeyboardEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+
+      // Ignore modifier-only keypresses
+      if (["Meta", "Shift", "Alt", "Control"].includes(e.key)) return;
+
+      if (e.key === "Escape") {
+        setRecording(false);
+        return;
+      }
+
+      onChange(action, {
+        key: e.key.toLowerCase(),
+        meta: e.metaKey,
+        shift: e.shiftKey,
+        alt: e.altKey,
+      });
+      setRecording(false);
+    };
+
+    const onMouseDown = (e: MouseEvent) => {
+      if (btnRef.current && !btnRef.current.contains(e.target as Node)) {
+        setRecording(false);
+      }
+    };
+
+    window.addEventListener("keydown", onKey, { capture: true });
+    window.addEventListener("mousedown", onMouseDown);
+    return () => {
+      window.removeEventListener("keydown", onKey, { capture: true });
+      window.removeEventListener("mousedown", onMouseDown);
+    };
+  }, [recording, action, onChange]);
+
+  return (
+    <div className="flex items-center justify-between gap-3 py-1.5">
+      <span className="text-xs text-[var(--c-text)] flex-1">{HOTKEY_LABELS[action]}</span>
+      <button
+        ref={btnRef}
+        onClick={() => setRecording(true)}
+        title={recording ? "Press a key combination, or Escape to cancel" : "Click to record a new shortcut"}
+        className={`min-w-[80px] px-2.5 py-1 rounded text-xs font-mono border transition-colors text-center ${
+          recording
+            ? "border-[var(--c-accent)] text-[var(--c-accent)] bg-[var(--c-accent)]/10 animate-pulse"
+            : conflict
+              ? "border-[var(--c-danger)] text-[var(--c-danger)] bg-[var(--c-danger)]/10"
+              : "border-[var(--c-border)] text-[var(--c-text-bright)] hover:border-[var(--c-accent)] bg-[var(--c-bg-deep)]"
+        }`}
+      >
+        {recording ? "recording…" : formatHotkey(binding)}
+      </button>
+    </div>
+  );
+}
+
+// ── Main modal ───────────────────────────────────────────────────────────────
+
 export function SettingsModal({ onClose }: Props) {
-  const { theme, setTheme, projectsFolder, setProjectsFolder } = useStore();
+  const { theme, setTheme, projectsFolder, setProjectsFolder, hotkeys, setHotkey, resetHotkeys } = useStore();
   const [folderInput, setFolderInput] = useState(projectsFolder);
 
   const handlePickFolder = async () => {
@@ -29,14 +107,33 @@ export function SettingsModal({ onClose }: Props) {
     return () => window.removeEventListener("keydown", handler);
   }, [onClose]);
 
+  // Detect conflicting bindings (same combo used by two actions)
+  const hotkeyActions = Object.keys(hotkeys) as HotkeyAction[];
+  const conflicts = new Set<HotkeyAction>();
+  for (let i = 0; i < hotkeyActions.length; i++) {
+    for (let j = i + 1; j < hotkeyActions.length; j++) {
+      const a = hotkeys[hotkeyActions[i]];
+      const b = hotkeys[hotkeyActions[j]];
+      if (
+        a.key === b.key &&
+        a.meta === b.meta &&
+        a.shift === b.shift &&
+        a.alt === b.alt
+      ) {
+        conflicts.add(hotkeyActions[i]);
+        conflicts.add(hotkeyActions[j]);
+      }
+    }
+  }
+
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
       onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
-      <div className="bg-[var(--c-bg-elevated)] border border-[var(--c-border)] rounded-xl shadow-2xl w-[480px] flex flex-col overflow-hidden">
+      <div className="bg-[var(--c-bg-elevated)] border border-[var(--c-border)] rounded-xl shadow-2xl w-[480px] flex flex-col overflow-hidden max-h-[90vh]">
         {/* Header */}
-        <div className="flex items-center justify-between px-4 h-10 border-b border-[var(--c-border)]">
+        <div className="flex items-center justify-between px-4 h-10 border-b border-[var(--c-border)] flex-shrink-0">
           <span className="text-sm font-semibold text-[var(--c-text-bright)]">Settings</span>
           <button
             onClick={onClose}
@@ -47,7 +144,7 @@ export function SettingsModal({ onClose }: Props) {
         </div>
 
         {/* Content */}
-        <div className="p-4 flex flex-col gap-4">
+        <div className="p-4 flex flex-col gap-5 overflow-y-auto">
 
           {/* Projects folder */}
           <div className="flex flex-col gap-2">
@@ -130,10 +227,46 @@ export function SettingsModal({ onClose }: Props) {
               })}
             </div>
           </div>
+
+          {/* Keyboard shortcuts */}
+          <div className="flex flex-col gap-2">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold text-[var(--c-text-dim)] uppercase tracking-widest">
+                Keyboard shortcuts
+              </span>
+              <button
+                onClick={resetHotkeys}
+                title="Reset all shortcuts to defaults"
+                className="flex items-center gap-1 text-[10px] text-[var(--c-text-dim)] hover:text-[var(--c-text-bright)] transition-colors"
+              >
+                <RotateCcw size={10} />
+                Reset
+              </button>
+            </div>
+            <p className="text-xs text-[var(--c-text-dim)]">
+              Click a shortcut to record a new key combination.
+            </p>
+            <div className="flex flex-col divide-y divide-[var(--c-border)]">
+              {hotkeyActions.map((action) => (
+                <HotkeyRow
+                  key={action}
+                  action={action}
+                  binding={hotkeys[action]}
+                  conflict={conflicts.has(action)}
+                  onChange={setHotkey}
+                />
+              ))}
+            </div>
+            {conflicts.size > 0 && (
+              <p className="text-[10px] text-[var(--c-danger)]">
+                Some shortcuts conflict — highlighted in red.
+              </p>
+            )}
+          </div>
         </div>
 
         {/* Footer */}
-        <div className="flex justify-end px-4 py-3 border-t border-[var(--c-border)]">
+        <div className="flex justify-end px-4 py-3 border-t border-[var(--c-border)] flex-shrink-0">
           <button
             onClick={onClose}
             className="px-4 py-1.5 text-xs rounded bg-[var(--c-bg-hover)] text-[var(--c-text)] hover:text-[var(--c-text-bright)] transition-colors"

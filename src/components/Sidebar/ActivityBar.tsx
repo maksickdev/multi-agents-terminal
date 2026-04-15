@@ -4,6 +4,7 @@ import { useStore } from "../../store/useStore";
 import { SettingsModal } from "../Settings/SettingsModal";
 import { UsageButton } from "./UsageButton";
 import { SearchModal } from "../Search/SearchModal";
+import { matchesHotkey, formatHotkey } from "../../lib/hotkeys";
 
 export function ActivityBar() {
   const {
@@ -11,30 +12,30 @@ export function ActivityBar() {
     fileExplorerOpen, setFileExplorerOpen,
     bottomPanelOpen, setBottomPanelOpen,
     gitPanelOpen, setGitPanelOpen,
+    hotkeys,
   } = useStore();
 
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
 
-  // ⌘B — toggle sidebar | ⌘G — toggle git panel | ⌘⇧F — global search
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      if (e.metaKey && e.key === "b") {
+      if (matchesHotkey(e, hotkeys.toggleSidebar)) {
         e.preventDefault();
         setSidebarOpen(!sidebarOpen);
       }
-      if (e.metaKey && e.key === "g") {
+      if (matchesHotkey(e, hotkeys.toggleGitPanel)) {
         e.preventDefault();
         setGitPanelOpen(!gitPanelOpen);
       }
-      if (e.metaKey && e.shiftKey && e.key === "f") {
+      if (matchesHotkey(e, hotkeys.globalSearch)) {
         e.preventDefault();
         setSearchOpen((v) => !v);
       }
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [sidebarOpen, setSidebarOpen, gitPanelOpen, setGitPanelOpen]);
+  }, [sidebarOpen, setSidebarOpen, gitPanelOpen, setGitPanelOpen, hotkeys]);
 
   return (
     <>
@@ -46,7 +47,7 @@ export function ActivityBar() {
         <div className="flex flex-col items-center gap-1 pt-2 flex-1">
           <button
             onClick={() => setSidebarOpen(!sidebarOpen)}
-            title="Toggle sidebar (⌘B)"
+            title={`Toggle sidebar (${formatHotkey(hotkeys.toggleSidebar)})`}
             className={`flex items-center justify-center w-9 h-9 rounded transition-colors ${
               sidebarOpen
                 ? "text-[var(--c-accent)] bg-[var(--c-bg)]"
@@ -58,7 +59,7 @@ export function ActivityBar() {
 
           <button
             onClick={() => setFileExplorerOpen(!fileExplorerOpen)}
-            title="File Explorer (⌘E)"
+            title={`File Explorer (${formatHotkey(hotkeys.toggleFileExplorer)})`}
             className={`flex items-center justify-center w-9 h-9 rounded transition-colors ${
               fileExplorerOpen
                 ? "text-[var(--c-accent)] bg-[var(--c-bg)]"
@@ -70,7 +71,7 @@ export function ActivityBar() {
 
           <button
             onClick={() => setBottomPanelOpen(!bottomPanelOpen)}
-            title="Terminal (⌘J)"
+            title={`Terminal (${formatHotkey(hotkeys.toggleTerminal)})`}
             className={`flex items-center justify-center w-9 h-9 rounded transition-colors ${
               bottomPanelOpen
                 ? "text-[var(--c-accent)] bg-[var(--c-bg)]"
@@ -82,7 +83,7 @@ export function ActivityBar() {
 
           <button
             onClick={() => setGitPanelOpen(!gitPanelOpen)}
-            title="Git (⌘G)"
+            title={`Git (${formatHotkey(hotkeys.toggleGitPanel)})`}
             className={`flex items-center justify-center w-9 h-9 rounded transition-colors ${
               gitPanelOpen
                 ? "text-[var(--c-accent)] bg-[var(--c-bg)]"
@@ -94,7 +95,7 @@ export function ActivityBar() {
 
           <button
             onClick={() => setSearchOpen(true)}
-            title="Search files (⌘⇧F)"
+            title={`Search files (${formatHotkey(hotkeys.globalSearch)})`}
             className={`flex items-center justify-center w-9 h-9 rounded transition-colors ${
               searchOpen
                 ? "text-[var(--c-accent)] bg-[var(--c-bg)]"
