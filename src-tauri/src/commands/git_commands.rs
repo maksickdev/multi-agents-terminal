@@ -264,7 +264,14 @@ pub fn git_diff(cwd: String, path: String, staged: bool) -> Result<String, Strin
 pub fn git_stage(cwd: String, path: String) -> Result<(), String> {
     let repo = open_repo(&cwd)?;
     let mut index = repo.index().map_err(|e| e.to_string())?;
-    index.add_path(Path::new(&path)).map_err(|e| e.to_string())?;
+    let abs_path = Path::new(repo.workdir().ok_or("no workdir")?)
+        .join(&path);
+    if abs_path.exists() {
+        index.add_path(Path::new(&path)).map_err(|e| e.to_string())?;
+    } else {
+        // File deleted — stage the removal
+        index.remove_path(Path::new(&path)).map_err(|e| e.to_string())?;
+    }
     index.write().map_err(|e| e.to_string())?;
     Ok(())
 }
