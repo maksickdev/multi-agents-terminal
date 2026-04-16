@@ -12,6 +12,10 @@ export function NewProjectModal({ onClose }: Props) {
   const { projectsFolder, addProject, projects, selectProject } = useStore();
   const [name, setName] = useState("");
   const [parentFolder, setParentFolder] = useState(projectsFolder);
+
+  useEffect(() => {
+    setParentFolder(projectsFolder);
+  }, [projectsFolder]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);

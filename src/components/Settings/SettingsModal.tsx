@@ -92,7 +92,10 @@ export function SettingsModal({ onClose }: Props) {
 
   const handlePickFolder = async () => {
     const picked = await pickFolder();
-    if (picked) setFolderInput(picked);
+    if (picked) {
+      setFolderInput(picked);
+      setProjectsFolder(picked);
+    }
   };
 
   const handleFolderBlur = () => {
