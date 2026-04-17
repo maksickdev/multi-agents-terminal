@@ -346,12 +346,36 @@ export function GitPanel() {
   const [addRemoteModal, setAddRemoteModal]       = useState(false);
   const [addingRemote, setAddingRemote]           = useState(false);
   const [removeRemoteConfirm, setRemoveRemoteConfirm] = useState<GitRemote | null>(null);
+  const [commitAreaHeight, setCommitAreaHeight] = useState(80);
 
   // ── resize ──────────────────────────────────────────────────────────────────
   const panelRef    = useRef<HTMLDivElement>(null);
   const resizingRef = useRef(false);
   const startXRef   = useRef(0);
   const startWRef   = useRef(0);
+
+  const commitResizingRef = useRef(false);
+  const commitStartYRef   = useRef(0);
+  const commitStartHRef   = useRef(0);
+
+  const onCommitHandleMouseDown = (e: React.MouseEvent) => {
+    e.preventDefault();
+    commitResizingRef.current = true;
+    commitStartYRef.current = e.clientY;
+    commitStartHRef.current = commitAreaHeight;
+    const onMove = (ev: MouseEvent) => {
+      if (!commitResizingRef.current) return;
+      const delta = commitStartYRef.current - ev.clientY;
+      setCommitAreaHeight(Math.max(52, Math.min(400, commitStartHRef.current + delta)));
+    };
+    const onUp = () => {
+      commitResizingRef.current = false;
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mouseup", onUp);
+    };
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onUp);
+  };
 
   const onHandleMouseDown = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -984,7 +1008,13 @@ export function GitPanel() {
           </div>
 
           {/* ── Commit bar ── */}
-          <div className="flex-shrink-0 border-t border-[var(--c-border)] p-2 flex flex-col gap-1.5">
+          <div className="flex-shrink-0 border-t border-[var(--c-border)] flex flex-col" style={{ height: commitAreaHeight + 56 }}>
+            {/* Top resize handle */}
+            <div
+              onMouseDown={onCommitHandleMouseDown}
+              className="flex-shrink-0 h-[4px] cursor-ns-resize hover:bg-[var(--c-accent)]/20 transition-colors"
+            />
+            <div className="flex flex-col gap-1.5 p-2 flex-1 min-h-0">
             <textarea
               value={commitMsg}
               onChange={e => setCommitMsg(e.target.value)}
@@ -992,7 +1022,7 @@ export function GitPanel() {
                 if (e.key === "Enter" && e.metaKey) { e.preventDefault(); doCommit(); }
               }}
               placeholder="Commit message (⌘↵)"
-              rows={2}
+              style={{ height: commitAreaHeight }}
               className="w-full text-xs bg-[var(--c-bg-elevated)] text-[var(--c-text-bright)] rounded px-2 py-1.5 outline-none resize-none placeholder:text-[var(--c-text-dim)] border border-[var(--c-border)] focus:border-[var(--c-accent)] transition-colors"
             />
             <button
@@ -1003,6 +1033,7 @@ export function GitPanel() {
               <GitCommit size={12} />
               {committing ? "Committing…" : `Commit${stagedFiles.length > 0 ? ` (${stagedFiles.length})` : ""}`}
             </button>
+            </div>
           </div>
         </div>
       )}
