@@ -121,17 +121,6 @@ export function EditorPane() {
     setDragOverPath(path);
   }, []);
 
-  // ── Save ──────────────────────────────────────────────────────────────────
-  const handleSave = async () => {
-    if (!activeFile) return;
-    try {
-      await writeFileText(activeFile.path, activeFile.content);
-      markFileSaved(activeFile.path);
-    } catch (e) {
-      console.error("save failed", e);
-    }
-  };
-
   const handleClose = (path: string) => {
     const file = openFiles.find((f) => f.path === path);
     if (file?.isDirty) {
@@ -191,18 +180,39 @@ export function EditorPane() {
   );
 
   const editorArea = (
-    <div className="flex-1 overflow-hidden">
-      {activeFile && (
-        isPreviewable && previewMode === "rendered"
-          ? <RenderedPreview content={activeFile.content} language={activeFile.language} />
-          : <CodeEditor
-              key={activeFile.path}
-              content={activeFile.content}
-              language={activeFile.language}
-              onChange={(content) => updateFileContent(activeFile.path, content)}
-              onSave={handleSave}
-            />
-      )}
+    <div className="flex-1 overflow-hidden relative">
+      {projectFiles.map((file) => {
+        const isActive = file.path === activeFile?.path;
+        const isFilePreviewable = PREVIEWABLE.includes(file.language);
+        return (
+          <div
+            key={file.path}
+            style={{
+              position: "absolute",
+              inset: 0,
+              visibility: isActive ? "visible" : "hidden",
+              pointerEvents: isActive ? "auto" : "none",
+            }}
+          >
+            {isFilePreviewable && previewMode === "rendered"
+              ? <RenderedPreview content={file.content} language={file.language} />
+              : <CodeEditor
+                  content={file.content}
+                  language={file.language}
+                  onChange={(content) => updateFileContent(file.path, content)}
+                  onSave={async () => {
+                    try {
+                      await writeFileText(file.path, file.content);
+                      markFileSaved(file.path);
+                    } catch (e) {
+                      console.error("save failed", e);
+                    }
+                  }}
+                />
+            }
+          </div>
+        );
+      })}
     </div>
   );
 
