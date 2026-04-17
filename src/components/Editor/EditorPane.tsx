@@ -1,9 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import ReactDOM from "react-dom";
 import { useStore } from "../../store/useStore";
 import { writeFileText, renamePath } from "../../lib/tauri";
 import { useFileWatcher } from "../../hooks/useFileWatcher";
-import { CodeEditor } from "./CodeEditor";
+import { CodeEditor, type CodeEditorHandle, type EditorSearchState } from "./CodeEditor";
 import { EditorTab } from "./EditorTab";
 import { RenderedPreview } from "./RenderedPreview";
 import { ConfirmModal } from "../shared/ConfirmModal";
@@ -69,6 +68,30 @@ export function EditorPane() {
   const [previewMode, setPreviewMode] = useState<"raw" | "rendered">("raw");
   const [pendingClosePath, setPendingClosePath] = useState<string | null>(null);
   const [fullscreen, setFullscreen] = useState(false);
+
+  // Shared search state across all editor tabs
+  const editorRefs = useRef<Map<string, CodeEditorHandle>>(new Map());
+  const sharedSearch = useRef<EditorSearchState | null>(null);
+  const prevActivePath = useRef<string | null>(null);
+
+  // Sync search panel state when switching tabs
+  useEffect(() => {
+    const prev = prevActivePath.current;
+    const curr = activeFile?.path ?? null;
+    prevActivePath.current = curr;
+
+    if (prev === curr) return;
+
+    if (prev) {
+      const prevEditor = editorRefs.current.get(prev);
+      if (prevEditor) sharedSearch.current = prevEditor.captureSearch();
+    }
+
+    if (curr && sharedSearch.current) {
+      const nextEditor = editorRefs.current.get(curr);
+      if (nextEditor) nextEditor.applySearch(sharedSearch.current);
+    }
+  }, [activeFile?.path]);
 
   // Escape closes fullscreen
   useEffect(() => {
@@ -197,6 +220,10 @@ export function EditorPane() {
             {isFilePreviewable && previewMode === "rendered"
               ? <RenderedPreview content={file.content} language={file.language} />
               : <CodeEditor
+                  ref={(handle) => {
+                    if (handle) editorRefs.current.set(file.path, handle);
+                    else editorRefs.current.delete(file.path);
+                  }}
                   content={file.content}
                   language={file.language}
                   onChange={(content) => updateFileContent(file.path, content)}
@@ -262,31 +289,28 @@ export function EditorPane() {
         />
       )}
 
-      {/* Fullscreen overlay via portal */}
-      {fullscreen && isVisible && ReactDOM.createPortal(
-        <div className="fixed inset-0 top-8 z-50 flex flex-col bg-[var(--c-bg-deep)]">
-          {tabBar}
-          {editorArea}
-          {statusBar}
-        </div>,
-        document.body,
-      )}
-
-      {/* Normal panel */}
       <div
         ref={panelRef}
-        style={{
+        style={fullscreen && isVisible ? {
+          position: "fixed",
+          inset: 0,
+          top: 32,
+          zIndex: 50,
+          overflow: "hidden",
+        } : {
           height: isVisible ? editorPaneHeight : 0,
           flexShrink: 0,
           overflow: "hidden",
         }}
         className="relative flex flex-col bg-[var(--c-bg-deep)]"
       >
-        {/* Top resize handle */}
-        <div
-          onMouseDown={isVisible ? onHandleMouseDown : undefined}
-          className="absolute top-0 left-0 right-0 h-[6px] border-t border-[var(--c-border)] cursor-ns-resize hover:bg-[var(--c-accent)]/20 transition-colors z-10 flex flex-col justify-center"
-        />
+        {/* Top resize handle — hidden in fullscreen */}
+        {!fullscreen && (
+          <div
+            onMouseDown={isVisible ? onHandleMouseDown : undefined}
+            className="absolute top-0 left-0 right-0 h-[6px] border-t border-[var(--c-border)] cursor-ns-resize hover:bg-[var(--c-accent)]/20 transition-colors z-10 flex flex-col justify-center"
+          />
+        )}
         {tabBar}
         {editorArea}
         {statusBar}

@@ -1,10 +1,10 @@
-import { useEffect, useRef } from "react";
+import { forwardRef, useEffect, useImperativeHandle, useRef } from "react";
 import { EditorView, keymap, lineNumbers, highlightActiveLineGutter, highlightSpecialChars, drawSelection, rectangularSelection, crosshairCursor } from "@codemirror/view";
 import { EditorState, Compartment, Transaction } from "@codemirror/state";
 import { defaultKeymap, history, historyKeymap, indentWithTab } from "@codemirror/commands";
 import { indentOnInput, syntaxHighlighting, defaultHighlightStyle, bracketMatching, foldGutter, foldKeymap } from "@codemirror/language";
 import { autocompletion, completionKeymap, closeBrackets, closeBracketsKeymap } from "@codemirror/autocomplete";
-import { search, searchKeymap } from "@codemirror/search";
+import { search, searchKeymap, openSearchPanel, closeSearchPanel, getSearchQuery, setSearchQuery, SearchQuery } from "@codemirror/search";
 import { oneDark, oneDarkHighlightStyle } from "@codemirror/theme-one-dark";
 import { javascript } from "@codemirror/lang-javascript";
 import { css } from "@codemirror/lang-css";
@@ -96,6 +96,16 @@ function patchSearchPanel(container: HTMLElement) {
   closeBtn.style.marginLeft = "auto";
   panel.appendChild(replaceSection);
   panel.appendChild(closeBtn);
+}
+
+export interface EditorSearchState {
+  open: boolean;
+  query: SearchQuery;
+}
+
+export interface CodeEditorHandle {
+  captureSearch: () => EditorSearchState;
+  applySearch: (state: EditorSearchState) => void;
 }
 
 interface Props {
@@ -239,7 +249,10 @@ const baseExtensions = [
   search({ top: false }),
 ];
 
-export function CodeEditor({ content, language, onChange, onSave }: Props) {
+export const CodeEditor = forwardRef<CodeEditorHandle, Props>(function CodeEditor(
+  { content, language, onChange, onSave }: Props,
+  ref,
+) {
   const containerRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
   const languageCompartment = useRef(new Compartment());
@@ -254,6 +267,20 @@ export function CodeEditor({ content, language, onChange, onSave }: Props) {
   const onChangeRef = useRef(onChange);
   useEffect(() => { onSaveRef.current  = onSave;  });
   useEffect(() => { onChangeRef.current = onChange; });
+
+  useImperativeHandle(ref, () => ({
+    captureSearch: () => ({
+      open: !!containerRef.current?.querySelector(".cm-search"),
+      query: viewRef.current ? getSearchQuery(viewRef.current.state) : new SearchQuery({ search: "" }),
+    }),
+    applySearch: ({ open, query }) => {
+      const view = viewRef.current;
+      if (!view) return;
+      view.dispatch({ effects: setSearchQuery.of(query) });
+      if (open) openSearchPanel(view);
+      else closeSearchPanel(view);
+    },
+  }), []);
 
   // ── Create editor (recreate on language change) ───────────────────────────
   useEffect(() => {
@@ -330,4 +357,4 @@ export function CodeEditor({ content, language, onChange, onSave }: Props) {
   }, [content]);
 
   return <div ref={containerRef} className="h-full overflow-hidden" />;
-}
+});
