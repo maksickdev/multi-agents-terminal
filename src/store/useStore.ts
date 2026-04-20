@@ -88,6 +88,10 @@ interface AppStore {
   toggleExpandedDir: (projectId: string, dirPath: string) => void;
 
   // Editor pane
+  editorPanelOpen: boolean;
+  setEditorPanelOpen: (open: boolean) => void;
+  editorPanelWidth: number;
+  setEditorPanelWidth: (width: number) => void;
   openFiles: OpenFile[];
   activeFilePath: string | null;
   editorPaneHeight: number;
@@ -140,6 +144,8 @@ export const useStore = create<AppStore>((set, get) => ({
   expandedDirs: {},
   fileTreeVersion: 0,
 
+  editorPanelOpen: false,
+  editorPanelWidth: 420,
   openFiles: [],
   activeFilePath: null,
   editorPaneHeight: 300,
@@ -318,6 +324,9 @@ export const useStore = create<AppStore>((set, get) => ({
         f.path === path ? { ...f, content, isDirty: false } : f
       ),
     })),
+
+  setEditorPanelOpen: (open) => set({ editorPanelOpen: open }),
+  setEditorPanelWidth: (width) => set({ editorPanelWidth: Math.max(200, Math.min(width, 900)) }),
 
   setEditorPaneHeight: (height) =>
     set({ editorPaneHeight: Math.max(100, Math.min(height, 700)) }),

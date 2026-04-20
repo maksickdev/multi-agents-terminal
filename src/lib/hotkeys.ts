@@ -1,6 +1,7 @@
 export type HotkeyAction =
   | "toggleSidebar"
   | "toggleFileExplorer"
+  | "toggleEditorPanel"
   | "toggleGitPanel"
   | "toggleTerminal"
   | "globalSearch";
@@ -17,6 +18,7 @@ export type HotkeyMap = Record<HotkeyAction, Hotkey>;
 export const HOTKEY_LABELS: Record<HotkeyAction, string> = {
   toggleSidebar:      "Toggle Sidebar",
   toggleFileExplorer: "Toggle File Explorer",
+  toggleEditorPanel:  "Toggle Editor Panel",
   toggleGitPanel:     "Toggle Git Panel",
   toggleTerminal:     "Toggle Terminal",
   globalSearch:       "Global Search",
@@ -25,6 +27,7 @@ export const HOTKEY_LABELS: Record<HotkeyAction, string> = {
 export const DEFAULT_HOTKEYS: HotkeyMap = {
   toggleSidebar:      { key: "b", meta: true,  shift: false, alt: false },
   toggleFileExplorer: { key: "e", meta: true,  shift: false, alt: false },
+  toggleEditorPanel:  { key: "e", meta: true,  shift: true,  alt: false },
   toggleGitPanel:     { key: "g", meta: true,  shift: false, alt: false },
   toggleTerminal:     { key: "j", meta: true,  shift: false, alt: false },
   globalSearch:       { key: "f", meta: true,  shift: true,  alt: false },

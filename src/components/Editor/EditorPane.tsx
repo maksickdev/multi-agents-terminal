@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import ReactDOM from "react-dom";
 import { useStore } from "../../store/useStore";
 import { writeFileText, renamePath } from "../../lib/tauri";
 import { useFileWatcher } from "../../hooks/useFileWatcher";
@@ -15,14 +16,13 @@ export function EditorPane() {
 
   const {
     openFiles, activeFilePath,
-    editorPaneHeight, setEditorPaneHeight,
+    editorPanelOpen, editorPanelWidth, setEditorPanelWidth,
     setActiveFile, closeFile,
     updateFileContent, markFileSaved,
     reorderOpenFiles, renameOpenFile,
     selectedProjectId,
   } = useStore();
 
-  // Only show files belonging to the currently selected project
   const projectFiles = openFiles.filter((f) => f.projectId === selectedProjectId);
 
   const activeFile =
@@ -30,24 +30,23 @@ export function EditorPane() {
     projectFiles[0] ??
     null;
 
-  const isVisible = projectFiles.length > 0;
   const isPreviewable = activeFile ? PREVIEWABLE.includes(activeFile.language) : false;
 
-  // ── Resize handle (bottom edge — grows downward into terminal area) ───────
+  // ── Left-edge resize handle (drag left = wider, drag right = narrower) ────
   const panelRef    = useRef<HTMLDivElement>(null);
   const resizingRef = useRef(false);
-  const startYRef   = useRef(0);
-  const startHRef   = useRef(0);
+  const startXRef   = useRef(0);
+  const startWRef   = useRef(0);
 
   const onHandleMouseDown = (e: React.MouseEvent) => {
     e.preventDefault();
     resizingRef.current = true;
-    startYRef.current = e.clientY;
-    startHRef.current = editorPaneHeight;
+    startXRef.current = e.clientX;
+    startWRef.current = editorPanelWidth;
 
     const onMove = (ev: MouseEvent) => {
       if (!resizingRef.current) return;
-      setEditorPaneHeight(startHRef.current + (startYRef.current - ev.clientY));
+      setEditorPanelWidth(startWRef.current + (startXRef.current - ev.clientX));
     };
     const onUp = () => {
       resizingRef.current = false;
@@ -58,7 +57,7 @@ export function EditorPane() {
     window.addEventListener("mouseup", onUp);
   };
 
-  // ── Tab drag-to-reorder (same mouse-event pattern as agent TabBar) ────────
+  // ── Tab drag-to-reorder ───────────────────────────────────────────────────
   const draggingRef = useRef<string | null>(null);
   const dragOverRef = useRef<string | null>(null);
   const movedRef    = useRef(false);
@@ -69,31 +68,25 @@ export function EditorPane() {
   const [pendingClosePath, setPendingClosePath] = useState<string | null>(null);
   const [fullscreen, setFullscreen] = useState(false);
 
-  // Shared search state across all editor tabs
   const editorRefs = useRef<Map<string, CodeEditorHandle>>(new Map());
   const sharedSearch = useRef<EditorSearchState | null>(null);
   const prevActivePath = useRef<string | null>(null);
 
-  // Sync search panel state when switching tabs
   useEffect(() => {
     const prev = prevActivePath.current;
     const curr = activeFile?.path ?? null;
     prevActivePath.current = curr;
-
     if (prev === curr) return;
-
     if (prev) {
       const prevEditor = editorRefs.current.get(prev);
       if (prevEditor) sharedSearch.current = prevEditor.captureSearch();
     }
-
     if (curr && sharedSearch.current) {
       const nextEditor = editorRefs.current.get(curr);
       if (nextEditor) nextEditor.applySearch(sharedSearch.current);
     }
   }, [activeFile?.path]);
 
-  // Escape closes fullscreen
   useEffect(() => {
     if (!fullscreen) return;
     const handler = (e: KeyboardEvent) => {
@@ -120,12 +113,10 @@ export function EditorPane() {
     movedRef.current    = false;
     setDraggingPath(path);
     setDragOverPath(null);
-
     const onMouseUp = () => {
       const from = draggingRef.current;
       const to   = dragOverRef.current;
       if (from && to && from !== to) doReorder(from, to);
-
       draggingRef.current = null;
       dragOverRef.current = null;
       movedRef.current    = false;
@@ -133,7 +124,6 @@ export function EditorPane() {
       setDragOverPath(null);
       window.removeEventListener("mouseup", onMouseUp);
     };
-
     window.addEventListener("mouseup", onMouseUp);
   }, [doReorder]);
 
@@ -169,14 +159,12 @@ export function EditorPane() {
     }
   };
 
-  // ── Shared inner content (tab bar + editor + status bar) ─────────────────
   const tabBar = (
     <div className="flex h-8 bg-[var(--c-bg)] border-b border-[var(--c-border)] flex-shrink-0">
-      {/* Fullscreen toggle — pinned left */}
       {activeFile && (
         <button
           onClick={() => setFullscreen((v) => !v)}
-          title={fullscreen ? "Exit fullscreen (Esc)" : "Fullscreen (double-click tab)"}
+          title={fullscreen ? "Exit fullscreen (Esc)" : "Fullscreen"}
           className="flex items-center justify-center w-8 flex-shrink-0 border-r border-[var(--c-border)] text-[var(--c-text-dim)] hover:text-[var(--c-text)] hover:bg-[var(--c-bg)] transition-colors"
         >
           {fullscreen ? <Minimize2 size={13} /> : <Maximize2 size={13} />}
@@ -276,6 +264,47 @@ export function EditorPane() {
     </div>
   );
 
+  // Fullscreen via portal — rendered outside normal flow
+  if (fullscreen && editorPanelOpen) {
+    return (
+      <>
+        {pendingClosePath && (
+          <ConfirmModal
+            title="Unsaved changes"
+            message={`"${pendingClosePath.split("/").pop()}" has unsaved changes. Close anyway?`}
+            confirmLabel="Close"
+            danger
+            onConfirm={confirmClose}
+            onCancel={() => setPendingClosePath(null)}
+          />
+        )}
+        {ReactDOM.createPortal(
+          <div
+            style={{
+              position: "fixed",
+              inset: 0,
+              top: 32,
+              zIndex: 50,
+              overflow: "hidden",
+              marginLeft: 8,
+              marginRight: 8,
+              marginBottom: 8,
+              borderRadius: 10,
+              border: "1px solid var(--c-border)",
+            }}
+            className="flex flex-col bg-[var(--c-bg)]"
+          >
+            {tabBar}
+            {editorArea}
+            {statusBar}
+          </div>,
+          document.body
+        )}
+      </>
+    );
+  }
+
+
   return (
     <>
       {pendingClosePath && (
@@ -291,32 +320,26 @@ export function EditorPane() {
 
       <div
         ref={panelRef}
-        style={fullscreen && isVisible ? {
-          position: "fixed",
-          inset: 0,
-          top: 32,
-          zIndex: 50,
-          overflow: "hidden",
-          marginLeft: 8,
-          marginRight: 8,
-          marginBottom: 8,
-          borderRadius: 10,
-          border: "1px solid var(--c-border)",
-        } : {
-          height: isVisible ? editorPaneHeight : 0,
+        style={{
+          width: editorPanelOpen ? editorPanelWidth : 0,
           flexShrink: 0,
           overflow: "hidden",
-          ...(isVisible ? { borderRadius: 10, border: "1px solid var(--c-border)", marginTop: 4 } : {}),
+          position: "relative",
+          ...(editorPanelOpen ? {
+            borderRadius: 10,
+            border: "1px solid var(--c-border)",
+            marginTop: 4,
+            marginBottom: 4,
+            marginRight: 4,
+          } : {}),
         }}
-        className="relative flex flex-col bg-[var(--c-bg)]"
+        className="flex flex-col bg-[var(--c-bg)]"
       >
-        {/* Top resize handle — hidden in fullscreen */}
-        {!fullscreen && (
-          <div
-            onMouseDown={isVisible ? onHandleMouseDown : undefined}
-            className="absolute top-0 left-0 right-0 h-[6px] border-t border-[var(--c-border)] cursor-ns-resize hover:bg-[var(--c-accent)]/20 transition-colors z-10 flex flex-col justify-center"
-          />
-        )}
+        {/* Left-edge resize handle */}
+        <div
+          onMouseDown={editorPanelOpen ? onHandleMouseDown : undefined}
+          className="absolute left-0 top-0 bottom-0 w-[6px] cursor-ew-resize hover:bg-[var(--c-accent)]/20 transition-colors z-10"
+        />
         {tabBar}
         {editorArea}
         {statusBar}

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { listen } from "@tauri-apps/api/event";
-import { Folder, GitBranch, Loader2, PanelLeft, Settings, SquareTerminal } from "lucide-react";
+import { FileCode2, Folder, GitBranch, Loader2, PanelLeft, Settings, SquareTerminal } from "lucide-react";
 import { useSessionPersistence } from "./hooks/useSessionPersistence";
 import { usePtyEvents } from "./hooks/usePty";
 import { useTheme } from "./hooks/useTheme";
@@ -8,6 +8,7 @@ import { useExternalFileDrop } from "./hooks/useExternalFileDrop";
 import { useStore } from "./store/useStore";
 import { Sidebar } from "./components/Sidebar/Sidebar";
 import { MainArea } from "./components/MainArea/MainArea";
+import { EditorPane } from "./components/Editor/EditorPane";
 import { FileExplorer } from "./components/FileExplorer/FileExplorer";
 import { GitPanel } from "./components/Git/GitPanel";
 import { TitleBarGitInfo } from "./components/Git/TitleBarGitInfo";
@@ -88,6 +89,7 @@ export function App() {
     projects, selectedProjectId, agents, agentOrder, shellAgentIds,
     sidebarOpen, setSidebarOpen,
     fileExplorerOpen, setFileExplorerOpen,
+    editorPanelOpen, setEditorPanelOpen,
     bottomPanelOpen, setBottomPanelOpen,
     gitPanelOpen, setGitPanelOpen,
     hotkeys,
@@ -106,6 +108,10 @@ export function App() {
         e.preventDefault();
         setSidebarOpen(!sidebarOpen);
       }
+      if (matchesHotkey(e, hotkeys.toggleEditorPanel)) {
+        e.preventDefault();
+        setEditorPanelOpen(!editorPanelOpen);
+      }
       if (matchesHotkey(e, hotkeys.toggleGitPanel)) {
         e.preventDefault();
         setGitPanelOpen(!gitPanelOpen);
@@ -113,7 +119,7 @@ export function App() {
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [sidebarOpen, setSidebarOpen, gitPanelOpen, setGitPanelOpen, hotkeys]);
+  }, [sidebarOpen, setSidebarOpen, editorPanelOpen, setEditorPanelOpen, gitPanelOpen, setGitPanelOpen, hotkeys]);
 
   // ── Listen for OS window-close request (intercepted by Rust) ─────────────
   useEffect(() => {
@@ -220,6 +226,7 @@ export function App() {
               { icon: Folder, active: fileExplorerOpen, onClick: () => setFileExplorerOpen(!fileExplorerOpen), title: `File Explorer (${formatHotkey(hotkeys.toggleFileExplorer)})` },
               { icon: SquareTerminal, active: bottomPanelOpen, onClick: () => setBottomPanelOpen(!bottomPanelOpen), title: `Terminal (${formatHotkey(hotkeys.toggleTerminal)})` },
               { icon: GitBranch, active: gitPanelOpen, onClick: () => setGitPanelOpen(!gitPanelOpen), title: `Git (${formatHotkey(hotkeys.toggleGitPanel)})` },
+              { icon: FileCode2, active: editorPanelOpen, onClick: () => setEditorPanelOpen(!editorPanelOpen), title: `Editor (${formatHotkey(hotkeys.toggleEditorPanel)})` },
             ] as const
           ).map(({ icon: Icon, active, onClick, title }) => (
             <button
@@ -265,6 +272,7 @@ export function App() {
         <GitPanel />
         <FileExplorer />
         <MainArea />
+        <EditorPane />
       </div>
 
       {/* ── Close confirmation modal ───────────────────────────────────────── */}

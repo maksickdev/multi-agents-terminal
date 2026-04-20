@@ -5,7 +5,6 @@ import { EmptyState } from "./EmptyState";
 import { TabBar } from "./TabBar";
 import { TerminalGrid } from "../Terminal/TerminalGrid";
 import { BottomPanel } from "../BottomPanel/BottomPanel";
-import { EditorPane } from "../Editor/EditorPane";
 
 // Approximate character dimensions for JetBrains Mono 13px
 const CHAR_W = 8;
@@ -105,9 +104,6 @@ export function MainArea() {
               })}
             </div>
           </div>
-
-          {/* Editor pane — sits between terminal area and bottom shell panel */}
-          <EditorPane />
 
           <BottomPanel />
         </>
