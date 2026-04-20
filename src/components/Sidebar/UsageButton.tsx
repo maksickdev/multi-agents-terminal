@@ -43,7 +43,7 @@ export function UsageButton() {
   const [data, setData] = useState<UsageData | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [panelPos, setPanelPos] = useState({ left: 0, bottom: 0 });
+  const [panelPos, setPanelPos] = useState({ right: 0, top: 0 });
 
   const btnRef  = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
@@ -67,8 +67,8 @@ export function UsageButton() {
       if (btnRef.current) {
         const rect = btnRef.current.getBoundingClientRect();
         setPanelPos({
-          left: rect.right + 4,
-          bottom: window.innerHeight - rect.bottom,
+          right: window.innerWidth - rect.right,
+          top: rect.bottom + 4,
         });
       }
       setOpen(true);
@@ -105,8 +105,8 @@ export function UsageButton() {
       ref={panelRef}
       style={{
         position: "fixed",
-        left: panelPos.left,
-        bottom: panelPos.bottom,
+        right: panelPos.right,
+        top: panelPos.top,
         width: 230,
         zIndex: 200,
         background: "var(--c-bg)",
@@ -188,13 +188,13 @@ export function UsageButton() {
         ref={btnRef}
         onClick={toggle}
         title="Claude Code usage limits"
-        className={`flex items-center justify-center w-9 h-9 rounded transition-colors ${
+        className={`flex items-center justify-center w-7 h-7 rounded transition-colors ${
           open
-            ? "text-[var(--c-accent)] bg-[var(--c-bg)]"
-            : "text-[var(--c-text-dim)] hover:text-[var(--c-text)] hover:bg-[var(--c-bg)]"
+            ? "text-[var(--c-accent)]"
+            : "text-[var(--c-text-dim)] hover:text-[var(--c-text)]"
         }`}
       >
-        <BarChart2 size={20} />
+        <BarChart2 size={16} />
       </button>
       {ReactDOM.createPortal(panel, document.body)}
     </>

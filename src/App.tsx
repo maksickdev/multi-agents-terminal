@@ -1,18 +1,20 @@
 import { useEffect, useRef, useState } from "react";
 import { listen } from "@tauri-apps/api/event";
-import { Loader2 } from "lucide-react";
+import { Folder, GitBranch, Loader2, PanelLeft, Settings, SquareTerminal } from "lucide-react";
 import { useSessionPersistence } from "./hooks/useSessionPersistence";
 import { usePtyEvents } from "./hooks/usePty";
 import { useTheme } from "./hooks/useTheme";
 import { useExternalFileDrop } from "./hooks/useExternalFileDrop";
 import { useStore } from "./store/useStore";
-import { ActivityBar } from "./components/Sidebar/ActivityBar";
 import { Sidebar } from "./components/Sidebar/Sidebar";
 import { MainArea } from "./components/MainArea/MainArea";
 import { FileExplorer } from "./components/FileExplorer/FileExplorer";
 import { GitPanel } from "./components/Git/GitPanel";
 import { TitleBarGitInfo } from "./components/Git/TitleBarGitInfo";
 import { ConfirmModal } from "./components/shared/ConfirmModal";
+import { UsageButton } from "./components/Sidebar/UsageButton";
+import { SettingsModal } from "./components/Settings/SettingsModal";
+import { matchesHotkey, formatHotkey } from "./lib/hotkeys";
 import {
   saveAgents, exitApp, writeToAgent,
   getScrollbackSize, truncateScrollback, isSessionNonempty,
@@ -82,12 +84,36 @@ export function App() {
   useTheme();
   useExternalFileDrop();
 
-  const { projects, selectedProjectId, agents, agentOrder, shellAgentIds } = useStore();
+  const {
+    projects, selectedProjectId, agents, agentOrder, shellAgentIds,
+    sidebarOpen, setSidebarOpen,
+    fileExplorerOpen, setFileExplorerOpen,
+    bottomPanelOpen, setBottomPanelOpen,
+    gitPanelOpen, setGitPanelOpen,
+    hotkeys,
+  } = useStore();
   const activeProject = projects.find((p) => p.id === selectedProjectId) ?? null;
 
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const [closePhase, setClosePhase] = useState<ClosePhase>("idle");
   // Prevents triggering the modal twice if close fires multiple times
   const closingRef = useRef(false);
+
+  // ── Sidebar + git panel keyboard shortcuts ────────────────────────────────
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (matchesHotkey(e, hotkeys.toggleSidebar)) {
+        e.preventDefault();
+        setSidebarOpen(!sidebarOpen);
+      }
+      if (matchesHotkey(e, hotkeys.toggleGitPanel)) {
+        e.preventDefault();
+        setGitPanelOpen(!gitPanelOpen);
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [sidebarOpen, setSidebarOpen, gitPanelOpen, setGitPanelOpen, hotkeys]);
 
   // ── Listen for OS window-close request (intercepted by Rust) ─────────────
   useEffect(() => {
@@ -179,23 +205,62 @@ export function App() {
 
   return (
     <div className="flex flex-col h-screen bg-[var(--c-bg-deep)] text-[var(--c-text-bright)] overflow-hidden">
+      {settingsOpen && <SettingsModal onClose={() => setSettingsOpen(false)} />}
+
       {/* macOS traffic-light area — full-width drag region */}
       <div
         data-tauri-drag-region
-        className="flex-shrink-0 h-8 bg-[var(--c-bg-deep)] flex items-center justify-center"
+        className="relative flex-shrink-0 h-8 bg-[var(--c-bg-deep)] flex items-center"
       >
-        {activeProject && (
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-[var(--c-text-dim)] pointer-events-none select-none">
-              {activeProject.name}
-            </span>
-            <TitleBarGitInfo projectPath={activeProject.path} projectId={activeProject.id} />
-          </div>
-        )}
+        {/* Left: navigation buttons */}
+        <div className="flex items-center gap-0.5 ml-[90px]">
+          {(
+            [
+              { icon: PanelLeft, active: sidebarOpen, onClick: () => setSidebarOpen(!sidebarOpen), title: `Toggle sidebar (${formatHotkey(hotkeys.toggleSidebar)})` },
+              { icon: Folder, active: fileExplorerOpen, onClick: () => setFileExplorerOpen(!fileExplorerOpen), title: `File Explorer (${formatHotkey(hotkeys.toggleFileExplorer)})` },
+              { icon: SquareTerminal, active: bottomPanelOpen, onClick: () => setBottomPanelOpen(!bottomPanelOpen), title: `Terminal (${formatHotkey(hotkeys.toggleTerminal)})` },
+              { icon: GitBranch, active: gitPanelOpen, onClick: () => setGitPanelOpen(!gitPanelOpen), title: `Git (${formatHotkey(hotkeys.toggleGitPanel)})` },
+            ] as const
+          ).map(({ icon: Icon, active, onClick, title }) => (
+            <button
+              key={title}
+              onClick={onClick}
+              title={title}
+              className={`flex items-center justify-center w-7 h-7 rounded transition-colors ${
+                active
+                  ? "text-[var(--c-accent)]"
+                  : "text-[var(--c-text-dim)] hover:text-[var(--c-text)]"
+              }`}
+            >
+              <Icon size={16} />
+            </button>
+          ))}
+        </div>
+
+        {/* Center: project name + git info */}
+        <div className="absolute inset-x-0 flex items-center justify-center gap-2 pointer-events-none select-none">
+          {activeProject && (
+            <>
+              <span className="text-xs text-[var(--c-text-dim)]">{activeProject.name}</span>
+              <TitleBarGitInfo projectPath={activeProject.path} projectId={activeProject.id} />
+            </>
+          )}
+        </div>
+
+        {/* Right: usage + settings */}
+        <div className="ml-auto flex items-center gap-0.5 pr-1">
+          <UsageButton />
+          <button
+            onClick={() => setSettingsOpen(true)}
+            title="Settings"
+            className="flex items-center justify-center w-7 h-7 rounded text-[var(--c-text-dim)] hover:text-[var(--c-text)] transition-colors"
+          >
+            <Settings size={16} />
+          </button>
+        </div>
       </div>
 
       <div className="flex flex-1 overflow-hidden" style={{ marginBottom: 4, marginLeft: 4, marginRight: 4 }}>
-        <ActivityBar />
         <Sidebar />
         <GitPanel />
         <FileExplorer />
