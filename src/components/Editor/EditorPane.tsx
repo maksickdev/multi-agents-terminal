@@ -301,9 +301,7 @@ export function EditorPane() {
           height: isVisible ? editorPaneHeight : 0,
           flexShrink: 0,
           overflow: "hidden",
-          borderRadius: 10,
-          border: "1px solid var(--c-border)",
-          marginTop: 4,
+          ...(isVisible ? { borderRadius: 10, border: "1px solid var(--c-border)", marginTop: 4 } : {}),
         }}
         className="relative flex flex-col bg-[var(--c-bg)]"
       >

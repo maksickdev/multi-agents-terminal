@@ -125,9 +125,7 @@ export function FileExplorer() {
         flexShrink: 0,
         overflow: "hidden",
         position: "relative",
-        borderRadius: 10,
-        margin: 4,
-        border: "1px solid var(--c-border)",
+        ...(fileExplorerOpen ? { borderRadius: 10, marginTop: 4, marginBottom: 4, marginLeft: 4, border: "1px solid var(--c-border)" } : {}),
       }}
       className="flex flex-col bg-[var(--c-bg)]"
     >

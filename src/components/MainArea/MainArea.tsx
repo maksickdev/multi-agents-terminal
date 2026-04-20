@@ -49,7 +49,7 @@ export function MainArea() {
   const allProjects = projects;
 
   return (
-    <main className="flex-1 flex flex-col bg-[var(--c-bg-deep)] overflow-hidden min-w-0" style={{ marginTop: 4, marginRight: 4, marginBottom: 4 }}>
+    <main className="flex-1 flex flex-col bg-[var(--c-bg-deep)] overflow-hidden min-w-0" style={{ marginTop: 4, marginRight: 4, marginBottom: 4, marginLeft: 4 }}>
 
       {!project ? (
         <div className="flex-1 overflow-hidden flex flex-col">
