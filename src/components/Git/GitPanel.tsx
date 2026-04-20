@@ -790,7 +790,7 @@ export function GitPanel() {
       ref={panelRef}
       data-git-panel
       style={{ width: gitPanelOpen ? gitPanelWidth : 0, flexShrink: 0, overflow: "hidden", position: "relative", ...(gitPanelOpen ? { borderRadius: 10, marginTop: 4, marginBottom: 4, marginLeft: 4, border: "1px solid var(--c-border)" } : {}) }}
-      className="flex flex-col bg-[var(--c-bg)] h-full"
+      className="flex flex-col bg-[var(--c-bg)]"
     >
       {/* ── Header ── */}
       <div className="flex items-center justify-between px-2 h-8 border-b border-[var(--c-border)] flex-shrink-0 select-none">

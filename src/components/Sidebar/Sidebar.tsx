@@ -41,7 +41,7 @@ export function Sidebar() {
       <aside
         ref={panelRef}
         style={{ width: sidebarOpen ? sidebarWidth : 0, flexShrink: 0, position: "relative", overflow: "hidden", ...(sidebarOpen ? { borderRadius: 10, marginTop: 4, marginBottom: 4, marginLeft: 4, border: "1px solid var(--c-border)" } : {}) }}
-        className="flex flex-col bg-[var(--c-bg)] h-full select-none"
+        className="flex flex-col bg-[var(--c-bg)] select-none"
       >
         {/* Header */}
         <div className="flex items-center justify-between px-4 h-8 border-b border-[var(--c-border)]">

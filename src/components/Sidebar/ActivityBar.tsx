@@ -35,7 +35,7 @@ export function ActivityBar() {
     <>
       {settingsOpen && <SettingsModal onClose={() => setSettingsOpen(false)} />}
 
-      <div className="flex flex-col items-center w-12 flex-shrink-0 bg-[var(--c-bg)] h-full select-none" style={{ borderRadius: 10, marginTop: 4, marginBottom: 4, marginLeft: 4, border: "1px solid var(--c-border)" }}>
+      <div className="flex flex-col items-center w-12 flex-shrink-0 bg-[var(--c-bg)] select-none" style={{ borderRadius: 10, marginTop: 4, marginBottom: 4, marginLeft: 4, border: "1px solid var(--c-border)" }}>
         {/* Top actions */}
         <div className="flex flex-col items-center gap-1 pt-2 flex-1">
           <button
