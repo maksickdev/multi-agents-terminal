@@ -61,7 +61,7 @@ function enqueueWrite(
 
 const xtermThemes: Record<ThemeId, NonNullable<ConstructorParameters<typeof Terminal>[0]>["theme"]> = {
   dark: {
-    background:    "#1a1b26",
+    background:    "#16161e",
     foreground:    "#c0caf5",
     cursor:        "#c0caf5",
     black:         "#15161e",
@@ -82,7 +82,7 @@ const xtermThemes: Record<ThemeId, NonNullable<ConstructorParameters<typeof Term
     brightWhite:   "#c0caf5",
   },
   mint: {
-    background:    "#111111",
+    background:    "#0a0a0a",
     foreground:    "#cccccc",
     cursor:        "#00d4aa",
     cursorAccent:  "#111111",
@@ -104,7 +104,7 @@ const xtermThemes: Record<ThemeId, NonNullable<ConstructorParameters<typeof Term
     brightWhite:   "#cccccc",
   },
   light: {
-    background:    "#f5f5fa",
+    background:    "#e8e8f0",
     foreground:    "#1a1a3a",
     cursor:        "#3878e8",
     black:         "#1a1a3a",

@@ -2,8 +2,8 @@
 
 /* ── Theme: Tokyo Night (dark, default) ──────────────────────────────────── */
 :root {
-  --c-bg-deep:      #16161e;
-  --c-bg:           #1a1b26;
+  --c-bg-deep:      #1a1b26;
+  --c-bg:           #16161e;
   --c-bg-elevated:  #1f2335;
   --c-bg-selected:  #24283b;
   --c-bg-hover:     #292e42;

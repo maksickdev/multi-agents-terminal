@@ -31,8 +31,8 @@ export const themes: Theme[] = [
     id: "dark",
     name: "Tokyo Night",
     vars: {
-      bgDeep: "#16161e",
-      bg: "#1a1b26",
+      bgDeep: "#1a1b26",
+      bg: "#16161e",
       bgElevated: "#1f2335",
       bgSelected: "#24283b",
       bgHover: "#292e42",
@@ -54,8 +54,8 @@ export const themes: Theme[] = [
     id: "mint",
     name: "Grid Mint",
     vars: {
-      bgDeep:       "#0a0a0a",
-      bg:           "#111111",
+      bgDeep:       "#111111",
+      bg:           "#0a0a0a",
       bgElevated:   "#181818",
       bgSelected:   "#202020",
       bgHover:      "#252525",
@@ -77,8 +77,8 @@ export const themes: Theme[] = [
     id: "light",
     name: "Dawn",
     vars: {
-      bgDeep: "#e8e8f0",
-      bg: "#f5f5fa",
+      bgDeep: "#f5f5fa",
+      bg: "#e8e8f0",
       bgElevated: "#ebebf2",
       bgSelected: "#d8d8e8",
       bgHover: "#e0e0ec",
