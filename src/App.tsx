@@ -178,11 +178,11 @@ export function App() {
   }
 
   return (
-    <div className="flex flex-col h-screen bg-[var(--c-bg)] text-[var(--c-text-bright)] overflow-hidden">
+    <div className="flex flex-col h-screen bg-[var(--c-bg-deep)] text-[var(--c-text-bright)] overflow-hidden">
       {/* macOS traffic-light area — full-width drag region */}
       <div
         data-tauri-drag-region
-        className="flex-shrink-0 h-8 bg-[var(--c-bg-deep)] border-b border-[var(--c-border)] flex items-center justify-center"
+        className="flex-shrink-0 h-8 bg-[var(--c-bg-deep)] flex items-center justify-center"
       >
         {activeProject && (
           <div className="flex items-center gap-2">

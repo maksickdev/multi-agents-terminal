@@ -171,7 +171,7 @@ export function EditorPane() {
 
   // ── Shared inner content (tab bar + editor + status bar) ─────────────────
   const tabBar = (
-    <div className="flex h-8 bg-[var(--c-bg-deep)] border-b border-[var(--c-border)] flex-shrink-0">
+    <div className="flex h-8 bg-[var(--c-bg)] border-b border-[var(--c-border)] flex-shrink-0">
       {/* Fullscreen toggle — pinned left */}
       {activeFile && (
         <button
@@ -244,7 +244,7 @@ export function EditorPane() {
   );
 
   const statusBar = activeFile && (
-    <div className="flex items-center justify-between px-3 h-6 bg-[var(--c-bg-deep)] border-t border-[var(--c-border)] flex-shrink-0">
+    <div className="flex items-center justify-between px-3 h-6 bg-[var(--c-bg)] border-t border-[var(--c-border)] flex-shrink-0">
       <span className="text-[10px] text-[var(--c-muted)] truncate">{activeFile.path}</span>
       <div className="flex items-center gap-2 flex-shrink-0 ml-2">
         {isPreviewable && (
@@ -301,8 +301,9 @@ export function EditorPane() {
           height: isVisible ? editorPaneHeight : 0,
           flexShrink: 0,
           overflow: "hidden",
+          borderRadius: 10,
         }}
-        className="relative flex flex-col bg-[var(--c-bg-deep)]"
+        className="relative flex flex-col bg-[var(--c-bg)]"
       >
         {/* Top resize handle — hidden in fullscreen */}
         {!fullscreen && (

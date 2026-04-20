@@ -49,7 +49,7 @@ export function MainArea() {
   const allProjects = projects;
 
   return (
-    <main className="flex-1 flex flex-col bg-[var(--c-bg)] overflow-hidden min-w-0">
+    <main className="flex-1 flex flex-col bg-[var(--c-bg-deep)] overflow-hidden min-w-0" style={{ marginTop: 4, marginRight: 4, marginBottom: 4 }}>
 
       {!project ? (
         <div className="flex-1 overflow-hidden flex flex-col">
@@ -62,9 +62,9 @@ export function MainArea() {
           <div
             className={terminalFullscreen
               ? "fixed inset-0 top-8 z-50 flex flex-col bg-[var(--c-bg)]"
-              : "flex flex-col overflow-hidden min-h-0"
+              : "flex flex-col overflow-hidden min-h-0 bg-[var(--c-bg)]"
             }
-            style={terminalFullscreen ? undefined : { flex: "1 1 0%" }}
+            style={terminalFullscreen ? undefined : { flex: "1 1 0%", borderRadius: 10, overflow: "hidden" }}
           >
             <TabBar
               project={project}

@@ -100,7 +100,7 @@ export function TabItem({
           "group flex items-center gap-2 px-3 h-8 border-b-2 transition-colors whitespace-nowrap select-none",
           isActive
             ? "border-[var(--c-accent)] bg-[var(--c-bg)] text-[var(--c-text-bright)]"
-            : "border-transparent bg-[var(--c-bg-deep)] text-[var(--c-text-dim)] hover:bg-[var(--c-bg)] hover:text-[var(--c-text)]",
+            : "border-transparent bg-transparent text-[var(--c-text-dim)] hover:bg-[var(--c-bg-elevated)] hover:text-[var(--c-text)]",
         ].join(" ")}
       >
         <span className={`w-2 h-2 rounded-full flex-shrink-0 ${statusColors[agent.status]}`} />

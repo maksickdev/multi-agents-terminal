@@ -125,11 +125,13 @@ export function FileExplorer() {
         flexShrink: 0,
         overflow: "hidden",
         position: "relative",
+        borderRadius: 10,
+        margin: 4,
       }}
-      className="flex flex-col bg-[var(--c-bg-deep)] border-r border-[var(--c-border)]"
+      className="flex flex-col bg-[var(--c-bg)]"
     >
       {/* Header */}
-      <div className="flex items-center justify-between px-2 h-8 bg-[var(--c-bg-deep)] border-b border-[var(--c-border)] flex-shrink-0 select-none">
+      <div className="flex items-center justify-between px-2 h-8 bg-[var(--c-bg)] border-b border-[var(--c-border)] flex-shrink-0 select-none">
         <span className="text-xs font-semibold text-[var(--c-text-dim)] uppercase tracking-widest truncate">
           {selectedProject ? selectedProject.name : "Explorer"}
         </span>

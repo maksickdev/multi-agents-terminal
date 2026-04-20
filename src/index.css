@@ -70,6 +70,7 @@ html, body, #root {
 
 .xterm-viewport {
   scrollbar-width: none !important;
+  background-color: var(--c-bg) !important;
 }
 
 .xterm-viewport::-webkit-scrollbar {

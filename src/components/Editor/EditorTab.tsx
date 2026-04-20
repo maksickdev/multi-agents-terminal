@@ -87,7 +87,7 @@ export function EditorTab({
       className={`flex items-center gap-1 px-3 h-full border-r border-[var(--c-border)] flex-shrink-0 select-none transition-colors ${
         isActive
           ? "bg-[var(--c-bg)] text-[var(--c-text-bright)]"
-          : "bg-[var(--c-bg-deep)] text-[var(--c-text-dim)] hover:text-[var(--c-text)] hover:bg-[var(--c-bg)]"
+          : "bg-transparent text-[var(--c-text-dim)] hover:text-[var(--c-text)] hover:bg-[var(--c-bg-elevated)]"
       }`}
     >
       {file.isDirty && !editing && (

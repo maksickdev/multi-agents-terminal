@@ -584,8 +584,8 @@ export function GitPanel() {
   if (!project) {
     return (
       <div
-        style={{ width: gitPanelOpen ? gitPanelWidth : 0, flexShrink: 0, overflow: "hidden" }}
-        className="bg-[var(--c-bg-deep)] border-r border-[var(--c-border)]"
+        style={{ width: gitPanelOpen ? gitPanelWidth : 0, flexShrink: 0, overflow: "hidden", borderRadius: 10, marginTop: 4, marginBottom: 4, marginLeft: 4 }}
+        className="bg-[var(--c-bg)]"
       />
     );
   }
@@ -789,8 +789,8 @@ export function GitPanel() {
     <div
       ref={panelRef}
       data-git-panel
-      style={{ width: gitPanelOpen ? gitPanelWidth : 0, flexShrink: 0, overflow: "hidden", position: "relative" }}
-      className="flex flex-col bg-[var(--c-bg-deep)] border-r border-[var(--c-border)] h-full"
+      style={{ width: gitPanelOpen ? gitPanelWidth : 0, flexShrink: 0, overflow: "hidden", position: "relative", borderRadius: 10, marginTop: 4, marginBottom: 4, marginLeft: 4 }}
+      className="flex flex-col bg-[var(--c-bg)] h-full"
     >
       {/* ── Header ── */}
       <div className="flex items-center justify-between px-2 h-8 border-b border-[var(--c-border)] flex-shrink-0 select-none">

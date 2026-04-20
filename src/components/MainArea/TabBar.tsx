@@ -97,7 +97,7 @@ export function TabBar({ project, agents, activeAgentId, getTerminalSize, fullsc
   };
 
   return (
-    <div className="flex items-center h-8 bg-[var(--c-bg-deep)] border-b border-[var(--c-border)]">
+    <div className="flex items-center h-8 bg-[var(--c-bg)] border-b border-[var(--c-border)]">
       {/* Fullscreen toggle — pinned left */}
       <button
         onClick={onToggleFullscreen}

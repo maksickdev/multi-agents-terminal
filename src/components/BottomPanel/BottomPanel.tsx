@@ -221,6 +221,7 @@ export function BottomPanel() {
         height: bottomPanelOpen ? bottomPanelHeight : 0,
         flexShrink: 0,
         overflow: "hidden",
+        borderRadius: 10,
       }}
       className="relative flex flex-col bg-[var(--c-bg)]"
     >
@@ -231,7 +232,7 @@ export function BottomPanel() {
       />
 
       {/* Header */}
-      <div className="flex items-center justify-between px-3 h-8 bg-[var(--c-bg-deep)] border-b border-[var(--c-border)] flex-shrink-0 select-none">
+      <div className="flex items-center justify-between px-3 h-8 bg-[var(--c-bg)] border-b border-[var(--c-border)] flex-shrink-0 select-none">
         <span className="text-xs font-semibold text-[var(--c-text-dim)] uppercase tracking-widest">
           Terminal
           {selectedProject && (

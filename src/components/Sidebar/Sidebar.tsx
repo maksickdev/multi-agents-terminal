@@ -40,8 +40,8 @@ export function Sidebar() {
 
       <aside
         ref={panelRef}
-        style={{ width: sidebarOpen ? sidebarWidth : 0, flexShrink: 0, position: "relative", overflow: "hidden" }}
-        className="flex flex-col bg-[var(--c-bg-deep)] border-r border-[var(--c-border)] h-full select-none"
+        style={{ width: sidebarOpen ? sidebarWidth : 0, flexShrink: 0, position: "relative", overflow: "hidden", borderRadius: 10, marginTop: 4, marginBottom: 4, marginLeft: 4 }}
+        className="flex flex-col bg-[var(--c-bg)] h-full select-none"
       >
         {/* Header */}
         <div className="flex items-center justify-between px-4 h-8 border-b border-[var(--c-border)]">

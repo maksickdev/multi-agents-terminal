@@ -82,10 +82,10 @@ const xtermThemes: Record<ThemeId, NonNullable<ConstructorParameters<typeof Term
     brightWhite:   "#c0caf5",
   },
   mint: {
-    background:    "#0a0a0a",
+    background:    "#111111",
     foreground:    "#cccccc",
     cursor:        "#00d4aa",
-    cursorAccent:  "#0a0a0a",
+    cursorAccent:  "#111111",
     black:         "#111111",
     red:           "#d44444",
     green:         "#00c896",
