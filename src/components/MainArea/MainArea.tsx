@@ -61,10 +61,12 @@ export function MainArea() {
           {/* Terminal panel — CSS fullscreen (no remount) via position:fixed */}
           <div
             className={terminalFullscreen
-              ? "fixed inset-0 top-8 z-50 flex flex-col bg-[var(--c-bg)]"
+              ? "fixed z-50 flex flex-col bg-[var(--c-bg)]"
               : "flex flex-col overflow-hidden min-h-0 bg-[var(--c-bg)]"
             }
-            style={terminalFullscreen ? undefined : { flex: "1 1 0%", borderRadius: 10, overflow: "hidden", border: "1px solid var(--c-border)" }}
+            style={terminalFullscreen
+              ? { inset: 0, top: 32, marginLeft: 8, marginRight: 8, marginBottom: 8, borderRadius: 10, border: "1px solid var(--c-border)", overflow: "hidden" }
+              : { flex: "1 1 0%", borderRadius: 10, overflow: "hidden", border: "1px solid var(--c-border)" }}
           >
             <TabBar
               project={project}

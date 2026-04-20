@@ -297,6 +297,11 @@ export function EditorPane() {
           top: 32,
           zIndex: 50,
           overflow: "hidden",
+          marginLeft: 8,
+          marginRight: 8,
+          marginBottom: 8,
+          borderRadius: 10,
+          border: "1px solid var(--c-border)",
         } : {
           height: isVisible ? editorPaneHeight : 0,
           flexShrink: 0,
