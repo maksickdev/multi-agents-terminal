@@ -64,7 +64,7 @@ export function MainArea() {
               ? "fixed inset-0 top-8 z-50 flex flex-col bg-[var(--c-bg)]"
               : "flex flex-col overflow-hidden min-h-0 bg-[var(--c-bg)]"
             }
-            style={terminalFullscreen ? undefined : { flex: "1 1 0%", borderRadius: 10, overflow: "hidden" }}
+            style={terminalFullscreen ? undefined : { flex: "1 1 0%", borderRadius: 10, overflow: "hidden", border: "1px solid var(--c-border)" }}
           >
             <TabBar
               project={project}
