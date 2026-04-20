@@ -21,7 +21,7 @@ interface Props {
 interface ContextState { x: number; y: number }
 
 export function FileTreeNode({ entry, depth, projectId, onRefresh, renderChildren }: Props) {
-  const { toggleExpandedDir, openFile } = useStore();
+  const { toggleExpandedDir, openFile, editorPanelOpen, setEditorPanelOpen } = useStore();
 
   const [contextMenu, setContextMenu] = useState<ContextState | null>(null);
   const [renaming, setRenaming] = useState(false);
@@ -73,6 +73,7 @@ export function FileTreeNode({ entry, depth, projectId, onRefresh, renderChildre
         isDirty: false,
         language: detectLanguage(entry.name),
       });
+      if (!editorPanelOpen) setEditorPanelOpen(true);
     } catch (e) {
       console.error("open file failed", e);
     }

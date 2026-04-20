@@ -315,7 +315,7 @@ interface DiffModalState {
 // ── main panel ────────────────────────────────────────────────────────────────
 
 export function GitPanel() {
-  const { projects, selectedProjectId, gitPanelWidth, setGitPanelWidth, gitPanelOpen, bumpGitStatus, openFiles, reloadFileContent, openFile } = useStore();
+  const { projects, selectedProjectId, gitPanelWidth, setGitPanelWidth, gitPanelOpen, bumpGitStatus, openFiles, reloadFileContent, openFile, editorPanelOpen, setEditorPanelOpen } = useStore();
   const project = projects.find((p) => p.id === selectedProjectId) ?? null;
 
   const [status, setStatus]           = useState<GitStatus | null>(null);
@@ -687,6 +687,7 @@ export function GitPanel() {
     try {
       const content = await readFileText(fullPath);
       openFile({ path: fullPath, projectId, content, isDirty: false, language: detectLanguage(fileName) });
+      if (!editorPanelOpen) setEditorPanelOpen(true);
     } catch (e) {
       console.error("[openFileInEditor] failed:", fullPath, e);
       setError(String(e));

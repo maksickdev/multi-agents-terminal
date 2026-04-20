@@ -7,7 +7,7 @@ import { CodeEditor, type CodeEditorHandle, type EditorSearchState } from "./Cod
 import { EditorTab } from "./EditorTab";
 import { RenderedPreview } from "./RenderedPreview";
 import { ConfirmModal } from "../shared/ConfirmModal";
-import { Circle, Maximize2, Minimize2 } from "lucide-react";
+import { Circle, FileCode2, Maximize2, Minimize2 } from "lucide-react";
 
 const PREVIEWABLE = ["markdown"];
 
@@ -340,9 +340,18 @@ export function EditorPane() {
           onMouseDown={editorPanelOpen ? onHandleMouseDown : undefined}
           className="absolute left-0 top-0 bottom-0 w-[6px] cursor-ew-resize hover:bg-[var(--c-accent)]/20 transition-colors z-10"
         />
-        {tabBar}
-        {editorArea}
-        {statusBar}
+        {projectFiles.length === 0 ? (
+          <div className="flex-1 flex flex-col items-center justify-center gap-2 text-[var(--c-text-dim)] select-none">
+            <FileCode2 size={28} className="opacity-30" />
+            <span className="text-xs opacity-50">No files open</span>
+          </div>
+        ) : (
+          <>
+            {tabBar}
+            {editorArea}
+            {statusBar}
+          </>
+        )}
       </div>
     </>
   );
