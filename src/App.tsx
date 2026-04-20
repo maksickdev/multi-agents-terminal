@@ -194,7 +194,7 @@ export function App() {
         )}
       </div>
 
-      <div className="flex flex-1 overflow-hidden">
+      <div className="flex flex-1 overflow-hidden" style={{ marginBottom: 4, marginLeft: 4, marginRight: 4 }}>
         <ActivityBar />
         <Sidebar />
         <GitPanel />
