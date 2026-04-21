@@ -54,7 +54,7 @@ export function ImageViewer({ path }: Props) {
     const { width, height } = container.getBoundingClientRect();
     const padding = 32;
     const scale = Math.min((width - padding) / naturalW, (height - padding) / naturalH, 1);
-    return Math.max(scale, MIN_ZOOM);
+    return Math.max(scale, 0.001);
   }, []);
 
   const onLoad = (e: React.SyntheticEvent<HTMLImageElement>) => {
@@ -138,22 +138,12 @@ export function ImageViewer({ path }: Props) {
       {/* Scrollable canvas */}
       <div
         ref={containerRef}
-        className="flex-1 overflow-auto"
+        className="flex-1 overflow-auto flex"
         onWheel={onWheel}
         style={{ cursor: zoom > fitZoom ? "grab" : "default" }}
       >
         {src ? (
-          <div
-            style={{
-              minWidth: "100%",
-              minHeight: "100%",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              padding: 16,
-              boxSizing: "border-box",
-            }}
-          >
+          <div style={{ margin: "auto", padding: 16, flexShrink: 0 }}>
             <img
               ref={imgRef}
               src={src}
@@ -164,7 +154,6 @@ export function ImageViewer({ path }: Props) {
                 width: dims ? dims.w * zoom : undefined,
                 height: dims ? dims.h * zoom : undefined,
                 imageRendering: zoom > 2 ? "pixelated" : "auto",
-                flexShrink: 0,
                 display: "block",
               }}
               className="shadow-md"
