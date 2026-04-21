@@ -236,6 +236,28 @@ pub fn git_diff(cwd: String, path: String, staged: bool) -> Result<String, Strin
     let mut diff_opts = DiffOptions::new();
     diff_opts.pathspec(&path);
 
+    // For untracked files there is no index entry — build a synthetic +line diff
+    if !staged {
+        let statuses = repo.statuses(None).map_err(|e| e.to_string())?;
+        let is_untracked = statuses.iter().any(|e| {
+            e.path() == Some(path.as_str()) && e.status().contains(git2::Status::WT_NEW)
+        });
+        if is_untracked {
+            let full = std::path::Path::new(&cwd).join(&path);
+            let content = std::fs::read_to_string(&full).unwrap_or_default();
+            let line_count = content.lines().count();
+            let mut patch = format!(
+                "--- /dev/null\n+++ b/{path}\n@@ -0,0 +1,{line_count} @@\n"
+            );
+            for line in content.lines() {
+                patch.push('+');
+                patch.push_str(line);
+                patch.push('\n');
+            }
+            return Ok(patch);
+        }
+    }
+
     let diff = if staged {
         let head_tree = repo.head().ok().and_then(|h| h.peel_to_tree().ok());
         repo.diff_tree_to_index(head_tree.as_ref(), None, Some(&mut diff_opts))
