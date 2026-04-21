@@ -45,6 +45,33 @@ pub fn read_file_text(path: String) -> Result<String, String> {
 }
 
 #[tauri::command]
+pub fn read_file_bytes_base64(path: String) -> Result<String, String> {
+    use std::io::Read;
+    let mut file = std::fs::File::open(&path)
+        .map_err(|e| format!("read_file_bytes_base64 failed: {e}"))?;
+    let mut buf = Vec::new();
+    file.read_to_end(&mut buf)
+        .map_err(|e| format!("read_file_bytes_base64 failed: {e}"))?;
+    Ok(base64_encode(&buf))
+}
+
+fn base64_encode(input: &[u8]) -> String {
+    const CHARS: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+    let mut out = String::with_capacity((input.len() + 2) / 3 * 4);
+    for chunk in input.chunks(3) {
+        let b0 = chunk[0] as u32;
+        let b1 = chunk.get(1).copied().unwrap_or(0) as u32;
+        let b2 = chunk.get(2).copied().unwrap_or(0) as u32;
+        let n = (b0 << 16) | (b1 << 8) | b2;
+        out.push(CHARS[((n >> 18) & 0x3f) as usize] as char);
+        out.push(CHARS[((n >> 12) & 0x3f) as usize] as char);
+        out.push(if chunk.len() > 1 { CHARS[((n >> 6) & 0x3f) as usize] as char } else { '=' });
+        out.push(if chunk.len() > 2 { CHARS[(n & 0x3f) as usize] as char } else { '=' });
+    }
+    out
+}
+
+#[tauri::command]
 pub fn write_file_text(path: String, content: String) -> Result<(), String> {
     std::fs::write(&path, content).map_err(|e| format!("write_file_text failed: {e}"))
 }

@@ -8,6 +8,9 @@ export function detectLanguage(filename: string): string {
   if (lower === "docker-compose.yml" || lower === "docker-compose.yaml") return "yaml";
 
   const ext = lower.split(".").pop() ?? "";
+  const IMAGE_EXTS = new Set(["png", "jpg", "jpeg", "gif", "webp", "svg", "ico", "bmp", "avif", "tiff", "tif"]);
+  if (IMAGE_EXTS.has(ext)) return "image";
+
   const map: Record<string, string> = {
     ts: "typescript",
     tsx: "typescript",

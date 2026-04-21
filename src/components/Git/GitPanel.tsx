@@ -683,8 +683,9 @@ export function GitPanel() {
     const fileName    = relativePath.split("/").pop() ?? relativePath;
     const fullPath    = `${projectPath}/${relativePath}`;
     try {
-      const content = await readFileText(fullPath);
-      openFile({ path: fullPath, projectId, content, isDirty: false, language: detectLanguage(fileName) });
+      const language = detectLanguage(fileName);
+      const content = language === "image" ? "" : await readFileText(fullPath);
+      openFile({ path: fullPath, projectId, content, isDirty: false, language });
       if (!editorPanelOpen) setEditorPanelOpen(true);
     } catch (e) {
       console.error("[openFileInEditor] failed:", fullPath, e);

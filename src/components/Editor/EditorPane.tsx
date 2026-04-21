@@ -6,10 +6,12 @@ import { useFileWatcher } from "../../hooks/useFileWatcher";
 import { CodeEditor, type CodeEditorHandle, type EditorSearchState } from "./CodeEditor";
 import { EditorTab } from "./EditorTab";
 import { RenderedPreview } from "./RenderedPreview";
+import { ImageViewer } from "./ImageViewer";
 import { ConfirmModal } from "../shared/ConfirmModal";
 import { Circle, FileCode2, Maximize2, Minimize2 } from "lucide-react";
 
 const PREVIEWABLE = ["markdown"];
+const IMAGE_LANG = "image";
 
 export function EditorPane() {
   useFileWatcher();
@@ -205,7 +207,9 @@ export function EditorPane() {
               pointerEvents: isActive ? "auto" : "none",
             }}
           >
-            {isFilePreviewable && previewMode === "rendered"
+            {file.language === IMAGE_LANG
+              ? <ImageViewer path={file.path} />
+              : isFilePreviewable && previewMode === "rendered"
               ? <RenderedPreview content={file.content} language={file.language} />
               : <CodeEditor
                   ref={(handle) => {

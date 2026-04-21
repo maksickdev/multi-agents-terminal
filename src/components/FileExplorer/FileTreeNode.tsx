@@ -65,14 +65,9 @@ export function FileTreeNode({ entry, depth, projectId, onRefresh, renderChildre
       return;
     }
     try {
-      const content = await readFileText(entry.path);
-      openFile({
-        path: entry.path,
-        projectId,
-        content,
-        isDirty: false,
-        language: detectLanguage(entry.name),
-      });
+      const language = detectLanguage(entry.name);
+      const content = language === "image" ? "" : await readFileText(entry.path);
+      openFile({ path: entry.path, projectId, content, isDirty: false, language });
       if (!editorPanelOpen) setEditorPanelOpen(true);
     } catch (e) {
       console.error("open file failed", e);
