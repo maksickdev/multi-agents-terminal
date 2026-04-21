@@ -327,10 +327,22 @@ pub fn git_unstage_all(cwd: String) -> Result<(), String> {
 #[tauri::command]
 pub fn git_discard(cwd: String, path: String) -> Result<(), String> {
     let repo = open_repo(&cwd)?;
-    // Restore working tree from index (matches `git restore <path>`)
-    let mut cb = CheckoutBuilder::new();
-    cb.path(path.as_str()).force();
-    repo.checkout_index(None, Some(&mut cb)).map_err(|e| e.to_string())?;
+    let statuses = repo.statuses(None).map_err(|e| e.to_string())?;
+    let is_untracked = statuses.iter().any(|e| {
+        e.path() == Some(path.as_str()) && e.status().contains(git2::Status::WT_NEW)
+    });
+    if is_untracked {
+        let full = std::path::Path::new(&cwd).join(&path);
+        if full.is_dir() {
+            std::fs::remove_dir_all(&full).map_err(|e| e.to_string())?;
+        } else {
+            std::fs::remove_file(&full).map_err(|e| e.to_string())?;
+        }
+    } else {
+        let mut cb = CheckoutBuilder::new();
+        cb.path(path.as_str()).force();
+        repo.checkout_index(None, Some(&mut cb)).map_err(|e| e.to_string())?;
+    }
     Ok(())
 }
 

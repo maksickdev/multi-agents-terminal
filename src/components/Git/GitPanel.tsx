@@ -111,15 +111,13 @@ function FileRow({
             >
               <Plus size={11} />
             </button>
-            {status !== "?" && (
-              <button
-                onClick={(e) => { e.stopPropagation(); onDiscard(); }}
-                title="Discard changes"
-                className="p-0.5 text-[var(--c-text-dim)] hover:text-[var(--c-danger)] rounded"
-              >
-                <RotateCcw size={11} />
-              </button>
-            )}
+            <button
+              onClick={(e) => { e.stopPropagation(); onDiscard(); }}
+              title={status === "?" ? "Delete file" : "Discard changes"}
+              className="p-0.5 text-[var(--c-text-dim)] hover:text-[var(--c-danger)] rounded"
+            >
+              {status === "?" ? <Trash2 size={11} /> : <RotateCcw size={11} />}
+            </button>
           </>
         )}
       </div>
@@ -728,8 +726,13 @@ export function GitPanel() {
           ctxMenu.isStaged
             ? { label: "Unstage", icon: Minus, onClick: () => gitUnstage(project!.path, ctxMenu.file.path).then(refresh) }
             : { label: "Stage", icon: Plus, onClick: () => gitStage(project!.path, ctxMenu.file.path).then(refresh) },
-          ...(!ctxMenu.isStaged && ctxMenu.file.unstagedStatus !== "?"
-            ? [{ label: "Discard changes", icon: RotateCcw, danger: true as const, onClick: () => setDiscardConfirm({ file: ctxMenu.file }) }]
+          ...(!ctxMenu.isStaged
+            ? [{
+                label: ctxMenu.file.unstagedStatus === "?" ? "Delete file" : "Discard changes",
+                icon: ctxMenu.file.unstagedStatus === "?" ? Trash2 : RotateCcw,
+                danger: true as const,
+                onClick: () => setDiscardConfirm({ file: ctxMenu.file }),
+              }]
             : []),
           { label: "Open file", icon: FolderOpen, onClick: () => openFileInEditor(ctxMenu.file.path) },
         ]}
@@ -737,9 +740,13 @@ export function GitPanel() {
     )}
     {discardConfirm && (
       <ConfirmModal
-        title="Discard Changes"
-        message={`Discard all changes in "${discardConfirm.file.path.split("/").pop()}"? This cannot be undone.`}
-        confirmLabel="Discard"
+        title={discardConfirm.file.unstagedStatus === "?" ? "Delete File" : "Discard Changes"}
+        message={
+          discardConfirm.file.unstagedStatus === "?"
+            ? `Delete untracked file "${discardConfirm.file.path.split("/").pop()}"? This cannot be undone.`
+            : `Discard all changes in "${discardConfirm.file.path.split("/").pop()}"? This cannot be undone.`
+        }
+        confirmLabel={discardConfirm.file.unstagedStatus === "?" ? "Delete" : "Discard"}
         danger
         onConfirm={() => doDiscard(discardConfirm.file)}
         onCancel={() => setDiscardConfirm(null)}
