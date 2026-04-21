@@ -168,11 +168,13 @@ export function TerminalPane({ agentId, isVisible }: Props) {
           : { position: "absolute", visibility: "hidden", pointerEvents: "none", width: "100%", height: "100%", overflow: "hidden", display: "flex" }
       }
     >
-      <div
-        ref={containerRef}
-        data-agent-id={agentId}
-        style={{ flex: 1, overflow: "hidden" }}
-      />
+      <div style={{ flex: 1, overflow: "hidden", paddingLeft: 8, paddingTop: 4, paddingBottom: 4 }}>
+        <div
+          ref={containerRef}
+          data-agent-id={agentId}
+          style={{ width: "100%", height: "100%" }}
+        />
+      </div>
 
       {/* Scroll to bottom button */}
       <button

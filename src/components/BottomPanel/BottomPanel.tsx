@@ -138,7 +138,9 @@ function ShellPane({ agentId, isVisible, height }: {
           : { position: "absolute", inset: 0, visibility: "hidden", pointerEvents: "none", overflow: "hidden", display: "flex" }
       }
     >
-      <div ref={containerRef} style={{ flex: 1, overflow: "hidden" }} />
+      <div style={{ flex: 1, overflow: "hidden", paddingLeft: 8, paddingTop: 4, paddingBottom: 4 }}>
+        <div ref={containerRef} style={{ width: "100%", height: "100%" }} />
+      </div>
       <div
         ref={trackRef}
         onClick={handleTrackClick}
