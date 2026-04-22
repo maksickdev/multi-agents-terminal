@@ -85,6 +85,7 @@ export const restartAgent = (agentId: string, cwd: string, projectId: string, ro
 
 // Project commands
 export const loadProjects = () => invoke<Project[]>("load_projects");
+export const getConfigDir = () => invoke<string>("get_config_dir");
 
 // Session-persistence commands
 export const loadAgents = () => invoke<AgentMeta[]>("load_agents");

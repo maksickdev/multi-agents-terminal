@@ -1,16 +1,19 @@
 import { useEffect, useRef, useState } from "react";
 import { listen } from "@tauri-apps/api/event";
-import { FileCode2, Folder, GitBranch, Loader2, PanelLeft, Settings, SquareTerminal } from "lucide-react";
+import { FileCode2, Folder, GitBranch, Loader2, PanelLeft, Settings, SquareTerminal, Zap } from "lucide-react";
 import { useSessionPersistence } from "./hooks/useSessionPersistence";
 import { usePtyEvents } from "./hooks/usePty";
 import { useTheme } from "./hooks/useTheme";
 import { useExternalFileDrop } from "./hooks/useExternalFileDrop";
+import { useAutomationScheduler } from "./hooks/useAutomationScheduler";
 import { useStore } from "./store/useStore";
+import { useAutomationStore } from "./store/useAutomationStore";
 import { Sidebar } from "./components/Sidebar/Sidebar";
 import { MainArea } from "./components/MainArea/MainArea";
 import { EditorPane } from "./components/Editor/EditorPane";
 import { FileExplorer } from "./components/FileExplorer/FileExplorer";
 import { GitPanel } from "./components/Git/GitPanel";
+import { AutomationPanel } from "./components/Automation/AutomationPanel";
 import { TitleBarGitInfo } from "./components/Git/TitleBarGitInfo";
 import { ConfirmModal } from "./components/shared/ConfirmModal";
 import { UsageButton } from "./components/Sidebar/UsageButton";
@@ -84,6 +87,10 @@ export function App() {
   usePtyEvents();
   useTheme();
   useExternalFileDrop();
+  useAutomationScheduler();
+
+  const { init: initAutomations } = useAutomationStore();
+  useEffect(() => { initAutomations(); }, []);
 
   const {
     projects, selectedProjectId, agents, agentOrder, shellAgentIds,
@@ -92,6 +99,7 @@ export function App() {
     editorPanelOpen, setEditorPanelOpen,
     bottomPanelOpen, setBottomPanelOpen,
     gitPanelOpen, setGitPanelOpen,
+    automationPanelOpen, setAutomationPanelOpen,
     hotkeys,
   } = useStore();
   const activeProject = projects.find((p) => p.id === selectedProjectId) ?? null;
@@ -227,6 +235,7 @@ export function App() {
               { icon: SquareTerminal, active: bottomPanelOpen, onClick: () => setBottomPanelOpen(!bottomPanelOpen), title: `Terminal (${formatHotkey(hotkeys.toggleTerminal)})` },
               { icon: GitBranch, active: gitPanelOpen, onClick: () => setGitPanelOpen(!gitPanelOpen), title: `Git (${formatHotkey(hotkeys.toggleGitPanel)})` },
               { icon: FileCode2, active: editorPanelOpen, onClick: () => setEditorPanelOpen(!editorPanelOpen), title: `Editor (${formatHotkey(hotkeys.toggleEditorPanel)})` },
+              { icon: Zap, active: automationPanelOpen, onClick: () => setAutomationPanelOpen(!automationPanelOpen), title: 'Automation' },
             ] as const
           ).map(({ icon: Icon, active, onClick, title }) => (
             <button
@@ -273,6 +282,7 @@ export function App() {
         <FileExplorer />
         <MainArea />
         <EditorPane />
+        <AutomationPanel />
       </div>
 
       {/* ── Close confirmation modal ───────────────────────────────────────── */}

@@ -76,6 +76,12 @@ interface AppStore {
   gitStatusVersion: number;
   bumpGitStatus: () => void;
 
+  // Automation panel
+  automationPanelOpen: boolean;
+  setAutomationPanelOpen: (open: boolean) => void;
+  automationPanelWidth: number;
+  setAutomationPanelWidth: (width: number) => void;
+
   fileExplorerOpen: boolean;
   fileExplorerWidth: number;
   /** projectId → array of expanded absolute dir paths */
@@ -138,6 +144,8 @@ export const useStore = create<AppStore>((set, get) => ({
   gitPanelOpen: false,
   gitPanelWidth: 280,
   gitStatusVersion: 0,
+  automationPanelOpen: false,
+  automationPanelWidth: 320,
 
   fileExplorerOpen: false,
   fileExplorerWidth: 240,
@@ -266,6 +274,8 @@ export const useStore = create<AppStore>((set, get) => ({
   setGitPanelOpen: (open) => set({ gitPanelOpen: open }),
   setGitPanelWidth: (width) => set({ gitPanelWidth: Math.max(220, Math.min(width, 600)) }),
   bumpGitStatus: () => set((s) => ({ gitStatusVersion: s.gitStatusVersion + 1 })),
+  setAutomationPanelOpen: (open) => set({ automationPanelOpen: open }),
+  setAutomationPanelWidth: (width) => set({ automationPanelWidth: Math.max(240, Math.min(width, 600)) }),
 
   bumpFileTree: () => set((s) => ({ fileTreeVersion: s.fileTreeVersion + 1 })),
   setFileExplorerOpen: (open) => set({ fileExplorerOpen: open }),

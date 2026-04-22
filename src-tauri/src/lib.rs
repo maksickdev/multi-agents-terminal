@@ -10,7 +10,7 @@ use commands::pty_commands::{
     is_session_nonempty, kill_agent, load_agents, load_scrollback, resize_agent, restart_agent,
     save_agents, spawn_agent, spawn_shell, truncate_scrollback, write_to_agent,
 };
-use commands::project_commands::{load_projects, pick_folder, save_projects};
+use commands::project_commands::{load_projects, pick_folder, save_projects, get_config_dir};
 use commands::file_commands::{
     read_dir, read_file_text, read_file_bytes_base64, write_file_text, delete_path,
     create_file, create_dir_all, rename_path, copy_path, reveal_in_finder,
@@ -69,6 +69,7 @@ pub fn run() {
             load_projects,
             save_projects,
             pick_folder,
+            get_config_dir,
             // Session persistence
             load_agents,
             save_agents,

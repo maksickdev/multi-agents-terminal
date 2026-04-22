@@ -34,6 +34,11 @@ pub async fn save_projects(
 }
 
 #[tauri::command]
+pub async fn get_config_dir(state: State<'_, AppState>) -> Result<String, String> {
+    Ok(state.config_path.to_string_lossy().to_string())
+}
+
+#[tauri::command]
 pub async fn pick_folder(app: AppHandle) -> Result<Option<String>, String> {
     let (tx, rx) = tokio::sync::oneshot::channel();
 
