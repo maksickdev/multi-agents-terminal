@@ -583,8 +583,16 @@ export function GitPanel() {
     return (
       <div
         style={{ width: gitPanelOpen ? gitPanelWidth : 0, flexShrink: 0, overflow: "hidden", ...(gitPanelOpen ? { borderRadius: 10, marginTop: 4, marginBottom: 4, marginLeft: 4, border: "1px solid var(--c-border)" } : {}) }}
-        className="bg-[var(--c-bg)]"
-      />
+        className="flex flex-col bg-[var(--c-bg)]"
+      >
+        <div className="flex items-center px-2 h-8 border-b border-[var(--c-border)] flex-shrink-0 select-none">
+          <span className="text-[10px] font-semibold uppercase tracking-wider text-[var(--c-text-dim)]">Git</span>
+        </div>
+        <div className="flex-1 flex flex-col items-center justify-center gap-2 text-[var(--c-text-dim)] select-none">
+          <GitBranch size={28} className="opacity-30" />
+          <span className="text-xs opacity-50">Select a project first</span>
+        </div>
+      </div>
     );
   }
 

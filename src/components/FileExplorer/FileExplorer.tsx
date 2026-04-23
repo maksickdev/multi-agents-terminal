@@ -5,7 +5,7 @@ import { matchesHotkey } from "../../lib/hotkeys";
 import { FileTree } from "./FileTree";
 import { MoveConfirmModal } from "./MoveConfirmModal";
 import { setOnFolderDrop } from "../../lib/fileDrag";
-import { FilePlus, FolderPlus, RotateCw } from "lucide-react";
+import { FilePlus, Files, FolderPlus, RotateCw } from "lucide-react";
 
 export function FileExplorer() {
   const {
@@ -192,8 +192,9 @@ export function FileExplorer() {
             />
           </>
         ) : (
-          <div className="text-[var(--c-muted)] text-xs px-3 py-2 italic">
-            Select a project
+          <div className="h-full flex flex-col items-center justify-center gap-2 text-[var(--c-text-dim)] select-none">
+            <Files size={28} className="opacity-30" />
+            <span className="text-xs opacity-50">Select a project</span>
           </div>
         )}
       </div>

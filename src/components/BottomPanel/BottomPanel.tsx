@@ -4,7 +4,7 @@ import { useStore } from "../../store/useStore";
 import type { Project } from "../../lib/tauri";
 import * as ptyManager from "../../lib/ptyManager";
 import { useAgentInput } from "../../hooks/usePty";
-import { X } from "lucide-react";
+import { SquareTerminal, X } from "lucide-react";
 
 const CHAR_W = 8;
 const CHAR_H = 16;
@@ -263,8 +263,9 @@ export function BottomPanel() {
           />
         ))}
         {!selectedProject && (
-          <div className="absolute inset-0 flex items-center justify-center text-[var(--c-text-dim)] text-sm">
-            Select a project to open a terminal
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-[var(--c-text-dim)] select-none">
+            <SquareTerminal size={28} className="opacity-30" />
+            <span className="text-xs opacity-50">Select a project to open a terminal</span>
           </div>
         )}
       </div>

@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { Plus } from 'lucide-react';
+import { Clock, Plus } from 'lucide-react';
 import { useStore } from '../../store/useStore';
 import { useAutomationStore } from '../../store/useAutomationStore';
 import { AutomationList } from './AutomationList';
@@ -108,8 +108,9 @@ export function AutomationPanel() {
               </div>
 
               {!projectId ? (
-                <div className="flex-1 flex items-center justify-center">
-                  <p className="text-xs text-[var(--c-text-dim)]">Select a project first.</p>
+                <div className="flex-1 flex flex-col items-center justify-center gap-2 text-[var(--c-text-dim)] select-none">
+                  <Clock size={28} className="opacity-30" />
+                  <span className="text-xs opacity-50">Select a project first</span>
                 </div>
               ) : (
                 <>
