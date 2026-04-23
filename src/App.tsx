@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { listen } from "@tauri-apps/api/event";
-import { Clock, FileCode2, Folder, GitBranch, Layers, Loader2, Settings, SquareTerminal } from "lucide-react";
+import { Clock, FileCode2, Files, GitBranch, Layers, Loader2, Settings, SquareTerminal } from "lucide-react";
 import { useSessionPersistence } from "./hooks/useSessionPersistence";
 import { usePtyEvents } from "./hooks/usePty";
 import { useTheme } from "./hooks/useTheme";
@@ -235,7 +235,7 @@ export function App() {
           {(
             [
               { icon: Layers, active: sidebarOpen, onClick: () => setSidebarOpen(!sidebarOpen), title: `Projects (${formatHotkey(hotkeys.toggleSidebar)})` },
-              { icon: Folder, active: fileExplorerOpen, onClick: () => setFileExplorerOpen(!fileExplorerOpen), title: `File Explorer (${formatHotkey(hotkeys.toggleFileExplorer)})` },
+              { icon: Files, active: fileExplorerOpen, onClick: () => setFileExplorerOpen(!fileExplorerOpen), title: `File Explorer (${formatHotkey(hotkeys.toggleFileExplorer)})` },
               { icon: SquareTerminal, active: bottomPanelOpen, onClick: () => setBottomPanelOpen(!bottomPanelOpen), title: `Terminal (${formatHotkey(hotkeys.toggleTerminal)})` },
               { icon: GitBranch, active: gitPanelOpen, onClick: () => setGitPanelOpen(!gitPanelOpen), title: `Git (${formatHotkey(hotkeys.toggleGitPanel)})` },
               { icon: FileCode2, active: editorPanelOpen, onClick: () => setEditorPanelOpen(!editorPanelOpen), title: `Editor (${formatHotkey(hotkeys.toggleEditorPanel)})` },
