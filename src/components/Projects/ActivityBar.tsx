@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Folder, SquareTerminal, Settings, PanelLeft, GitBranch, Clock } from "lucide-react";
+import { Folder, SquareTerminal, Settings, Layers, GitBranch, Clock } from "lucide-react";
 import { useStore } from "../../store/useStore";
 import { SettingsModal } from "../Settings/SettingsModal";
 import { UsageButton } from "./UsageButton";
@@ -45,14 +45,14 @@ export function ActivityBar() {
         <div className="flex flex-col items-center gap-1 pt-2 flex-1">
           <button
             onClick={() => setSidebarOpen(!sidebarOpen)}
-            title={`Toggle sidebar (${formatHotkey(hotkeys.toggleSidebar)})`}
+            title={`Projects (${formatHotkey(hotkeys.toggleSidebar)})`}
             className={`flex items-center justify-center w-9 h-9 rounded transition-colors ${
               sidebarOpen
                 ? "text-[var(--c-accent)] bg-[var(--c-bg)]"
                 : "text-[var(--c-text-dim)] hover:text-[var(--c-text)] hover:bg-[var(--c-bg)]"
             }`}
           >
-            <PanelLeft size={20} />
+            <Layers size={20} />
           </button>
 
           <button

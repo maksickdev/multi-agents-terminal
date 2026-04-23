@@ -17,7 +17,7 @@ export interface Hotkey {
 export type HotkeyMap = Record<HotkeyAction, Hotkey>;
 
 export const HOTKEY_LABELS: Record<HotkeyAction, string> = {
-  toggleSidebar:      "Toggle Sidebar",
+  toggleSidebar:      "Toggle Projects",
   toggleFileExplorer: "Toggle File Explorer",
   toggleEditorPanel:  "Toggle Editor Panel",
   toggleGitPanel:          "Toggle Git Panel",

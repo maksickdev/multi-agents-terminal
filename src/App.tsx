@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { listen } from "@tauri-apps/api/event";
-import { Clock, FileCode2, Folder, GitBranch, Loader2, PanelLeft, Settings, SquareTerminal } from "lucide-react";
+import { Clock, FileCode2, Folder, GitBranch, Layers, Loader2, Settings, SquareTerminal } from "lucide-react";
 import { useSessionPersistence } from "./hooks/useSessionPersistence";
 import { usePtyEvents } from "./hooks/usePty";
 import { useTheme } from "./hooks/useTheme";
@@ -8,7 +8,7 @@ import { useExternalFileDrop } from "./hooks/useExternalFileDrop";
 import { useAutomationScheduler } from "./hooks/useAutomationScheduler";
 import { useStore } from "./store/useStore";
 import { useAutomationStore } from "./store/useAutomationStore";
-import { Sidebar } from "./components/Sidebar/Sidebar";
+import { ProjectsPanel } from "./components/Projects/ProjectsPanel";
 import { MainArea } from "./components/MainArea/MainArea";
 import { EditorPane } from "./components/Editor/EditorPane";
 import { FileExplorer } from "./components/FileExplorer/FileExplorer";
@@ -16,7 +16,7 @@ import { GitPanel } from "./components/Git/GitPanel";
 import { AutomationPanel } from "./components/Automation/AutomationPanel";
 import { TitleBarGitInfo } from "./components/Git/TitleBarGitInfo";
 import { ConfirmModal } from "./components/shared/ConfirmModal";
-import { UsageButton } from "./components/Sidebar/UsageButton";
+import { UsageButton } from "./components/Projects/UsageButton";
 import { SettingsModal } from "./components/Settings/SettingsModal";
 import { matchesHotkey, formatHotkey } from "./lib/hotkeys";
 import {
@@ -234,7 +234,7 @@ export function App() {
         <div className="flex items-center gap-0.5 ml-[90px]">
           {(
             [
-              { icon: PanelLeft, active: sidebarOpen, onClick: () => setSidebarOpen(!sidebarOpen), title: `Toggle sidebar (${formatHotkey(hotkeys.toggleSidebar)})` },
+              { icon: Layers, active: sidebarOpen, onClick: () => setSidebarOpen(!sidebarOpen), title: `Projects (${formatHotkey(hotkeys.toggleSidebar)})` },
               { icon: Folder, active: fileExplorerOpen, onClick: () => setFileExplorerOpen(!fileExplorerOpen), title: `File Explorer (${formatHotkey(hotkeys.toggleFileExplorer)})` },
               { icon: SquareTerminal, active: bottomPanelOpen, onClick: () => setBottomPanelOpen(!bottomPanelOpen), title: `Terminal (${formatHotkey(hotkeys.toggleTerminal)})` },
               { icon: GitBranch, active: gitPanelOpen, onClick: () => setGitPanelOpen(!gitPanelOpen), title: `Git (${formatHotkey(hotkeys.toggleGitPanel)})` },
@@ -281,7 +281,7 @@ export function App() {
       </div>
 
       <div className="flex flex-1 overflow-hidden" style={{ marginBottom: 4, marginLeft: 4, marginRight: 4 }}>
-        <Sidebar />
+        <ProjectsPanel />
         <GitPanel />
         <FileExplorer />
         <MainArea />

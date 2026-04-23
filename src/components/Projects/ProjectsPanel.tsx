@@ -5,7 +5,7 @@ import { ProjectItem } from "./ProjectItem";
 import { NewProjectModal } from "./NewProjectModal";
 import { useStore } from "../../store/useStore";
 
-export function Sidebar() {
+export function ProjectsPanel() {
   const { projects, sidebarOpen, sidebarWidth, setSidebarWidth } = useStore();
 
   const [showNewProject, setShowNewProject] = useState(false);
