@@ -104,7 +104,7 @@ export function AutomationForm({ projectId, automation, onClose }: Props) {
   const segBtn = (active: boolean) =>
     `flex-1 py-1 text-xs rounded transition-colors ${
       active
-        ? 'bg-[var(--c-accent)] text-white font-medium'
+        ? 'bg-[var(--c-accent)] text-[var(--c-bg-deep)] font-medium'
         : 'text-[var(--c-text-dim)] hover:text-[var(--c-text)]'
     }`;
 
@@ -320,7 +320,7 @@ export function AutomationForm({ projectId, automation, onClose }: Props) {
           <button
             type="submit"
             disabled={!name.trim() || !task.trim()}
-            className="flex-1 py-1.5 text-sm rounded bg-[var(--c-accent)] text-white font-medium disabled:opacity-40 hover:opacity-90 transition-opacity"
+            className="flex-1 py-1.5 text-sm rounded bg-[var(--c-accent)] text-[var(--c-bg-deep)] font-medium disabled:opacity-40 hover:opacity-90 transition-opacity"
           >
             {automation ? 'Save' : 'Create'}
           </button>

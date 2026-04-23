@@ -657,15 +657,17 @@ Two distinct accent button variants exist — use them in the right context.
 #### Segmented / Toggle Group
 
 ```tsx
-<div className="flex rounded border border-[var(--c-border)] overflow-hidden">
+<div className="flex gap-1 bg-[var(--c-bg-deep)] rounded p-0.5">
   {options.map(opt => (
     <button
       key={opt.value}
-      className={`flex-1 py-1 text-xs transition-colors ${
+      type="button"
+      className={`flex-1 py-1 text-xs rounded transition-colors ${
         active === opt.value
           ? "bg-[var(--c-accent)] text-[var(--c-bg-deep)] font-medium"
-          : "text-[var(--c-text-dim)] hover:bg-[var(--c-bg-hover)]"
+          : "text-[var(--c-text-dim)] hover:text-[var(--c-text)]"
       }`}
+      onClick={() => setActive(opt.value)}
     >
       {opt.label}
     </button>
