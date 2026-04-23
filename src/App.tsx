@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { listen } from "@tauri-apps/api/event";
-import { FileCode2, Folder, GitBranch, Loader2, PanelLeft, Settings, SquareTerminal, Zap } from "lucide-react";
+import { Clock, FileCode2, Folder, GitBranch, Loader2, PanelLeft, Settings, SquareTerminal } from "lucide-react";
 import { useSessionPersistence } from "./hooks/useSessionPersistence";
 import { usePtyEvents } from "./hooks/usePty";
 import { useTheme } from "./hooks/useTheme";
@@ -124,10 +124,14 @@ export function App() {
         e.preventDefault();
         setGitPanelOpen(!gitPanelOpen);
       }
+      if (matchesHotkey(e, hotkeys.toggleAutomationPanel)) {
+        e.preventDefault();
+        setAutomationPanelOpen(!automationPanelOpen);
+      }
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [sidebarOpen, setSidebarOpen, editorPanelOpen, setEditorPanelOpen, gitPanelOpen, setGitPanelOpen, hotkeys]);
+  }, [sidebarOpen, setSidebarOpen, editorPanelOpen, setEditorPanelOpen, gitPanelOpen, setGitPanelOpen, automationPanelOpen, setAutomationPanelOpen, hotkeys]);
 
   // ── Listen for OS window-close request (intercepted by Rust) ─────────────
   useEffect(() => {
@@ -235,7 +239,7 @@ export function App() {
               { icon: SquareTerminal, active: bottomPanelOpen, onClick: () => setBottomPanelOpen(!bottomPanelOpen), title: `Terminal (${formatHotkey(hotkeys.toggleTerminal)})` },
               { icon: GitBranch, active: gitPanelOpen, onClick: () => setGitPanelOpen(!gitPanelOpen), title: `Git (${formatHotkey(hotkeys.toggleGitPanel)})` },
               { icon: FileCode2, active: editorPanelOpen, onClick: () => setEditorPanelOpen(!editorPanelOpen), title: `Editor (${formatHotkey(hotkeys.toggleEditorPanel)})` },
-              { icon: Zap, active: automationPanelOpen, onClick: () => setAutomationPanelOpen(!automationPanelOpen), title: 'Automation' },
+              { icon: Clock, active: automationPanelOpen, onClick: () => setAutomationPanelOpen(!automationPanelOpen), title: `Automation (${formatHotkey(hotkeys.toggleAutomationPanel)})` },
             ] as const
           ).map(({ icon: Icon, active, onClick, title }) => (
             <button

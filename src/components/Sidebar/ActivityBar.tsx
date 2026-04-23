@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Folder, SquareTerminal, Settings, PanelLeft, GitBranch, Zap } from "lucide-react";
+import { Folder, SquareTerminal, Settings, PanelLeft, GitBranch, Clock } from "lucide-react";
 import { useStore } from "../../store/useStore";
 import { SettingsModal } from "../Settings/SettingsModal";
 import { UsageButton } from "./UsageButton";
@@ -27,10 +27,14 @@ export function ActivityBar() {
         e.preventDefault();
         setGitPanelOpen(!gitPanelOpen);
       }
+      if (matchesHotkey(e, hotkeys.toggleAutomationPanel)) {
+        e.preventDefault();
+        setAutomationPanelOpen(!automationPanelOpen);
+      }
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [sidebarOpen, setSidebarOpen, gitPanelOpen, setGitPanelOpen, hotkeys]);
+  }, [sidebarOpen, setSidebarOpen, gitPanelOpen, setGitPanelOpen, automationPanelOpen, setAutomationPanelOpen, hotkeys]);
 
   return (
     <>
@@ -89,14 +93,14 @@ export function ActivityBar() {
 
           <button
             onClick={() => setAutomationPanelOpen(!automationPanelOpen)}
-            title="Automation"
+            title={`Automation (${formatHotkey(hotkeys.toggleAutomationPanel)})`}
             className={`flex items-center justify-center w-9 h-9 rounded transition-colors ${
               automationPanelOpen
                 ? "text-[var(--c-accent)] bg-[var(--c-bg)]"
                 : "text-[var(--c-text-dim)] hover:text-[var(--c-text)] hover:bg-[var(--c-bg)]"
             }`}
           >
-            <Zap size={20} />
+            <Clock size={20} />
           </button>
 
         </div>
