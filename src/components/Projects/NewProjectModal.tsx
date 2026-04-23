@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import { FolderPlus } from "lucide-react";
+import ReactDOM from "react-dom";
+import { FolderOpen, FolderPlus, X } from "lucide-react";
 import { createDirAll, pickFolder, saveProjects } from "../../lib/tauri";
 import { useStore } from "../../store/useStore";
 import { v4 as uuidv4 } from "uuid";
@@ -12,18 +13,12 @@ export function NewProjectModal({ onClose }: Props) {
   const { projectsFolder, addProject, projects, selectProject } = useStore();
   const [name, setName] = useState("");
   const [parentFolder, setParentFolder] = useState(projectsFolder);
-
-  useEffect(() => {
-    setParentFolder(projectsFolder);
-  }, [projectsFolder]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
-  const overlayRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    inputRef.current?.focus();
-  }, []);
+  useEffect(() => { setParentFolder(projectsFolder); }, [projectsFolder]);
+  useEffect(() => { inputRef.current?.focus(); }, []);
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -43,8 +38,6 @@ export function NewProjectModal({ onClose }: Props) {
     const trimmed = name.trim();
     if (!trimmed) { setError("Project name is required"); return; }
     if (!parentFolder) { setError("Projects folder is not set"); return; }
-
-    // Sanitize: no slashes
     if (trimmed.includes("/") || trimmed.includes("\\")) {
       setError("Name must not contain slashes");
       return;
@@ -68,69 +61,56 @@ export function NewProjectModal({ onClose }: Props) {
     }
   };
 
-  return (
+  return ReactDOM.createPortal(
     <div
-      ref={overlayRef}
-      className="fixed inset-0 z-50 flex items-center justify-center"
-      style={{ background: "rgba(0,0,0,0.6)" }}
-      onMouseDown={(e) => { if (e.target === overlayRef.current) onClose(); }}
+      className="fixed inset-0 z-[500] flex items-center justify-center bg-black/60"
+      onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
-      <div
-        className="rounded-xl shadow-2xl overflow-hidden flex flex-col"
-        style={{
-          width: 400,
-          background: "var(--c-bg)",
-          border: "1px solid var(--c-border)",
-        }}
-      >
+      <div className="w-[420px] bg-[var(--c-bg)] border border-[var(--c-border)] rounded-xl shadow-2xl flex flex-col overflow-hidden">
         {/* Header */}
-        <div
-          className="flex items-center gap-2 px-4 py-3 border-b border-[var(--c-border)]"
-          style={{ background: "var(--c-bg-deep)" }}
-        >
-          <FolderPlus size={14} className="text-[var(--c-accent)]" />
-          <span className="text-sm font-semibold text-[var(--c-text-bright)]">New Project</span>
+        <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--c-border)]">
+          <div className="flex items-center gap-2">
+            <FolderPlus size={14} className="text-[var(--c-accent)] flex-shrink-0" />
+            <span className="text-sm font-medium text-[var(--c-text)]">New Project</span>
+          </div>
+          <button
+            onClick={onClose}
+            className="text-[var(--c-text-dim)] hover:text-[var(--c-text)] transition-colors"
+          >
+            <X size={16} />
+          </button>
         </div>
 
         {/* Body */}
-        <div className="p-4 flex flex-col gap-3">
-          {/* Project name */}
-          <div className="flex flex-col gap-1.5">
-            <label className="text-xs font-semibold text-[var(--c-text-dim)] uppercase tracking-wider">
-              Project name
-            </label>
+        <div className="p-4 flex flex-col gap-4">
+          <div className="flex flex-col gap-1">
+            <label className="text-xs text-[var(--c-text-dim)]">Project name</label>
             <input
               ref={inputRef}
               type="text"
               value={name}
               onChange={(e) => { setName(e.target.value); setError(null); }}
               placeholder="my-project"
-              className="px-3 py-1.5 text-sm rounded font-mono outline-none border border-[var(--c-border)] focus:border-[var(--c-accent)] transition-colors"
-              style={{ background: "var(--c-bg-deep)", color: "var(--c-text)" }}
+              className="w-full bg-[var(--c-bg-deep)] border border-[var(--c-border)] rounded px-2 py-1.5 text-sm text-[var(--c-text)] placeholder:text-[var(--c-text-dim)] focus:outline-none focus:border-[var(--c-accent)] transition-colors font-mono"
             />
           </div>
 
-          {/* Parent folder */}
-          <div className="flex flex-col gap-1.5">
-            <label className="text-xs font-semibold text-[var(--c-text-dim)] uppercase tracking-wider">
-              Parent folder
-            </label>
+          <div className="flex flex-col gap-1">
+            <label className="text-xs text-[var(--c-text-dim)]">Parent folder</label>
             <div className="flex gap-2">
               <input
                 type="text"
                 value={parentFolder}
                 onChange={(e) => { setParentFolder(e.target.value); setError(null); }}
                 placeholder="/Users/you/Projects"
-                className="flex-1 px-3 py-1.5 text-sm rounded font-mono outline-none border border-[var(--c-border)] focus:border-[var(--c-accent)] transition-colors"
-                style={{ background: "var(--c-bg-deep)", color: "var(--c-text)" }}
+                className="flex-1 bg-[var(--c-bg-deep)] border border-[var(--c-border)] rounded px-2 py-1.5 text-sm text-[var(--c-text)] placeholder:text-[var(--c-text-dim)] focus:outline-none focus:border-[var(--c-accent)] transition-colors font-mono"
               />
               <button
                 onClick={handlePickFolder}
                 title="Pick folder"
-                className="px-2 py-1.5 rounded border border-[var(--c-border)] hover:border-[var(--c-accent)] text-[var(--c-text-dim)] hover:text-[var(--c-text)] transition-colors"
-                style={{ background: "var(--c-bg-deep)" }}
+                className="px-2 py-1.5 rounded border border-[var(--c-border)] bg-[var(--c-bg-deep)] text-[var(--c-text-dim)] hover:text-[var(--c-text)] hover:border-[var(--c-accent)] transition-colors"
               >
-                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-.82-1.2A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13c0 1.1.9 2 2 2Z"/></svg>
+                <FolderOpen size={14} />
               </button>
             </div>
             {parentFolder && name.trim() && (
@@ -146,27 +126,23 @@ export function NewProjectModal({ onClose }: Props) {
         </div>
 
         {/* Footer */}
-        <div
-          className="flex justify-end gap-2 px-4 py-3 border-t border-[var(--c-border)]"
-          style={{ background: "var(--c-bg-deep)" }}
-        >
+        <div className="flex gap-2 px-4 py-3 border-t border-[var(--c-border)]">
           <button
             onClick={onClose}
-            className="px-3 py-1.5 text-sm rounded border border-[var(--c-border)] text-[var(--c-text-dim)] hover:text-[var(--c-text)] transition-colors"
-            style={{ background: "var(--c-bg)" }}
+            className="flex-1 py-1.5 text-sm rounded border border-[var(--c-border)] text-[var(--c-text-dim)] hover:text-[var(--c-text)] transition-colors"
           >
             Cancel
           </button>
           <button
             onClick={handleCreate}
             disabled={loading || !name.trim()}
-            className="px-3 py-1.5 text-sm rounded font-medium transition-colors disabled:opacity-40"
-            style={{ background: "var(--c-accent)", color: "#000" }}
+            className="flex-1 py-1.5 text-sm rounded font-medium bg-[var(--c-accent)] text-[var(--c-bg-deep)] hover:opacity-90 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed"
           >
             {loading ? "Creating…" : "Create Project"}
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

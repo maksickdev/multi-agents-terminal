@@ -32,6 +32,24 @@ refactor(git): expand history section to fill remaining panel space
 chore: update dependencies
 ```
 
+## Design System
+
+All UI work must follow the unified design system documented in [`DESIGN.md`](./DESIGN.md).
+
+**Before building or modifying any UI component:**
+- Read the relevant section in `DESIGN.md` for the component type (panel, modal, button, input, etc.)
+- Use only the CSS variables defined there (`var(--c-*)`) — never hardcode hex colors
+- Match the exact spacing, font sizes, and border radius values from the spec
+
+**Key rules at a glance:**
+- All colors via CSS variables: `var(--c-bg)`, `var(--c-accent)`, `var(--c-danger)`, etc.
+- The app has 3 switchable themes (Tokyo Night, Grid Mint, Dawn) — components must work in all three
+- Panel headers are always `h-8` (32px); tab bars are always `h-8`
+- Standard text sizes: `text-xs` (12px) for UI, `text-sm` (14px) for inputs/modals
+- Icons from `lucide-react` only; sizes 13–20px depending on context
+- Modals via `ReactDOM.createPortal` to `document.body`; context menus at `z-[9999]`
+- No `display: none` on terminal-containing elements — use `visibility: hidden` or `height: 0`
+
 ## Commands
 
 ```bash

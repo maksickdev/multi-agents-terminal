@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import ReactDOM from "react-dom";
 import { useStore } from "../../store/useStore";
 import { themes } from "../../lib/themes";
 import { X, FolderOpen, RotateCcw } from "lucide-react";
@@ -129,25 +130,25 @@ export function SettingsModal({ onClose }: Props) {
     }
   }
 
-  return (
+  return ReactDOM.createPortal(
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
       onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
-      <div className="bg-[var(--c-bg-elevated)] border border-[var(--c-border)] rounded-xl shadow-2xl w-[480px] flex flex-col overflow-hidden max-h-[90vh]">
+      <div className="bg-[var(--c-bg)] border border-[var(--c-border)] rounded-xl shadow-2xl w-[480px] flex flex-col overflow-hidden max-h-[90vh]">
         {/* Header */}
-        <div className="flex items-center justify-between px-4 h-10 border-b border-[var(--c-border)] flex-shrink-0">
-          <span className="text-sm font-semibold text-[var(--c-text-bright)]">Settings</span>
+        <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--c-border)] flex-shrink-0">
+          <span className="text-sm font-medium text-[var(--c-text)]">Settings</span>
           <button
             onClick={onClose}
-            className="text-[var(--c-text-dim)] hover:text-[var(--c-text-bright)] transition-colors"
+            className="text-[var(--c-text-dim)] hover:text-[var(--c-text)] transition-colors"
           >
-            <X size={15} />
+            <X size={16} />
           </button>
         </div>
 
         {/* Content */}
-        <div className="p-4 flex flex-col gap-5 overflow-y-auto">
+        <div className="p-4 flex flex-col gap-4 overflow-y-auto">
 
           {/* Projects folder */}
           <div className="flex flex-col gap-2">
@@ -272,12 +273,13 @@ export function SettingsModal({ onClose }: Props) {
         <div className="flex justify-end px-4 py-3 border-t border-[var(--c-border)] flex-shrink-0">
           <button
             onClick={onClose}
-            className="px-4 py-1.5 text-xs rounded bg-[var(--c-bg-hover)] text-[var(--c-text)] hover:text-[var(--c-text-bright)] transition-colors"
+            className="px-4 py-1.5 text-sm rounded font-medium bg-[var(--c-accent)] text-[var(--c-bg-deep)] hover:opacity-90 transition-opacity"
           >
             Done
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

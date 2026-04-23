@@ -38,7 +38,7 @@ export function ConfirmModal({
       style={{ zIndex: 500 }}
       onMouseDown={(e) => { if (e.target === e.currentTarget) onCancel(); }}
     >
-      <div className="bg-[var(--c-bg-elevated)] border border-[var(--c-muted)] rounded-lg shadow-2xl p-5 w-80 flex flex-col gap-4">
+      <div className="bg-[var(--c-bg)] border border-[var(--c-border)] rounded-lg shadow-2xl p-5 w-80 flex flex-col gap-4">
         <div className="flex flex-col gap-1">
           <span className="text-sm font-semibold text-[var(--c-text-bright)]">{title}</span>
           <span className="text-xs text-[var(--c-text)] leading-relaxed">{message}</span>
@@ -47,7 +47,7 @@ export function ConfirmModal({
         <div className="flex justify-end gap-2">
           <button
             onClick={onCancel}
-            className="px-3 py-1.5 text-xs rounded bg-[var(--c-bg-hover)] text-[var(--c-text)] hover:text-[var(--c-text-bright)] transition-colors"
+            className="px-3 py-1.5 text-xs rounded border border-[var(--c-border)] text-[var(--c-text-dim)] hover:text-[var(--c-text)] hover:bg-[var(--c-bg-hover)] transition-colors"
           >
             Cancel
           </button>

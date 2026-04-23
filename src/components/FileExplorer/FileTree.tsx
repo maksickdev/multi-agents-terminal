@@ -44,7 +44,7 @@ export function FileTree({ project, rootPath, depth = 0, onRefreshRoot }: Props)
   );
 
   if (loading && entries.length === 0) {
-    return <div className="text-[#565f89] text-xs px-3 py-0.5">…</div>;
+    return <div className="text-[var(--c-text-dim)] text-xs px-3 py-0.5">…</div>;
   }
 
   return (
@@ -66,7 +66,7 @@ export function FileTree({ project, rootPath, depth = 0, onRefreshRoot }: Props)
       ))}
 
       {entries.length === 0 && !loading && depth === 0 && (
-        <div className="text-[#414868] text-xs px-3 py-1 italic">Empty folder</div>
+        <div className="text-[var(--c-muted)] text-xs px-3 py-1 italic">Empty folder</div>
       )}
     </div>
   );

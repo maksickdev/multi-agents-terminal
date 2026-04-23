@@ -1,13 +1,8 @@
 import { useEffect, useRef, useState } from "react";
-import { Globe, Loader2 } from "lucide-react";
+import ReactDOM from "react-dom";
+import { Globe, Loader2, X } from "lucide-react";
 import { gitLsRemote } from "../../lib/tauri";
 
-/** Accepted git remote URL patterns:
- *  - https://github.com/user/repo.git
- *  - git@github.com:user/repo.git
- *  - ssh://git@github.com/user/repo.git
- *  - git://github.com/user/repo.git
- */
 const GIT_REMOTE_URL_RE = /^(https?:\/\/.+|git@[\w.-]+:.+|ssh:\/\/.+|git:\/\/.+)/;
 
 function validateUrl(raw: string): string | null {
@@ -19,7 +14,6 @@ function validateUrl(raw: string): string | null {
 }
 
 interface Props {
-  /** Pre-fill name with "origin" when no remotes exist yet */
   defaultName?: string;
   loading: boolean;
   onConfirm: (name: string, url: string) => void;
@@ -36,7 +30,6 @@ export function GitAddRemoteModal({ defaultName = "", loading, onConfirm, onCanc
   const nameRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    // Focus name if empty, else url
     (name ? urlRef : nameRef).current?.focus();
   }, []);
 
@@ -54,7 +47,6 @@ export function GitAddRemoteModal({ defaultName = "", loading, onConfirm, onCanc
     const fmtErr = validateUrl(u);
     if (fmtErr) { setUrlError(fmtErr); setUrlWarning(null); return; }
 
-    // If user confirmed despite the warning — add without re-checking
     if (force) { onConfirm(n, u); return; }
 
     setChecking(true);
@@ -66,10 +58,8 @@ export function GitAddRemoteModal({ defaultName = "", loading, onConfirm, onCanc
     } catch (e) {
       const msg = String(e);
       if (msg.startsWith("AUTH_REQUIRED:")) {
-        // Clearly auth-gated — allow adding directly
         onConfirm(n, u);
       } else {
-        // GitHub returns "not found" for private repos too — show warning, let user decide
         setUrlWarning("Could not reach the repository. It may be private or require authentication.");
       }
     } finally {
@@ -77,31 +67,30 @@ export function GitAddRemoteModal({ defaultName = "", loading, onConfirm, onCanc
     }
   };
 
-  return (
+  return ReactDOM.createPortal(
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center"
-      style={{ background: "rgba(0,0,0,0.6)" }}
+      className="fixed inset-0 z-[500] flex items-center justify-center bg-black/60"
       onMouseDown={(e) => { if (e.target === e.currentTarget) onCancel(); }}
     >
-      <div
-        className="rounded-lg shadow-2xl overflow-hidden"
-        style={{ width: 400, background: "var(--c-bg)", border: "1px solid var(--c-border)" }}
-      >
+      <div className="w-[420px] bg-[var(--c-bg)] border border-[var(--c-border)] rounded-xl shadow-2xl flex flex-col overflow-hidden">
         {/* Header */}
-        <div
-          className="flex items-center gap-2 px-4 py-3 border-b border-[var(--c-border)]"
-          style={{ background: "var(--c-bg-deep)" }}
-        >
-          <Globe size={14} className="text-[var(--c-accent)] flex-shrink-0" />
-          <span className="text-sm font-semibold text-[var(--c-text-bright)]">Add Remote</span>
+        <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--c-border)]">
+          <div className="flex items-center gap-2">
+            <Globe size={14} className="text-[var(--c-accent)] flex-shrink-0" />
+            <span className="text-sm font-medium text-[var(--c-text)]">Add Remote</span>
+          </div>
+          <button
+            onClick={onCancel}
+            className="text-[var(--c-text-dim)] hover:text-[var(--c-text)] transition-colors"
+          >
+            <X size={16} />
+          </button>
         </div>
 
-        {/* Form */}
-        <div className="p-4 flex flex-col gap-3">
+        {/* Body */}
+        <div className="p-4 flex flex-col gap-4">
           <div className="flex flex-col gap-1">
-            <label className="text-[10px] uppercase tracking-wider font-semibold text-[var(--c-text-dim)]">
-              Remote name
-            </label>
+            <label className="text-xs text-[var(--c-text-dim)]">Remote name</label>
             <input
               ref={nameRef}
               value={name}
@@ -109,14 +98,12 @@ export function GitAddRemoteModal({ defaultName = "", loading, onConfirm, onCanc
               onKeyDown={(e) => { if (e.key === "Enter") urlRef.current?.focus(); }}
               placeholder="origin"
               spellCheck={false}
-              className="w-full text-xs bg-[var(--c-bg-elevated)] text-[var(--c-text-bright)] rounded px-2 py-1.5 outline-none border border-[var(--c-border)] focus:border-[var(--c-accent)] placeholder:text-[var(--c-muted)] transition-colors"
+              className="w-full bg-[var(--c-bg-deep)] border border-[var(--c-border)] rounded px-2 py-1.5 text-sm text-[var(--c-text)] placeholder:text-[var(--c-text-dim)] focus:outline-none focus:border-[var(--c-accent)] transition-colors"
             />
           </div>
 
           <div className="flex flex-col gap-1">
-            <label className="text-[10px] uppercase tracking-wider font-semibold text-[var(--c-text-dim)]">
-              URL
-            </label>
+            <label className="text-xs text-[var(--c-text-dim)]">URL</label>
             <input
               ref={urlRef}
               value={url}
@@ -124,19 +111,19 @@ export function GitAddRemoteModal({ defaultName = "", loading, onConfirm, onCanc
               onKeyDown={(e) => { if (e.key === "Enter") submit(false); }}
               placeholder="https://github.com/user/repo.git"
               spellCheck={false}
-              className={`w-full text-xs bg-[var(--c-bg-elevated)] text-[var(--c-text-bright)] rounded px-2 py-1.5 outline-none border placeholder:text-[var(--c-muted)] transition-colors font-mono ${
-                urlError ? "border-[var(--c-danger)]" : urlWarning ? "border-yellow-500/50" : "border-[var(--c-border)] focus:border-[var(--c-accent)]"
+              className={`w-full bg-[var(--c-bg-deep)] rounded px-2 py-1.5 text-sm text-[var(--c-text)] placeholder:text-[var(--c-text-dim)] focus:outline-none transition-colors font-mono border ${
+                urlError ? "border-[var(--c-danger)]" : urlWarning ? "border-[var(--c-accent-yellow)]/50" : "border-[var(--c-border)] focus:border-[var(--c-accent)]"
               }`}
             />
             {urlError && (
               <p className="text-[10px] text-[var(--c-danger)] leading-tight">{urlError}</p>
             )}
             {urlWarning && (
-              <div className="flex flex-col gap-1.5 rounded px-2 py-1.5 bg-yellow-500/10 border border-yellow-500/30">
-                <p className="text-[10px] text-yellow-400 leading-tight">{urlWarning}</p>
+              <div className="flex flex-col gap-1.5 rounded px-2 py-1.5 bg-[var(--c-accent-yellow)]/10 border border-[var(--c-accent-yellow)]/30">
+                <p className="text-[10px] text-[var(--c-accent-yellow)] leading-tight">{urlWarning}</p>
                 <button
                   onClick={() => submit(true)}
-                  className="self-start text-[10px] font-medium text-yellow-400 hover:text-yellow-300 underline underline-offset-2 transition-colors"
+                  className="self-start text-[10px] font-medium text-[var(--c-accent-yellow)] hover:opacity-80 underline underline-offset-2 transition-opacity"
                 >
                   Add anyway
                 </button>
@@ -146,28 +133,24 @@ export function GitAddRemoteModal({ defaultName = "", loading, onConfirm, onCanc
         </div>
 
         {/* Footer */}
-        <div
-          className="flex items-center justify-end gap-2 px-4 py-3 border-t border-[var(--c-border)]"
-          style={{ background: "var(--c-bg-deep)" }}
-        >
+        <div className="flex gap-2 px-4 py-3 border-t border-[var(--c-border)]">
           <button
             onClick={onCancel}
-            className="px-3 py-1.5 rounded text-xs text-[var(--c-text-dim)] hover:text-[var(--c-text-bright)] hover:bg-[var(--c-bg-elevated)] transition-colors"
+            className="flex-1 py-1.5 text-sm rounded border border-[var(--c-border)] text-[var(--c-text-dim)] hover:text-[var(--c-text)] transition-colors"
           >
             Cancel
           </button>
           <button
             onClick={() => submit(false)}
             disabled={!name.trim() || !url.trim() || loading || checking}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed bg-[var(--c-accent)]/20 text-[var(--c-accent)] hover:bg-[var(--c-accent)]/30"
+            className="flex-1 flex items-center justify-center gap-1.5 py-1.5 text-sm rounded font-medium bg-[var(--c-accent)] text-[var(--c-bg-deep)] hover:opacity-90 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed"
           >
-            {checking
-              ? <Loader2 size={11} className="animate-spin" />
-              : <Globe size={11} />}
+            {checking ? <Loader2 size={13} className="animate-spin" /> : <Globe size={13} />}
             {checking ? "Checking…" : loading ? "Adding…" : "Add Remote"}
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

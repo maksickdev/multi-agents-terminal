@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import ReactDOM from "react-dom";
 import { X } from "lucide-react";
 import { GitDiffView } from "./GitDiffView";
 
@@ -161,26 +162,20 @@ export function GitDiffModal({
   const activeKey = fileKey(activeFile);
 
   // ── render ───────────────────────────────────────────────────────────────────
-  return (
+  return ReactDOM.createPortal(
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center"
-      style={{ background: "rgba(0,0,0,0.6)" }}
+      className="fixed inset-0 z-[500] flex items-center justify-center bg-black/60"
       onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
       <div
-        className="flex flex-col rounded-lg shadow-2xl overflow-hidden"
+        className="flex flex-col rounded-xl shadow-2xl overflow-hidden bg-[var(--c-bg)] border border-[var(--c-border)]"
         style={{
           width: "min(1000px, 92vw)",
           height: "min(700px, 85vh)",
-          background: "var(--c-bg)",
-          border: "1px solid var(--c-border)",
         }}
       >
         {/* ── Header ── */}
-        <div
-          className="flex items-center justify-between px-4 h-10 flex-shrink-0 gap-3"
-          style={{ background: "var(--c-bg-deep)", borderBottom: "1px solid var(--c-border)" }}
-        >
+        <div className="flex items-center justify-between px-4 h-10 flex-shrink-0 gap-3 border-b border-[var(--c-border)]">
           <div className="flex items-center gap-2 min-w-0 flex-1">
             {commitInfo ? (
               /* Commit mode */
@@ -220,9 +215,9 @@ export function GitDiffModal({
           </div>
           <button
             onClick={onClose}
-            className="flex-shrink-0 p-1.5 rounded text-[var(--c-text-dim)] hover:text-[var(--c-text-bright)] hover:bg-[var(--c-bg-elevated)] transition-colors"
+            className="flex-shrink-0 p-1 rounded text-[var(--c-text-dim)] hover:text-[var(--c-text)] hover:bg-[var(--c-bg-hover)] transition-colors"
           >
-            <X size={15} />
+            <X size={14} />
           </button>
         </div>
 
@@ -294,6 +289,7 @@ export function GitDiffModal({
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
