@@ -1,4 +1,4 @@
-import { Pencil, Trash2, Play, Pause } from 'lucide-react';
+import { Pencil, Trash2, Play, Pause, Clock } from 'lucide-react';
 import { useAutomationStore } from '../../store/useAutomationStore';
 import type { Automation } from '../../types/automation';
 
@@ -50,12 +50,9 @@ export function AutomationList({ automations, onEdit }: Props) {
 
   if (automations.length === 0) {
     return (
-      <div className="flex-1 flex items-center justify-center">
-        <p className="text-xs text-[var(--c-text-dim)] text-center px-4">
-          No automations yet.
-          <br />
-          Click + New to create one.
-        </p>
+      <div className="flex-1 flex flex-col items-center justify-center gap-2 text-[var(--c-text-dim)] select-none">
+        <Clock size={28} className="opacity-30" />
+        <span className="text-xs opacity-50">No automations yet</span>
       </div>
     );
   }
