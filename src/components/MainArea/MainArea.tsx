@@ -98,7 +98,7 @@ export function MainArea() {
                         : { position: "absolute", inset: 0, display: "flex", flexDirection: "column", visibility: "hidden", pointerEvents: "none" }
                     }
                   >
-                    <TerminalGrid agents={pAgents} activeAgentId={pActiveId} />
+                    <TerminalGrid agents={pAgents} activeAgentId={pActiveId} isProjectActive={isActive} />
                   </div>
                 );
               })}

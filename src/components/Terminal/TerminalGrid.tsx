@@ -4,9 +4,10 @@ import { TerminalPane } from "./TerminalPane";
 interface Props {
   agents: Agent[];
   activeAgentId: string | null;
+  isProjectActive: boolean;
 }
 
-export function TerminalGrid({ agents, activeAgentId }: Props) {
+export function TerminalGrid({ agents, activeAgentId, isProjectActive }: Props) {
   return (
     <div className="relative flex-1 overflow-hidden">
       {agents.map((agent) => (
@@ -25,7 +26,7 @@ export function TerminalGrid({ agents, activeAgentId }: Props) {
         >
           <TerminalPane
             agentId={agent.id}
-            isVisible={agent.id === activeAgentId}
+            isVisible={isProjectActive && agent.id === activeAgentId}
           />
         </div>
       ))}
