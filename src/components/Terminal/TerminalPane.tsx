@@ -13,6 +13,14 @@ export function TerminalPane({ agentId, isVisible }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const sendInput = useAgentInput(agentId);
   const inputListenerRef = useRef<{ dispose: () => void } | null>(null);
+  const lastSentDimsRef = useRef<{ rows: number; cols: number }>({ rows: -1, cols: -1 });
+
+  const sendResizeIfChanged = useCallback((rows: number, cols: number) => {
+    const last = lastSentDimsRef.current;
+    if (last.rows === rows && last.cols === cols) return;
+    lastSentDimsRef.current = { rows, cols };
+    resizeAgent(agentId, rows, cols).catch(() => {});
+  }, [agentId]);
 
   // Custom scrollbar — direct DOM refs, no React state (avoids re-render lag)
   const trackRef = useRef<HTMLDivElement>(null);
@@ -70,7 +78,7 @@ export function TerminalPane({ agentId, isVisible }: Props) {
     const raf = requestAnimationFrame(() => {
       ptyManager.fit(agentId);
       const dims = ptyManager.getDimensions(agentId);
-      if (dims) resizeAgent(agentId, dims.rows, dims.cols).catch(() => {});
+      if (dims) sendResizeIfChanged(dims.rows, dims.cols);
       updateScrollbar(agentId);
     });
 
@@ -97,28 +105,40 @@ export function TerminalPane({ agentId, isVisible }: Props) {
     requestAnimationFrame(() => {
       ptyManager.fit(agentId);
       const dims = ptyManager.getDimensions(agentId);
-      if (dims) resizeAgent(agentId, dims.rows, dims.cols).catch(() => {});
+      if (dims) sendResizeIfChanged(dims.rows, dims.cols);
       updateScrollbar(agentId);
     });
-  }, [isVisible, agentId]);
+  }, [isVisible, agentId, sendResizeIfChanged]);
 
   useEffect(() => {
     if (!containerRef.current) return;
     let rafId: number | null = null;
+    let sigwinchTimer: ReturnType<typeof setTimeout> | null = null;
     const observer = new ResizeObserver(() => {
       if (!isVisible) return;
+      // xterm reflow on every frame for smooth visual feedback
       if (rafId !== null) cancelAnimationFrame(rafId);
       rafId = requestAnimationFrame(() => {
         rafId = null;
         ptyManager.fit(agentId);
-        const dims = ptyManager.getDimensions(agentId);
-        if (dims) resizeAgent(agentId, dims.rows, dims.cols).catch(() => {});
         updateScrollbar(agentId);
       });
+      // SIGWINCH only after the user stops dragging — Claude's TUI redraw
+      // is heavy and accumulates duplicate splash output if fired per frame.
+      if (sigwinchTimer !== null) clearTimeout(sigwinchTimer);
+      sigwinchTimer = setTimeout(() => {
+        sigwinchTimer = null;
+        const dims = ptyManager.getDimensions(agentId);
+        if (dims) sendResizeIfChanged(dims.rows, dims.cols);
+      }, 150);
     });
     observer.observe(containerRef.current);
-    return () => { observer.disconnect(); if (rafId !== null) cancelAnimationFrame(rafId); };
-  }, [agentId, isVisible]);
+    return () => {
+      observer.disconnect();
+      if (rafId !== null) cancelAnimationFrame(rafId);
+      if (sigwinchTimer !== null) clearTimeout(sigwinchTimer);
+    };
+  }, [agentId, isVisible, sendResizeIfChanged]);
 
   const handleThumbMouseDown = (e: React.MouseEvent) => {
     e.preventDefault();
