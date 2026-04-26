@@ -51,14 +51,6 @@ export const spawnAgent = (
 /** Forcefully exits the application (called after sessions are saved). */
 export const exitApp = () => invoke<void>("exit_app");
 
-/** Returns the current byte-length of the scrollback file for `agentId`. */
-export const getScrollbackSize = (agentId: string) =>
-  invoke<number>("get_scrollback_size", { agentId });
-
-/** Truncates the scrollback file to `size` bytes (strips /status I/O). */
-export const truncateScrollback = (agentId: string, size: number) =>
-  invoke<void>("truncate_scrollback", { agentId, size });
-
 /** Returns true if the Claude session file has actual conversation content.
  *  A session with only the initial snapshot line cannot be resumed. */
 export const isSessionNonempty = (sessionId: string, cwd: string) =>
@@ -92,13 +84,6 @@ export const loadAgents = () => invoke<AgentMeta[]>("load_agents");
 
 export const saveAgents = (agents: AgentMeta[]) =>
   invoke<void>("save_agents", { agents });
-
-/** Returns base64-encoded raw PTY bytes, or "" if no scrollback file exists. */
-export const loadScrollback = (agentId: string) =>
-  invoke<string>("load_scrollback", { agentId });
-
-export const deleteScrollback = (agentId: string) =>
-  invoke<void>("delete_scrollback", { agentId });
 
 export const saveProjects = (projects: Project[]) =>
   invoke<void>("save_projects", { projects });

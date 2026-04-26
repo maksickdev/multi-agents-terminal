@@ -5,17 +5,16 @@ import {
   saveProjects,
   loadAgents,
   saveAgents,
-  loadScrollback,
   spawnAgent,
   type AgentMeta,
 } from "../lib/tauri";
 import { useStore, type Agent } from "../store/useStore";
-import * as ptyManager from "../lib/ptyManager";
 
 /**
  * Handles full session persistence:
  *  - Loads projects and agents (in saved order) from disk on mount
- *  - Replays scrollback into each terminal before the new PTY starts
+ *  - Respawns each agent via `claude -r <session_id>` so Claude itself
+ *    restores the conversation
  *  - Saves projects and agents (in tab order) whenever they change
  *
  * @param pausedRef  When `pausedRef.current === true` the auto-save is
@@ -37,17 +36,6 @@ export function useSessionPersistence(pausedRef: React.MutableRefObject<boolean>
 
       for (const meta of savedAgents) {
         if (!projectIds.has(meta.project_id)) continue;
-
-        // Stage scrollback so it replays when the terminal mounts
-        try {
-          const b64 = await loadScrollback(meta.id);
-          if (b64) {
-            const bytes = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
-            ptyManager.setPendingScrollback(meta.id, bytes);
-          }
-        } catch (e) {
-          console.warn("[session] failed to load scrollback for", meta.id, e);
-        }
 
         // Spawn a fresh PTY reusing the same agent ID (and Claude session ID if saved)
         try {

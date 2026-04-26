@@ -69,7 +69,7 @@ cargo check --manifest-path src-tauri/Cargo.toml
 npm run tauri build
 ```
 
-Config files live at `~/Library/Application Support/multi-agents-terminal/` (projects.json, agents.json, scrollback/).
+Config files live at `~/Library/Application Support/multi-agents-terminal/` (projects.json, agents.json). Conversation history is restored entirely by Claude itself via `claude -r <session_id>` — the app no longer persists raw PTY scrollback.
 
 ## Architecture
 
@@ -91,11 +91,11 @@ PTY process output
 
 ### Rust backend (`src-tauri/src/`)
 
-- **`state/app_state.rs`** — `AppState` holds `Arc<Mutex<PtyManager>>`, config path, scrollback dir. All Tauri commands receive it via `State<'_, AppState>`.
+- **`state/app_state.rs`** — `AppState` holds `Arc<Mutex<PtyManager>>` and the config path. All Tauri commands receive it via `State<'_, AppState>`.
 - **`pty/session.rs`** — `AgentSession`: master PTY, writer, child process, atomic status (`STATUS_ACTIVE/WAITING/EXITED`), project_id, cwd.
 - **`pty/manager.rs`** — `PtyManager`: `HashMap<agent_id, AgentSession>`. Methods: insert, remove, write, resize, kill, get_status_u8.
-- **`pty/reader.rs`** — `spawn_reader()`: blocking task that reads PTY → appends to scrollback file → emits `pty-output` event. Emits `agent-status: waiting` after 2 s silence, `agent-exited` on EOF/error.
-- **`commands/pty_commands.rs`** — all PTY Tauri commands. `spawn_agent` runs `claude` (or `claude -r <session_id>` for resume), located via `zsh -il`. `spawn_shell` runs `$SHELL` with inherited `LANG`/`LC_ALL`/`LC_CTYPE`. Both accept optional `rows`/`cols` and `agent_id` (for session restore). Scrollback files are `{scrollback_dir}/{agent_id}.bin`. Additional commands: `get_scrollback_size`, `truncate_scrollback`, `is_session_nonempty`, `get_agent_session_id`, `exit_app`.
+- **`pty/reader.rs`** — `spawn_reader()`: blocking task that reads PTY → emits `pty-output` event. Emits `agent-status: waiting` after 2 s silence, `agent-exited` on EOF/error. No on-disk persistence — output is only forwarded to xterm via Tauri events.
+- **`commands/pty_commands.rs`** — all PTY Tauri commands. `spawn_agent` runs `claude` (or `claude -r <session_id>` for resume), located via `zsh -il`. `spawn_shell` runs `$SHELL` with inherited `LANG`/`LC_ALL`/`LC_CTYPE`. Both accept optional `rows`/`cols` and `agent_id` (for session restore). Additional commands: `is_session_nonempty`, `get_agent_session_id`, `exit_app`.
 - **`commands/project_commands.rs`** — load/save projects.json (atomic rename), folder picker.
 - **`commands/file_commands.rs`** — 8 FS commands: `read_dir`, `read_file_text`, `write_file_text`, `delete_path`, `create_file`, `create_dir_all`, `rename_path`, `copy_path`. `read_dir` sorts dirs first (alphabetical), then files.
 
@@ -205,18 +205,16 @@ xterm cannot be re-opened once closed. Two patterns used:
 
 **Session persistence (`src/hooks/useSessionPersistence.ts`)**
 
-On mount: loads projects + agents.json → stages scrollback via `ptyManager.setPendingScrollback()` → respawns each agent PTY reusing the saved `agent_id`; if `session_id` is present spawns as `claude -r <session_id>` to resume the conversation → adds to store. On change: saves projects and agents (in tab order, excluding `exited`) to disk. Accepts a `pausedRef: MutableRefObject<boolean>` — when true, skips auto-save (used during the close sequence to prevent race conditions).
+On mount: loads projects + agents.json → respawns each agent PTY reusing the saved `agent_id`; if `session_id` is present spawns as `claude -r <session_id>` so Claude itself restores the conversation → adds to store. On change: saves projects and agents (in tab order, excluding `exited`) to disk. Accepts a `pausedRef: MutableRefObject<boolean>` — when true, skips auto-save (used during the close sequence to prevent race conditions).
 
 **Close sequence (App.tsx)**
 
 X / Cmd+Q → Rust intercepts `CloseRequested` / `ExitRequested` → emits `"close-requested"` → frontend shows `ConfirmModal` → on confirm:
 1. `savingRef.current = true` — pauses `useSessionPersistence` auto-save
-2. Records scrollback file sizes for all active Claude agents
-3. Sends `/status\r` to each agent in parallel, listens for `pty-output` events, strips ANSI, matches `Session\s*ID:\s*<uuid>` (5 s timeout)
-4. Validates each UUID via `is_session_nonempty` — skips empty sessions Claude cannot resume
-5. Truncates each scrollback file back to the pre-`/status` size (removes the `/status` I/O so it doesn't replay on next launch)
-6. Saves `agents.json` with `session_id` fields
-7. Calls `exit_app` → sets `confirmed_exit` flag → `app.exit(0)`
+2. Sends `/status\r` to each Claude agent in parallel, listens for `pty-output` events, strips ANSI, matches `Session\s*ID:\s*<uuid>` (5 s timeout)
+3. Validates each UUID via `is_session_nonempty` — skips empty sessions Claude cannot resume
+4. Saves `agents.json` with `session_id` fields
+5. Calls `exit_app` → sets `confirmed_exit` flag → `app.exit(0)`
 
 **PTY events (`src/hooks/usePty.ts`)**
 
@@ -235,7 +233,7 @@ Uses **mouse events** (not HTML5 DnD — unreliable in WKWebView). `draggingRef`
 - `agentOrder` must be subscribed in any component that renders tab order — add it to `useStore()` destructuring to trigger re-renders on reorder (see `MainArea`).
 - `spawn_agent` / `spawn_shell` both require PTY size at spawn time — measure the container before calling, otherwise Claude TUI wraps incorrectly.
 - Shell PTY (`spawn_shell`) inherits `LANG`/`LC_ALL`/`LC_CTYPE` from environment so zsh ZLE handles multi-byte UTF-8 correctly.
-- Scrollback files are raw PTY bytes (not text) — replayed through xterm for session restore.
+- Conversation restore is handled entirely by Claude via `claude -r <session_id>` — the app does not store raw PTY scrollback, so on respawn the terminal starts empty until Claude redraws its UI.
 - **Stale closure in CodeMirror**: keymap and updateListener are created once on mount. Always use `useRef` for `onSave`/`onChange` callbacks and update the ref via `useEffect` (no deps) — never pass callbacks directly into the keymap closure.
 - **Vite HMR gotcha**: saving any file from `src/` or `index.html` via the editor triggers Vite HMR in dev mode, reloading the app. This does not affect production builds.
 - `EditorPane` filters `openFiles` by `selectedProjectId` — only files of the active project are shown. All project files remain in the store and reappear when switching back.

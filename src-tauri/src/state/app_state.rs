@@ -56,7 +56,6 @@ pub struct AgentStatusPayload {
 pub struct AppState {
     pub pty_manager: Arc<Mutex<PtyManager>>,
     pub config_path: PathBuf,
-    pub scrollback_dir: PathBuf,
     /// Set to true by `exit_app` so that the CloseRequested / ExitRequested
     /// handlers know the exit was initiated by us (not by the OS), and should
     /// not be prevented.
@@ -70,10 +69,8 @@ pub struct AppState {
 
 impl AppState {
     pub fn new(config_path: PathBuf) -> Self {
-        let scrollback_dir = config_path.join("scrollback");
         Self {
             pty_manager: Arc::new(Mutex::new(PtyManager::new())),
-            scrollback_dir,
             config_path,
             confirmed_exit: Arc::new(AtomicBool::new(false)),
             session_snapshots: Arc::new(Mutex::new(HashMap::new())),

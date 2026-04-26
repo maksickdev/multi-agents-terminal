@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react';
 import { listen } from '@tauri-apps/api/event';
 import { useStore } from '../store/useStore';
 import { useAutomationStore, computeNextRunAt, shouldRun } from '../store/useAutomationStore';
-import { spawnAgent, writeToAgent, killAgent, deleteScrollback } from '../lib/tauri';
+import { spawnAgent, writeToAgent, killAgent } from '../lib/tauri';
 import type { Automation } from '../types/automation';
 import type { Agent } from '../store/useStore';
 import type { Project } from '../lib/tauri';
@@ -125,7 +125,6 @@ async function runAutomation(
       unlistenExited?.();
       // Kill the process if still running (Claude doesn't self-exit after finishing a task)
       killAgent(agentId).catch(() => {});
-      deleteScrollback(agentId).catch(() => {});
       actions.removeAgent(agentId);
       actions.updateLog(logId, { status, completedAt: new Date().toISOString() });
     };

@@ -264,10 +264,6 @@ pub async fn spawn_agent(
     let snapshot = snapshot_claude_sessions(&cwd);
     state.session_snapshots.lock().await.insert(agent_id.clone(), snapshot.clone());
 
-    std::fs::create_dir_all(&state.scrollback_dir)
-        .map_err(|e| format!("create scrollback dir: {e}"))?;
-    let scrollback_path = state.scrollback_dir.join(format!("{}.bin", agent_id));
-
     let (master, writer, child, reader) =
         make_pty_pair_and_spawn(&cwd, rows, cols, session_id.as_deref())?;
     let session = AgentSession::new(master, writer, child, project_id, cwd.clone());
@@ -278,7 +274,7 @@ pub async fn spawn_agent(
         manager.insert(agent_id.clone(), session);
     }
 
-    spawn_reader(app, agent_id.clone(), reader, status, scrollback_path);
+    spawn_reader(app, agent_id.clone(), reader, status);
     Ok(agent_id)
 }
 
@@ -311,16 +307,8 @@ pub async fn kill_agent(
     state: State<'_, AppState>,
     agent_id: String,
 ) -> Result<(), String> {
-    {
-        let mut manager = state.pty_manager.lock().await;
-        manager.kill(&agent_id).map_err(|e| e.to_string())?;
-    }
-    // Remove scrollback on explicit kill (agent is gone for good)
-    let sb = state.scrollback_dir.join(format!("{}.bin", agent_id));
-    if sb.exists() {
-        let _ = std::fs::remove_file(&sb);
-    }
-    Ok(())
+    let mut manager = state.pty_manager.lock().await;
+    manager.kill(&agent_id).map_err(|e| e.to_string())
 }
 
 #[tauri::command]
@@ -338,18 +326,8 @@ pub async fn restart_agent(
         let _ = manager.kill(&agent_id);
     }
 
-    // Clear old scrollback so the restarted session starts fresh
-    let sb = state.scrollback_dir.join(format!("{}.bin", agent_id));
-    if sb.exists() {
-        let _ = std::fs::remove_file(&sb);
-    }
-
     let rows = rows.unwrap_or(24);
     let cols = cols.unwrap_or(80);
-
-    std::fs::create_dir_all(&state.scrollback_dir)
-        .map_err(|e| format!("create scrollback dir: {e}"))?;
-    let scrollback_path = state.scrollback_dir.join(format!("{}.bin", agent_id));
 
     let (master, writer, child, reader) = make_pty_pair_and_spawn(&cwd, rows, cols, None)?;
     let session = AgentSession::new(master, writer, child, project_id, cwd);
@@ -360,7 +338,7 @@ pub async fn restart_agent(
         manager.insert(agent_id.clone(), session);
     }
 
-    spawn_reader(app, agent_id, reader, status, scrollback_path);
+    spawn_reader(app, agent_id, reader, status);
     Ok(())
 }
 
@@ -417,10 +395,6 @@ pub async fn spawn_shell(
     let cols = cols.unwrap_or(80);
     eprintln!("[spawn_shell] agent_id={} cwd={} size={}x{}", agent_id, cwd, cols, rows);
 
-    std::fs::create_dir_all(&state.scrollback_dir)
-        .map_err(|e| format!("create scrollback dir: {e}"))?;
-    let scrollback_path = state.scrollback_dir.join(format!("{}.bin", agent_id));
-
     let (master, writer, child, reader) = make_shell_pty_pair(&cwd, rows, cols)?;
     let session = AgentSession::new(master, writer, child, "shell".to_string(), cwd);
     let status = session.status.clone();
@@ -430,36 +404,8 @@ pub async fn spawn_shell(
         manager.insert(agent_id.clone(), session);
     }
 
-    spawn_reader(app, agent_id.clone(), reader, status, scrollback_path);
+    spawn_reader(app, agent_id.clone(), reader, status);
     Ok(agent_id)
-}
-
-/// Returns base64-encoded raw PTY bytes saved for this agent.
-/// Returns empty string if no scrollback exists.
-#[tauri::command]
-pub async fn load_scrollback(
-    state: State<'_, AppState>,
-    agent_id: String,
-) -> Result<String, String> {
-    let path = state.scrollback_dir.join(format!("{}.bin", agent_id));
-    if !path.exists() {
-        return Ok(String::new());
-    }
-    let bytes = std::fs::read(&path).map_err(|e| e.to_string())?;
-    Ok(B64.encode(&bytes))
-}
-
-/// Deletes the scrollback file for an agent (called when user removes an agent).
-#[tauri::command]
-pub async fn delete_scrollback(
-    state: State<'_, AppState>,
-    agent_id: String,
-) -> Result<(), String> {
-    let path = state.scrollback_dir.join(format!("{}.bin", agent_id));
-    if path.exists() {
-        std::fs::remove_file(&path).map_err(|e| e.to_string())?;
-    }
-    Ok(())
 }
 
 /// Returns the Claude session ID for a specific agent by comparing the
@@ -511,40 +457,6 @@ pub async fn get_agent_session_id(
     // Newest new file first
     new_files.sort_by(|a, b| b.0.cmp(&a.0));
     Ok(new_files.into_iter().next().map(|(_, stem)| stem))
-}
-
-/// Returns the current byte size of the scrollback file for an agent.
-/// Used to record a "checkpoint" before sending /status so we can truncate
-/// the file afterwards and remove the /status I/O from the replay.
-#[tauri::command]
-pub async fn get_scrollback_size(
-    state: State<'_, AppState>,
-    agent_id: String,
-) -> Result<u64, String> {
-    let path = state.scrollback_dir.join(format!("{}.bin", agent_id));
-    if !path.exists() {
-        return Ok(0);
-    }
-    Ok(std::fs::metadata(&path).map_err(|e| e.to_string())?.len())
-}
-
-/// Truncates the scrollback file to `size` bytes, discarding anything written
-/// after the checkpoint.  Called after /status collection to strip that I/O.
-#[tauri::command]
-pub async fn truncate_scrollback(
-    state: State<'_, AppState>,
-    agent_id: String,
-    size: u64,
-) -> Result<(), String> {
-    let path = state.scrollback_dir.join(format!("{}.bin", agent_id));
-    if !path.exists() {
-        return Ok(());
-    }
-    let file = std::fs::OpenOptions::new()
-        .write(true)
-        .open(&path)
-        .map_err(|e| e.to_string())?;
-    file.set_len(size).map_err(|e| e.to_string())
 }
 
 /// Returns true only if the Claude session `.jsonl` file for the given

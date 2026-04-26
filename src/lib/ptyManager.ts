@@ -11,8 +11,9 @@ interface TerminalEntry {
 
 const entries = new Map<string, TerminalEntry>();
 
-/** Scrollback bytes waiting to be replayed when the terminal attaches. */
-const pendingScrollback = new Map<string, Uint8Array>();
+// Buffers PTY chunks that arrive before the terminal component mounts and calls
+// attach(). Drained into the write queue on the first attach() call.
+const preAttachBuffer = new Map<string, Uint8Array[]>();
 
 // ── Flow-control write queue ──────────────────────────────────────────────────
 //
@@ -137,10 +138,6 @@ export function applyTerminalTheme(themeId: ThemeId) {
   }
 }
 
-export function setPendingScrollback(agentId: string, data: Uint8Array) {
-  pendingScrollback.set(agentId, data);
-}
-
 export function getOrCreate(agentId: string): TerminalEntry {
   if (!entries.has(agentId)) {
     const terminal = new Terminal({
@@ -178,20 +175,15 @@ export function attach(agentId: string, element: HTMLElement) {
         { capture: true },
       );
     }
-  }
 
-  // Replay historical output if available (session restore).
-  // Queued via flow-control so the 50 MB xterm write-buffer never overflows.
-  const scrollback = pendingScrollback.get(agentId);
-  if (scrollback && scrollback.length > 0) {
-    pendingScrollback.delete(agentId);
-    enqueueWrite(agentId, entry.terminal, scrollback);
-    // Visual separator — enqueued after scrollback so it appears at the end
-    enqueueWrite(
-      agentId,
-      entry.terminal,
-      "\r\n\x1b[2m\x1b[90m─── session restored ───\x1b[0m\r\n\r\n",
-    );
+    // Drain any PTY output that arrived before this component mounted.
+    const buffered = preAttachBuffer.get(agentId);
+    if (buffered) {
+      preAttachBuffer.delete(agentId);
+      for (const chunk of buffered) {
+        enqueueWrite(agentId, entry.terminal, chunk);
+      }
+    }
   }
 
   entry.fitAddon.fit();
@@ -205,6 +197,7 @@ export function fit(agentId: string) {
 }
 
 export function dispose(agentId: string) {
+  preAttachBuffer.delete(agentId);
   const entry = entries.get(agentId);
   if (entry) {
     writeQueues.delete(agentId);
@@ -214,11 +207,15 @@ export function dispose(agentId: string) {
   }
 }
 
-/** Write PTY output. Uses a flow-control queue so xterm never overflows. */
+/** Write PTY output. Uses a flow-control queue so xterm never overflows.
+ *  If the terminal hasn't mounted yet, buffers the chunk until attach(). */
 export function write(agentId: string, data: Uint8Array) {
   const entry = entries.get(agentId);
   if (entry) {
     enqueueWrite(agentId, entry.terminal, data);
+  } else {
+    if (!preAttachBuffer.has(agentId)) preAttachBuffer.set(agentId, []);
+    preAttachBuffer.get(agentId)!.push(data);
   }
 }
 

@@ -6,9 +6,9 @@ use state::app_state::AppState;
 use std::sync::atomic::Ordering;
 use tauri::{Emitter, Manager};
 use commands::pty_commands::{
-    delete_scrollback, exit_app, get_agent_session_id, get_agent_status, get_scrollback_size,
-    is_session_nonempty, kill_agent, load_agents, load_scrollback, resize_agent, restart_agent,
-    save_agents, spawn_agent, spawn_shell, truncate_scrollback, write_to_agent,
+    exit_app, get_agent_session_id, get_agent_status, is_session_nonempty, kill_agent,
+    load_agents, resize_agent, restart_agent, save_agents, spawn_agent, spawn_shell,
+    write_to_agent,
 };
 use commands::project_commands::{load_projects, pick_folder, save_projects, get_config_dir};
 use commands::file_commands::{
@@ -73,8 +73,6 @@ pub fn run() {
             // Session persistence
             load_agents,
             save_agents,
-            load_scrollback,
-            delete_scrollback,
             // File manager
             read_dir,
             read_file_text,
@@ -116,8 +114,6 @@ pub fn run() {
             fetch_usage,
             // App lifecycle
             get_agent_session_id,
-            get_scrollback_size,
-            truncate_scrollback,
             is_session_nonempty,
             exit_app,
         ])

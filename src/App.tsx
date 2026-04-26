@@ -21,7 +21,7 @@ import { SettingsModal } from "./components/Settings/SettingsModal";
 import { matchesHotkey, formatHotkey } from "./lib/hotkeys";
 import {
   saveAgents, exitApp, writeToAgent,
-  getScrollbackSize, truncateScrollback, isSessionNonempty,
+  isSessionNonempty,
   type AgentMeta,
 } from "./lib/tauri";
 
@@ -160,20 +160,12 @@ export function App() {
       (a) => a.status !== "exited" && !shellIds.has(a.id)
     );
 
-    // 1. Record scrollback sizes BEFORE sending /status so we can strip that
-    //    I/O from the files afterwards (prevents it replaying on next launch).
-    const scrollbackSizes = new Map(
-      await Promise.all(
-        agentList.map(async (a) => [a.id, await getScrollbackSize(a.id).catch(() => 0)] as const)
-      )
-    );
-
-    // 2. Send /status to every agent in parallel, parse session UUIDs.
+    // Send /status to every agent in parallel, parse session UUIDs.
     const sessionIdResults = await Promise.all(
       agentList.map(async (a) => {
         const sid = await getSessionIdViaStatus(a.id).catch(() => null);
-        // 3. Validate — don't save a session_id for an empty session (Claude
-        //    can't resume it and the agent would exit immediately with red status).
+        // Validate — don't save a session_id for an empty session (Claude
+        // can't resume it and the agent would exit immediately with red status).
         const valid = sid
           ? await isSessionNonempty(sid, a.cwd).catch(() => false)
           : false;
@@ -183,19 +175,11 @@ export function App() {
       })
     );
 
-    // 4. Truncate scrollbacks back to pre-/status size on all agents.
-    await Promise.all(
-      agentList.map((a) => {
-        const size = scrollbackSizes.get(a.id) ?? 0;
-        return truncateScrollback(a.id, size).catch(() => {});
-      })
-    );
-
     const sessionIdMap = new Map(
       sessionIdResults.map((r) => [r.id, r.sessionId])
     );
 
-    // 5. Build metas preserving tab order
+    // Build metas preserving tab order
     const metas: AgentMeta[] = [];
     for (const ids of Object.values(agentOrder)) {
       for (const id of ids) {

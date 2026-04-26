@@ -1,5 +1,4 @@
-use std::io::{Read, Write};
-use std::path::PathBuf;
+use std::io::Read;
 use std::sync::atomic::{AtomicU64, AtomicU8, Ordering};
 use std::sync::Arc;
 use std::time::Duration;
@@ -24,7 +23,6 @@ pub fn spawn_reader(
     agent_id: String,
     mut reader: Box<dyn Read + Send>,
     status: Arc<AtomicU8>,
-    scrollback_path: PathBuf,
 ) {
     // Shared timestamp of the last PTY byte received (ms since epoch).
     // Both the blocking reader task and the async inactivity monitor share this.
@@ -70,14 +68,6 @@ pub fn spawn_reader(
     tokio::task::spawn_blocking(move || {
         let mut buf = [0u8; 4096];
 
-        // Open scrollback file for appending (created if missing)
-        let mut sb_file = std::fs::OpenOptions::new()
-            .create(true)
-            .append(true)
-            .open(&scrollback_path)
-            .map_err(|e| eprintln!("[reader] scrollback open error: {e}"))
-            .ok();
-
         loop {
             match reader.read(&mut buf) {
                 Ok(0) => {
@@ -94,11 +84,6 @@ pub fn spawn_reader(
                 Ok(n) => {
                     // Update the shared timestamp — the inactivity monitor reads this.
                     last_output.store(now_ms(), Ordering::Relaxed);
-
-                    // Persist to scrollback file
-                    if let Some(ref mut f) = sb_file {
-                        let _ = f.write_all(&buf[..n]);
-                    }
 
                     // Transition back to active if we were waiting
                     if status.load(Ordering::Relaxed) != STATUS_ACTIVE {
