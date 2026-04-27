@@ -517,26 +517,25 @@ A resizable side panel (Projects, Git, Explorer, Automation).
 Every panel has a 32px tall header with a title and optional action buttons.
 
 ```tsx
-<div className="h-8 flex items-center justify-between px-2 border-b border-[var(--c-border)] flex-shrink-0">
-  <span className="text-xs font-semibold text-[var(--c-text-bright)] uppercase tracking-wider">
+<div className="flex items-center justify-between px-3 h-8 bg-[var(--c-bg)] border-b border-[var(--c-border)] flex-shrink-0 select-none">
+  <span className="text-xs font-semibold text-[var(--c-text-dim)] uppercase tracking-widest">
     Panel Title
   </span>
-  <div className="flex items-center gap-1">
-    {/* icon action buttons */}
-    <button className="p-1 rounded text-[var(--c-text-dim)] hover:text-[var(--c-text)] hover:bg-[var(--c-bg-hover)] transition-colors">
-      <PlusIcon size={14} />
-    </button>
-  </div>
+  <button className="flex items-center text-[var(--c-text-dim)] hover:text-[var(--c-text-bright)] transition-colors">
+    <XIcon size={14} />
+  </button>
 </div>
 ```
 
 **Rules:**
 - Height: always `h-8` (32px), `flex-shrink-0`
-- Title: `text-xs font-semibold text-[var(--c-text-bright)]`
-- Title casing: sentence case or title case — no uppercase unless it's a section header label
+- Padding: `px-3`
+- Background: `bg-[var(--c-bg)]` (explicit, not inherited)
+- `select-none` to prevent text selection on drag
+- Title: `text-xs font-semibold text-[var(--c-text-dim)] uppercase tracking-widest`
 - Divider: `border-b border-[var(--c-border)]`
-- Action icon size: 13–15px
-- Action button padding: `p-1`
+- Action buttons: `flex items-center text-[var(--c-text-dim)] hover:text-[var(--c-text-bright)] transition-colors`
+- Action icon size: 14px
 
 ---
 
@@ -954,24 +953,37 @@ Terminal panes use a **custom React scrollbar** (direct DOM refs, no React state
 ## Layout & Structure
 
 ```
-App (full screen)
-├── ActivityBar          w-12 (48px), flex-shrink-0, h-full
-├── FileExplorer         resizable, default 230px, min 160px
-└── MainArea             flex-1
-    ├── TabBar            h-8 (32px), flex-shrink-0
-    ├── TerminalArea      flex-1
-    ├── EditorPane        resizable height
-    └── BottomPanel       resizable height, default 0 when closed
+App (full screen, flex-col)
+├── TitleBar             h-8 (32px), flex-shrink-0, data-tauri-drag-region
+│   ├── [left]  panel toggle buttons (Layers, Files, SquareTerminal, GitBranch,
+│   │           FileCode2, Clock, ScrollText) — w-7 h-7, size-16
+│   ├── [center] project name + git branch info (pointer-events-none)
+│   └── [right] UsageButton + Settings
+└── body row             flex-1, overflow-hidden
+    ├── ProjectsPanel    resizable width, default 192px
+    ├── GitPanel         resizable width, default 280px
+    ├── FileExplorer     resizable width, default 230px, min 160px
+    ├── MainArea         flex-1
+    │   ├── TerminalPanel  flex-1, border + borderRadius:10
+    │   │   ├── TabBar      h-8
+    │   │   └── TerminalArea flex-1
+    │   ├── LogsPanel    resizable height, default 220px, closed by default
+    │   ├── BottomPanel  resizable height, default 220px, closed by default
+    └── EditorPane       resizable width, rendered after MainArea
+    └── AutomationPanel  resizable width, default 320px
 ```
+
+> **Note:** `src/components/Projects/ActivityBar.tsx` exists but is **not rendered** anywhere.
+> All panel toggle buttons live in the TitleBar (`App.tsx`). Do not use ActivityBar.
 
 ### Fixed Heights
 
 | Element | Height |
 |---|---|
+| TitleBar | 32px (`h-8`) |
 | All panel headers | 32px (`h-8`) |
 | All tab bars | 32px (`h-8`) |
-| Activity bar buttons | 36px (`h-9 w-9`) |
-| Activity bar | full height, 48px wide |
+| TitleBar toggle buttons | 28px (`w-7 h-7`), icon size 16px |
 | Resize handles | 6px |
 
 ### Panel Constraints
@@ -979,7 +991,8 @@ App (full screen)
 | Panel | Default | Min |
 |---|---|---|
 | FileExplorer width | 230px | 160px |
-| BottomPanel height | 220px | 80px |
+| BottomPanel height | 220px | 100px |
+| LogsPanel height | 220px | 80px |
 | EditorPane height | dynamic | 80px |
 
 ---
