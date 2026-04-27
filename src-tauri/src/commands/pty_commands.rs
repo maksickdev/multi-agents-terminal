@@ -2,9 +2,40 @@ use base64::engine::general_purpose::STANDARD as B64;
 use base64::Engine;
 use portable_pty::{native_pty_system, CommandBuilder, PtySize};
 use std::collections::HashSet;
+use std::path::PathBuf;
 use std::sync::atomic::Ordering;
+use std::sync::OnceLock;
 use tauri::{AppHandle, Emitter, State};
 use uuid::Uuid;
+
+/// Embedded zsh wrapper rc — written to disk on first shell spawn and
+/// pointed at via ZDOTDIR so we can layer standard macOS keybindings on
+/// top of the user's own .zshrc.
+const ZSH_WRAPPER_RC: &str = include_str!("../shell/zshrc.zsh");
+
+/// Materializes the zsh wrapper directory once per process and returns it.
+/// The directory contains a `.zshrc` that sources the user's real config and
+/// then patches in macOS-style line-editing bindings. Returns `None` if the
+/// platform config dir is unavailable or the file can't be written — callers
+/// fall back to launching zsh without an override in that case.
+fn ensure_zsh_wrapper_dir() -> Option<PathBuf> {
+    static WRAPPER_DIR: OnceLock<Option<PathBuf>> = OnceLock::new();
+    WRAPPER_DIR
+        .get_or_init(|| {
+            let dir = dirs_next::config_dir()?
+                .join("multi-agents-terminal")
+                .join("shell");
+            std::fs::create_dir_all(&dir).ok()?;
+
+            // Atomic write so a concurrent shell spawn never sees a partial file.
+            let final_path = dir.join(".zshrc");
+            let tmp_path = dir.join(".zshrc.tmp");
+            std::fs::write(&tmp_path, ZSH_WRAPPER_RC).ok()?;
+            std::fs::rename(&tmp_path, &final_path).ok()?;
+            Some(dir)
+        })
+        .clone()
+}
 
 use crate::pty::reader::spawn_reader;
 use crate::pty::session::{AgentSession, STATUS_ACTIVE, STATUS_EXITED, STATUS_WAITING};
@@ -108,6 +139,17 @@ fn make_shell_pty_pair(
     cmd.env("LC_ALL", &lc_all);
     cmd.env("LC_CTYPE", &lc_all);
     cmd.cwd(&cwd);
+
+    // For zsh, point ZDOTDIR at our wrapper so macOS line-editing
+    // shortcuts (Option+Delete, Option+Left/Right, etc.) work even when
+    // the user's config drops them into vi-mode.
+    if shell.ends_with("/zsh") || shell == "zsh" {
+        if let Some(wrapper_dir) = ensure_zsh_wrapper_dir() {
+            let user_zdotdir = std::env::var("ZDOTDIR").unwrap_or_default();
+            cmd.env("MAT_USER_ZDOTDIR", user_zdotdir);
+            cmd.env("ZDOTDIR", wrapper_dir);
+        }
+    }
 
     let child = pair.slave.spawn_command(cmd).map_err(|e| format!("spawn error: {e}"))?;
     let reader = pair.master.try_clone_reader().map_err(|e| format!("clone_reader error: {e}"))?;
