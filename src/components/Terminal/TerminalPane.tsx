@@ -115,16 +115,17 @@ export function TerminalPane({ agentId, isVisible }: Props) {
     let rafId: number | null = null;
     let sigwinchTimer: ReturnType<typeof setTimeout> | null = null;
     const observer = new ResizeObserver(() => {
-      if (!isVisible) return;
-      // xterm reflow on every frame for smooth visual feedback
+      // Always fit xterm so the internal buffer stays correct even when hidden.
       if (rafId !== null) cancelAnimationFrame(rafId);
       rafId = requestAnimationFrame(() => {
         rafId = null;
         ptyManager.fit(agentId);
-        updateScrollbar(agentId);
+        if (isVisible) updateScrollbar(agentId);
       });
-      // SIGWINCH only after the user stops dragging — Claude's TUI redraw
-      // is heavy and accumulates duplicate splash output if fired per frame.
+      // Send SIGWINCH to the PTY even when hidden — this keeps the PTY size in
+      // sync with the real container so that switching projects does not trigger
+      // an unexpected SIGWINCH (and TUI redraw/duplication) at switch time.
+      // Debounced to 150 ms so resize-dragging doesn't fire per frame.
       if (sigwinchTimer !== null) clearTimeout(sigwinchTimer);
       sigwinchTimer = setTimeout(() => {
         sigwinchTimer = null;
