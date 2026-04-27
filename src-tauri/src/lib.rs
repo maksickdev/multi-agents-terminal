@@ -14,7 +14,7 @@ use commands::project_commands::{load_projects, pick_folder, save_projects, get_
 use commands::file_commands::{
     read_dir, read_file_text, read_file_bytes_base64, write_file_text, delete_path,
     create_file, create_dir_all, rename_path, copy_path, reveal_in_finder,
-    get_latest_session_id,
+    get_latest_session_id, get_home_dir, set_executable,
 };
 use commands::usage_commands::fetch_usage;
 use commands::git_commands::{
@@ -85,6 +85,8 @@ pub fn run() {
             rename_path,
             reveal_in_finder,
             get_latest_session_id,
+            get_home_dir,
+            set_executable,
             // Git
             git_status,
             git_diff,

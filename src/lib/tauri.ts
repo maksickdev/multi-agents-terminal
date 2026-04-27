@@ -125,6 +125,11 @@ export const copyPath = (src: string, dst: string) =>
 export const revealInFinder = (path: string) =>
   invoke<void>("reveal_in_finder", { path });
 
+export const getHomeDir = () => invoke<string>("get_home_dir");
+
+export const setExecutable = (path: string) =>
+  invoke<void>("set_executable", { path });
+
 /** Returns the Claude session ID for a specific agent by diffing the current
  *  ~/.claude/projects/<encoded-cwd>/ contents against the pre-spawn snapshot.
  *  Returns null if no new session file was created (e.g. resumed session). */

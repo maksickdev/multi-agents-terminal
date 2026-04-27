@@ -176,6 +176,23 @@ pub fn get_latest_session_id(cwd: String) -> Option<String> {
     Some(name.trim_end_matches(".jsonl").to_string())
 }
 
+#[tauri::command]
+pub fn get_home_dir() -> Result<String, String> {
+    std::env::var("HOME").map_err(|e| format!("HOME not set: {e}"))
+}
+
+#[cfg(unix)]
+#[tauri::command]
+pub fn set_executable(path: String) -> Result<(), String> {
+    use std::os::unix::fs::PermissionsExt;
+    let mut perms = std::fs::metadata(&path)
+        .map_err(|e| format!("metadata failed: {e}"))?
+        .permissions();
+    perms.set_mode(0o755);
+    std::fs::set_permissions(&path, perms)
+        .map_err(|e| format!("set_permissions failed: {e}"))
+}
+
 /// Open the containing folder in Finder and select the item (macOS only).
 #[tauri::command]
 pub fn reveal_in_finder(path: String) -> Result<(), String> {

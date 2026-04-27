@@ -9,6 +9,7 @@ import {
   type AgentMeta,
 } from "../lib/tauri";
 import { useStore, type Agent } from "../store/useStore";
+import { ensureDispatchScript, ensureProjectHooks } from "../lib/claudeHooks";
 
 /**
  * Handles full session persistence:
@@ -30,6 +31,13 @@ export function useSessionPersistence(pausedRef: React.MutableRefObject<boolean>
     async function restore() {
       const savedProjects = await loadProjects();
       setProjects(savedProjects);
+
+      await ensureDispatchScript().catch((e) => console.warn("[hooks] dispatch:", e));
+      await Promise.all(
+        savedProjects.map((p) =>
+          ensureProjectHooks(p.path).catch((e) => console.warn("[hooks]", p.path, e))
+        )
+      );
 
       const projectIds = new Set(savedProjects.map((p) => p.id));
       const savedAgents = await loadAgents(); // array order = tab order

@@ -6,6 +6,7 @@ import { usePtyEvents } from "./hooks/usePty";
 import { useTheme } from "./hooks/useTheme";
 import { useExternalFileDrop } from "./hooks/useExternalFileDrop";
 import { useAutomationScheduler } from "./hooks/useAutomationScheduler";
+import { useHookEvents } from "./hooks/useHookEvents";
 import { useStore } from "./store/useStore";
 import { useAutomationStore } from "./store/useAutomationStore";
 import { ProjectsPanel } from "./components/Projects/ProjectsPanel";
@@ -88,6 +89,9 @@ export function App() {
   useTheme();
   useExternalFileDrop();
   useAutomationScheduler();
+  useHookEvents((event) => {
+    console.log("[hook-event]", event.hook_event_name, event.session_id);
+  });
 
   const { init: initAutomations } = useAutomationStore();
   useEffect(() => { initAutomations(); }, []);

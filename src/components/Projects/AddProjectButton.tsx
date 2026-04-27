@@ -2,6 +2,7 @@ import { pickFolder, saveProjects } from "../../lib/tauri";
 import { useStore } from "../../store/useStore";
 import { v4 as uuidv4 } from "uuid";
 import { FolderOpen } from "lucide-react";
+import { ensureProjectHooks } from "../../lib/claudeHooks";
 
 export function AddProjectButton() {
   const { addProject, projects } = useStore();
@@ -18,6 +19,7 @@ export function AddProjectButton() {
       const project = { id: uuidv4(), name, path: folderPath };
       addProject(project);
       await saveProjects([...projects, project]);
+      ensureProjectHooks(project.path).catch((e) => console.warn("[hooks] add:", e));
     } catch (err) {
       console.error("Failed to add project:", err);
       alert(`Failed to add project: ${err}`);

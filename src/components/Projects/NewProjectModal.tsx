@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import ReactDOM from "react-dom";
 import { FolderOpen, FolderPlus, X } from "lucide-react";
 import { createDirAll, pickFolder, saveProjects } from "../../lib/tauri";
+import { ensureProjectHooks } from "../../lib/claudeHooks";
 import { useStore } from "../../store/useStore";
 import { v4 as uuidv4 } from "uuid";
 
@@ -52,6 +53,7 @@ export function NewProjectModal({ onClose }: Props) {
       const project = { id: uuidv4(), name: trimmed, path: newPath };
       addProject(project);
       await saveProjects([...projects, project]);
+      ensureProjectHooks(project.path).catch((e) => console.warn("[hooks] new:", e));
       selectProject(project.id);
       onClose();
     } catch (e) {
