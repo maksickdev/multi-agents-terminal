@@ -65,6 +65,11 @@ interface AppStore {
   setAgentSessionId: (agentId: string, sessionId: string) => void;
   removeAgent: (agentId: string) => void;
 
+  // Agent attention (needs user input)
+  agentAttention: Record<string, "notification" | "permission">;
+  setAgentAttention: (agentId: string, type: "notification" | "permission") => void;
+  clearAgentAttention: (agentId: string) => void;
+
   // Logs panel
   logsPanelOpen: boolean;
   logsPanelHeight: number;
@@ -155,6 +160,8 @@ export const useStore = create<AppStore>((set, get) => ({
   agentOrder: {},
   selectedProjectId: null,
   activeAgentId: {},
+  agentAttention: {},
+
   logsPanelOpen: false,
   logsPanelHeight: 220,
   hookEvents: [],
@@ -288,6 +295,15 @@ export const useStore = create<AppStore>((set, get) => ({
       };
     }),
 
+  setAgentAttention: (agentId, type) =>
+    set((s) => ({ agentAttention: { ...s.agentAttention, [agentId]: type } })),
+  clearAgentAttention: (agentId) =>
+    set((s) => {
+      const next = { ...s.agentAttention };
+      delete next[agentId];
+      return { agentAttention: next };
+    }),
+
   setLogsPanelOpen: (open) => set({ logsPanelOpen: open }),
   setLogsPanelHeight: (height) => set({ logsPanelHeight: Math.max(80, Math.min(height, 600)) }),
   addHookEvent: (event) => set((s) => ({
@@ -403,12 +419,28 @@ export const useStore = create<AppStore>((set, get) => ({
     set({ hotkeys: { ...DEFAULT_HOTKEYS } });
   },
 
-  selectProject: (projectId) => set({ selectedProjectId: projectId }),
+  selectProject: (projectId) =>
+    set((s) => {
+      const projectAgentIds = new Set(
+        Object.values(s.agents)
+          .filter((a) => a.projectId === projectId)
+          .map((a) => a.id)
+      );
+      const next = Object.fromEntries(
+        Object.entries(s.agentAttention).filter(([id]) => !projectAgentIds.has(id))
+      );
+      return { selectedProjectId: projectId, agentAttention: next };
+    }),
 
   setActiveAgent: (projectId, agentId) =>
-    set((s) => ({
-      activeAgentId: { ...s.activeAgentId, [projectId]: agentId },
-    })),
+    set((s) => {
+      const next = { ...s.agentAttention };
+      if (agentId) delete next[agentId];
+      return {
+        activeAgentId: { ...s.activeAgentId, [projectId]: agentId },
+        agentAttention: next,
+      };
+    }),
 
   /** Returns agents in explicit tab order (agentOrder), not by createdAt. */
   getProjectAgents: (projectId) => {

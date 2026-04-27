@@ -12,10 +12,18 @@ interface Props {
 }
 
 export function ProjectItem({ project }: Props) {
-  const { selectedProjectId, selectProject, addAgent, removeProject, renameProject, getProjectAgents, projects } =
+  const { selectedProjectId, selectProject, addAgent, removeProject, renameProject, getProjectAgents, projects, agentAttention } =
     useStore();
   const isSelected = selectedProjectId === project.id;
   const agents = getProjectAgents(project.id);
+
+  // "permission"   — PermissionRequest hook (requires confirmation)
+  // "notification" — Stop hook (Claude finished responding, waiting for input)
+  const attention = (() => {
+    if (agents.some((a) => agentAttention[a.id] === "permission")) return "permission";
+    if (!isSelected && agents.some((a) => agentAttention[a.id] === "notification")) return "notification";
+    return null;
+  })();
 
   const [showConfirm, setShowConfirm] = useState(false);
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
@@ -178,8 +186,19 @@ export function ProjectItem({ project }: Props) {
           ) : (
             <span className="text-sm font-medium truncate">{project.name}</span>
           )}
+          {!renaming && attention && (
+            <span
+              className="ml-2 flex-shrink-0 w-2 h-2 rounded-full animate-pulse"
+              style={{
+                backgroundColor: attention === "permission"
+                  ? "#e0af68"
+                  : "var(--c-accent)",
+              }}
+              title={attention === "permission" ? "Requires confirmation" : "Waiting for input"}
+            />
+          )}
           {!renaming && agents.length > 0 && (
-            <span className="text-xs text-[var(--c-accent)] ml-2 flex-shrink-0">{agents.length}</span>
+            <span className="text-xs text-[var(--c-accent)] ml-1 flex-shrink-0">{agents.length}</span>
           )}
         </div>
         {!renaming && (

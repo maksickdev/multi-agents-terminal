@@ -89,9 +89,18 @@ export function App() {
   useTheme();
   useExternalFileDrop();
   useAutomationScheduler();
-  const { addHookEvent } = useStore();
+  const { addHookEvent, setAgentAttention, clearAgentAttention } = useStore();
   useHookEvents((event) => {
     addHookEvent(event);
+    const agentId = typeof event.mat_agent_id === "string" ? event.mat_agent_id : null;
+    if (!agentId) return;
+    if (event.hook_event_name === "PermissionRequest") {
+      setAgentAttention(agentId, "permission");
+    } else if (event.hook_event_name === "Stop") {
+      setAgentAttention(agentId, "notification");
+    } else if (event.hook_event_name === "UserPromptSubmit") {
+      clearAgentAttention(agentId);
+    }
   });
 
   const { init: initAutomations } = useAutomationStore();
