@@ -1,15 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { getConfigDir, readFileText } from "../lib/tauri";
+import type { HookEvent } from "../store/useStore";
 
-export interface HookEvent {
-  hook_event_name: string;
-  session_id?: string;
-  tool_name?: string;
-  tool_input?: unknown;
-  tool_response?: unknown;
-  _received_at: number;
-  [key: string]: unknown;
-}
+export type { HookEvent };
 
 const POLL_INTERVAL_MS = 2000;
 
@@ -20,10 +13,19 @@ export function useHookEvents(onEvent?: (event: HookEvent) => void) {
   const onEventRef = useRef(onEvent);
   onEventRef.current = onEvent;
 
+  // On mount: resolve file path and skip all lines already in the file
+  // so we only process events that arrive while the app is running.
   useEffect(() => {
-    getConfigDir()
-      .then((dir) => { eventsFilePathRef.current = `${dir}/hook-events.jsonl`; })
-      .catch(() => {});
+    getConfigDir().then(async (dir) => {
+      const filePath = `${dir}/hook-events.jsonl`;
+      eventsFilePathRef.current = filePath;
+      try {
+        const text = await readFileText(filePath);
+        lastLineCountRef.current = text.trim().split("\n").filter(Boolean).length;
+      } catch {
+        lastLineCountRef.current = 0;
+      }
+    }).catch(() => {});
   }, []);
 
   useEffect(() => {

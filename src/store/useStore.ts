@@ -6,6 +6,17 @@ import {
   hotkeysFromStorage, DEFAULT_HOTKEYS,
 } from "../lib/hotkeys";
 
+export interface HookEvent {
+  hook_event_name: string;
+  session_id?: string;
+  tool_name?: string;
+  tool_input?: unknown;
+  tool_response?: unknown;
+  mat_agent_id?: string;
+  _received_at: number;
+  [key: string]: unknown;
+}
+
 export interface OpenFile {
   /** Absolute path — used as a unique key. */
   path: string;
@@ -53,6 +64,15 @@ interface AppStore {
   updateAgentStatus: (agentId: string, status: AgentStatus, exitCode?: number) => void;
   setAgentSessionId: (agentId: string, sessionId: string) => void;
   removeAgent: (agentId: string) => void;
+
+  // Logs panel
+  logsPanelOpen: boolean;
+  logsPanelHeight: number;
+  hookEvents: HookEvent[];
+  setLogsPanelOpen: (open: boolean) => void;
+  setLogsPanelHeight: (height: number) => void;
+  addHookEvent: (event: HookEvent) => void;
+  clearHookEvents: () => void;
 
   // Bottom panel
   bottomPanelOpen: boolean;
@@ -135,6 +155,10 @@ export const useStore = create<AppStore>((set, get) => ({
   agentOrder: {},
   selectedProjectId: null,
   activeAgentId: {},
+  logsPanelOpen: false,
+  logsPanelHeight: 220,
+  hookEvents: [],
+
   bottomPanelOpen: false,
   bottomPanelHeight: 220,
   shellAgentIds: {},
@@ -263,6 +287,13 @@ export const useStore = create<AppStore>((set, get) => ({
         activeAgentId: newActiveAgentId,
       };
     }),
+
+  setLogsPanelOpen: (open) => set({ logsPanelOpen: open }),
+  setLogsPanelHeight: (height) => set({ logsPanelHeight: Math.max(80, Math.min(height, 600)) }),
+  addHookEvent: (event) => set((s) => ({
+    hookEvents: [...s.hookEvents.slice(-499), event],
+  })),
+  clearHookEvents: () => set({ hookEvents: [] }),
 
   setBottomPanelOpen: (open) => set({ bottomPanelOpen: open }),
   setBottomPanelHeight: (height) => set({ bottomPanelHeight: Math.max(100, Math.min(height, 600)) }),

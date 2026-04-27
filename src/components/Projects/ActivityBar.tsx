@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Files, SquareTerminal, Settings, Layers, GitBranch, Clock } from "lucide-react";
+import { Files, SquareTerminal, Settings, Layers, GitBranch, Clock, ScrollText } from "lucide-react";
 import { useStore } from "../../store/useStore";
 import { SettingsModal } from "../Settings/SettingsModal";
 import { UsageButton } from "./UsageButton";
@@ -12,6 +12,7 @@ export function ActivityBar() {
     bottomPanelOpen, setBottomPanelOpen,
     gitPanelOpen, setGitPanelOpen,
     automationPanelOpen, setAutomationPanelOpen,
+    logsPanelOpen, setLogsPanelOpen,
     hotkeys,
   } = useStore();
 
@@ -101,6 +102,18 @@ export function ActivityBar() {
             }`}
           >
             <Clock size={20} />
+          </button>
+
+          <button
+            onClick={() => setLogsPanelOpen(!logsPanelOpen)}
+            title="Agent Logs"
+            className={`flex items-center justify-center w-9 h-9 rounded transition-colors ${
+              logsPanelOpen
+                ? "text-[var(--c-accent)] bg-[var(--c-bg)]"
+                : "text-[var(--c-text-dim)] hover:text-[var(--c-text)] hover:bg-[var(--c-bg)]"
+            }`}
+          >
+            <ScrollText size={20} />
           </button>
 
         </div>

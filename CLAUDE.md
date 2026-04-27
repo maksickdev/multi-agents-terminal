@@ -190,9 +190,11 @@ The native xterm scrollbar is hidden via CSS (`.xterm-viewport { scrollbar-width
 
 All non-xterm scrollbars use Tokyo Night colors: `scrollbar-color: #414868 #16161e`, 6px width. The `.scrollbar-none` utility class hides scrollbars (used on the agent TabBar).
 
-**Activity Bar (`src/components/Sidebar/ActivityBar.tsx`)**
+**TitleBar (top of `App.tsx`)**
 
-Icon-only vertical toolbar (w-12) on the far left. Top section: sidebar toggle, file explorer, terminal, git. Bottom section: `UsageButton` (above) and Settings (below). `UsageButton` renders an icon-only button; the usage panel opens via `ReactDOM.createPortal` (position fixed, `z-index: 200`) to the right of the ActivityBar, positioned from `getBoundingClientRect()` of the trigger button.
+32px drag region (`data-tauri-drag-region`) at the top of the window. Left side: panel toggle buttons (Layers, Files, SquareTerminal, GitBranch, FileCode2, Clock, ScrollText) — `w-7 h-7`, icon size 16px, rendered from a static array. Center: project name + `TitleBarGitInfo` (pointer-events-none). Right: `UsageButton` + Settings. `UsageButton` renders an icon-only button; the usage panel opens via `ReactDOM.createPortal` (position fixed, `z-index: 200`) positioned from `getBoundingClientRect()` of the trigger button.
+
+> `src/components/Projects/ActivityBar.tsx` exists but is **not used** — all panel toggles are in the TitleBar.
 
 **Terminal fullscreen (`src/components/MainArea/`)**
 

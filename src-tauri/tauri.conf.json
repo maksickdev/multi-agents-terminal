@@ -4,7 +4,7 @@
   "version": "0.1.0",
   "identifier": "com.multiagent.terminal",
   "build": {
-    "beforeDevCommand": "npm run dev",
+    "beforeDevCommand": "npx concurrently \"npm run dev\" \"npm run server\"",
     "devUrl": "http://localhost:1420",
     "beforeBuildCommand": "npm run build",
     "frontendDist": "../dist"

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { listen } from "@tauri-apps/api/event";
-import { Clock, FileCode2, Files, GitBranch, Layers, Loader2, Settings, SquareTerminal } from "lucide-react";
+import { Clock, FileCode2, Files, GitBranch, Layers, Loader2, ScrollText, Settings, SquareTerminal } from "lucide-react";
 import { useSessionPersistence } from "./hooks/useSessionPersistence";
 import { usePtyEvents } from "./hooks/usePty";
 import { useTheme } from "./hooks/useTheme";
@@ -89,8 +89,9 @@ export function App() {
   useTheme();
   useExternalFileDrop();
   useAutomationScheduler();
+  const { addHookEvent } = useStore();
   useHookEvents((event) => {
-    console.log("[hook-event]", event.hook_event_name, event.session_id);
+    addHookEvent(event);
   });
 
   const { init: initAutomations } = useAutomationStore();
@@ -104,6 +105,7 @@ export function App() {
     bottomPanelOpen, setBottomPanelOpen,
     gitPanelOpen, setGitPanelOpen,
     automationPanelOpen, setAutomationPanelOpen,
+    logsPanelOpen, setLogsPanelOpen,
     hotkeys,
   } = useStore();
   const activeProject = projects.find((p) => p.id === selectedProjectId) ?? null;
@@ -228,6 +230,7 @@ export function App() {
               { icon: GitBranch, active: gitPanelOpen, onClick: () => setGitPanelOpen(!gitPanelOpen), title: `Git (${formatHotkey(hotkeys.toggleGitPanel)})` },
               { icon: FileCode2, active: editorPanelOpen, onClick: () => setEditorPanelOpen(!editorPanelOpen), title: `Editor (${formatHotkey(hotkeys.toggleEditorPanel)})` },
               { icon: Clock, active: automationPanelOpen, onClick: () => setAutomationPanelOpen(!automationPanelOpen), title: `Automation (${formatHotkey(hotkeys.toggleAutomationPanel)})` },
+              { icon: ScrollText, active: logsPanelOpen, onClick: () => setLogsPanelOpen(!logsPanelOpen), title: "Agent Logs" },
             ] as const
           ).map(({ icon: Icon, active, onClick, title }) => (
             <button

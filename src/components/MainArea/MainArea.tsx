@@ -5,6 +5,7 @@ import { EmptyState } from "./EmptyState";
 import { TabBar } from "./TabBar";
 import { TerminalGrid } from "../Terminal/TerminalGrid";
 import { BottomPanel } from "../BottomPanel/BottomPanel";
+import { LogsPanel } from "../LogsPanel/LogsPanel";
 
 // Approximate character dimensions for JetBrains Mono 13px
 const CHAR_W = 8;
@@ -53,6 +54,7 @@ export function MainArea() {
       {!project ? (
         <div className="flex-1 overflow-hidden flex flex-col">
           <div className="flex-1"><EmptyState /></div>
+          <LogsPanel />
           <BottomPanel />
         </div>
       ) : (
@@ -105,6 +107,7 @@ export function MainArea() {
             </div>
           </div>
 
+          <LogsPanel />
           <BottomPanel />
         </>
       )}
