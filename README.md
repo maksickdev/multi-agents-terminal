@@ -19,6 +19,7 @@ A macOS desktop app built with Tauri 2 + React + TypeScript for running and mana
 - **Confirmation modals** — shown before killing an agent, closing an unsaved file, removing a project, moving or deleting a file, renaming a file tab
 - **Usage monitor** — Claude Code usage limits panel accessible from the ActivityBar (icon-only button above Settings)
 - **Themed scrollbars** — Tokyo Night styled scrollbars everywhere; custom scrollbar in xterm terminals (native one hidden)
+- **Hook event system** — automatically patches every project's `.claude/settings.json` to forward all 29 Claude Code hook events to a local server (`npm run server`); each hook is tagged with the originating agent ID via `MAT_AGENT_ID` env var injected at spawn time
 
 ## Tech stack
 
@@ -33,6 +34,10 @@ npm install
 npm run tauri dev   # Rust + frontend together (recommended)
 # or
 npm run dev         # Frontend only (Vite HMR, no Tauri backend)
+```
+
+```bash
+npm run server      # Hook event server (port 27123) — run alongside the app
 ```
 
 ```bash
@@ -54,19 +59,25 @@ src/
     BottomPanel/      — shell pane
     shared/           — ConfirmModal
   hooks/
-    useSessionPersistence.ts  — load/save agents + projects on disk
+    useSessionPersistence.ts  — load/save agents + projects on disk; patches project hooks on startup
     usePty.ts                 — Tauri PTY event listeners, input encoding
+    useHookEvents.ts          — polls hook-events.jsonl every 2 s, fires onEvent callbacks
     useFileWatcher.ts         — polls open files every 2 s, reloads on external change
     useExternalFileDrop.ts    — Finder→app file drop (terminal path insert / folder copy)
   lib/
     ptyManager.ts     — module-level xterm.js instance map + write queue
     tauri.ts          — typed wrappers for all Tauri invoke/event calls
+    claudeHooks.ts    — ensureProjectHooks / ensureDispatchScript utilities
     languageDetect.ts — file extension → CodeMirror language id
     fileIcons.tsx     — per-extension lucide icon + color definitions
     fileDrag.ts       — mouse-based file drag (to folder or terminal)
     externalDrop.ts   — shared state for active external drop target
   store/
     useStore.ts       — Zustand store (projects, agents, editor, file explorer state)
+server/
+  index.js            — HTTP server on port 27123 (hook receiver)
+  routes/
+    hooks.js          — POST /hook handler: agent lookup, logging, JSONL append
 src-tauri/
   src/
     commands/         — pty_commands, project_commands, file_commands
@@ -79,4 +90,6 @@ src-tauri/
 Runtime config is stored at `~/Library/Application Support/multi-agents-terminal/`:
 - `projects.json` — saved projects
 - `agents.json` — saved agents (tab order + Claude `session_id` per agent)
-- `scrollback/` — raw PTY scrollback per agent (`{agent_id}.bin`)
+- `hook-events.jsonl` — append-only log of all received Claude Code hook events (written by the server, polled by the frontend)
+
+Hook dispatch script is auto-created at `~/.claude/hooks/mat-dispatch.sh` on first app launch.

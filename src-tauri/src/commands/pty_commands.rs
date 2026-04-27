@@ -162,6 +162,7 @@ fn make_pty_pair_and_spawn(
     rows: u16,
     cols: u16,
     session_id: Option<&str>,
+    agent_id: Option<&str>,
 ) -> Result<
     (
         Box<dyn portable_pty::MasterPty + Send>,
@@ -195,6 +196,9 @@ fn make_pty_pair_and_spawn(
     cmd.env("TERM", "xterm-256color");
     cmd.env("COLORTERM", "truecolor");
     cmd.env("PATH", &shell_path);
+    if let Some(aid) = agent_id {
+        cmd.env("MAT_AGENT_ID", aid);
+    }
     cmd.cwd(cwd);
 
     eprintln!("[spawn] spawning {} in {}", claude_bin, cwd);
@@ -307,7 +311,7 @@ pub async fn spawn_agent(
     state.session_snapshots.lock().await.insert(agent_id.clone(), snapshot.clone());
 
     let (master, writer, child, reader) =
-        make_pty_pair_and_spawn(&cwd, rows, cols, session_id.as_deref())?;
+        make_pty_pair_and_spawn(&cwd, rows, cols, session_id.as_deref(), Some(&agent_id))?;
     let session = AgentSession::new(master, writer, child, project_id, cwd.clone());
     let status = session.status.clone();
 
@@ -371,7 +375,7 @@ pub async fn restart_agent(
     let rows = rows.unwrap_or(24);
     let cols = cols.unwrap_or(80);
 
-    let (master, writer, child, reader) = make_pty_pair_and_spawn(&cwd, rows, cols, None)?;
+    let (master, writer, child, reader) = make_pty_pair_and_spawn(&cwd, rows, cols, None, Some(&agent_id))?;
     let session = AgentSession::new(master, writer, child, project_id, cwd);
     let status = session.status.clone();
 

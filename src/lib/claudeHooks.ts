@@ -43,9 +43,14 @@ const REQUIRED_EVENTS = [
 
 const DISPATCH_SCRIPT = `#!/usr/bin/env bash
 INPUT=$(cat)
+PAYLOAD=$(node -e "
+const d = JSON.parse(process.argv[1]);
+if (process.env.MAT_AGENT_ID) d.mat_agent_id = process.env.MAT_AGENT_ID;
+console.log(JSON.stringify(d));
+" "$INPUT" 2>/dev/null || echo "$INPUT")
 curl -s --max-time 3 -X POST \\
   -H "Content-Type: application/json" \\
-  -d "$INPUT" \\
+  -d "$PAYLOAD" \\
   "http://127.0.0.1:27123/hook" &>/dev/null &
 `;
 
@@ -121,7 +126,7 @@ export async function ensureDispatchScript(): Promise<void> {
 
     try {
       const existing = await readFileText(scriptPath);
-      if (existing.includes("127.0.0.1:27123/hook")) return;
+      if (existing.includes("MAT_AGENT_ID")) return;
     } catch {
       // File missing — will create it
     }

@@ -59,6 +59,9 @@ npm run dev
 # Full Tauri app (Rust + frontend together)
 npm run tauri dev
 
+# Hook event server (receives Claude Code hook callbacks)
+npm run server
+
 # Type-check TypeScript
 npx tsc --noEmit
 
@@ -69,7 +72,7 @@ cargo check --manifest-path src-tauri/Cargo.toml
 npm run tauri build
 ```
 
-Config files live at `~/Library/Application Support/multi-agents-terminal/` (projects.json, agents.json). Conversation history is restored entirely by Claude itself via `claude -r <session_id>` — the app no longer persists raw PTY scrollback.
+Config files live at `~/Library/Application Support/multi-agents-terminal/` (projects.json, agents.json, hook-events.jsonl). Conversation history is restored entirely by Claude itself via `claude -r <session_id>` — the app no longer persists raw PTY scrollback.
 
 ## Architecture
 
@@ -95,9 +98,9 @@ PTY process output
 - **`pty/session.rs`** — `AgentSession`: master PTY, writer, child process, atomic status (`STATUS_ACTIVE/WAITING/EXITED`), project_id, cwd.
 - **`pty/manager.rs`** — `PtyManager`: `HashMap<agent_id, AgentSession>`. Methods: insert, remove, write, resize, kill, get_status_u8.
 - **`pty/reader.rs`** — `spawn_reader()`: blocking task that reads PTY → emits `pty-output` event. Emits `agent-status: waiting` after 2 s silence, `agent-exited` on EOF/error. No on-disk persistence — output is only forwarded to xterm via Tauri events.
-- **`commands/pty_commands.rs`** — all PTY Tauri commands. `spawn_agent` runs `claude` (or `claude -r <session_id>` for resume), located via `zsh -il`. `spawn_shell` runs `$SHELL` with inherited `LANG`/`LC_ALL`/`LC_CTYPE`. Both accept optional `rows`/`cols` and `agent_id` (for session restore). Additional commands: `is_session_nonempty`, `get_agent_session_id`, `exit_app`.
+- **`commands/pty_commands.rs`** — all PTY Tauri commands. `spawn_agent` runs `claude` (or `claude -r <session_id>` for resume), located via `zsh -il`. Passes `MAT_AGENT_ID=<agent_id>` as env var to the PTY so Claude Code hooks can identify the originating agent. `spawn_shell` runs `$SHELL` with inherited `LANG`/`LC_ALL`/`LC_CTYPE`. Both accept optional `rows`/`cols` and `agent_id` (for session restore). Additional commands: `is_session_nonempty`, `get_agent_session_id`, `exit_app`.
 - **`commands/project_commands.rs`** — load/save projects.json (atomic rename), folder picker.
-- **`commands/file_commands.rs`** — 8 FS commands: `read_dir`, `read_file_text`, `write_file_text`, `delete_path`, `create_file`, `create_dir_all`, `rename_path`, `copy_path`. `read_dir` sorts dirs first (alphabetical), then files.
+- **`commands/file_commands.rs`** — FS commands: `read_dir`, `read_file_text`, `write_file_text`, `delete_path`, `create_file`, `create_dir_all`, `rename_path`, `copy_path`, `get_home_dir`, `set_executable`. `read_dir` sorts dirs first (alphabetical), then files.
 
 Tauri 2 maps **camelCase JS parameters → snake_case Rust parameters** automatically.
 
@@ -205,7 +208,17 @@ xterm cannot be re-opened once closed. Two patterns used:
 
 **Session persistence (`src/hooks/useSessionPersistence.ts`)**
 
-On mount: loads projects + agents.json → respawns each agent PTY reusing the saved `agent_id`; if `session_id` is present spawns as `claude -r <session_id>` so Claude itself restores the conversation → adds to store. On change: saves projects and agents (in tab order, excluding `exited`) to disk. Accepts a `pausedRef: MutableRefObject<boolean>` — when true, skips auto-save (used during the close sequence to prevent race conditions).
+On mount: loads projects + agents.json → respawns each agent PTY reusing the saved `agent_id`; if `session_id` is present spawns as `claude -r <session_id>` so Claude itself restores the conversation → adds to store. Also calls `ensureDispatchScript()` (creates `~/.claude/hooks/mat-dispatch.sh`) and `ensureProjectHooks()` for every project (patches `.claude/settings.json` with all 29 hook events). On change: saves projects and agents (in tab order, excluding `exited`) to disk. Accepts a `pausedRef: MutableRefObject<boolean>` — when true, skips auto-save (used during the close sequence to prevent race conditions).
+
+**Claude Code hook system (`src/lib/claudeHooks.ts`, `src/hooks/useHookEvents.ts`, `server/`)**
+
+All Claude Code hook events are forwarded to a local Node.js server (`server/index.js`) running on `127.0.0.1:27123`.
+
+- `ensureProjectHooks(projectPath)` — non-destructively patches `<project>/.claude/settings.json` to register `~/.claude/hooks/mat-dispatch.sh` for all 29 hook event types. Called on startup (for every loaded project) and when a project is added or created.
+- `ensureDispatchScript()` — writes `~/.claude/hooks/mat-dispatch.sh` with `chmod 755` on startup. The script reads hook JSON from stdin, injects `mat_agent_id` (from `$MAT_AGENT_ID` env var set by `spawn_agent`), then POSTs to the server non-blocking (`--max-time 3 &`).
+- `server/index.js` — standalone HTTP server. Start with `npm run server`. Receives `POST /hook`, resolves the agent by `mat_agent_id` (exact match) with fallback to `session_id`/`cwd` lookup in `agents.json`, logs to console, appends to `hook-events.jsonl`.
+- `useHookEvents(onEvent)` — React hook that polls `hook-events.jsonl` every 2 s via `readFileText` and calls `onEvent` for each new line. Mounted in `App.tsx`.
+- **Agent identification**: `spawn_agent` sets `MAT_AGENT_ID=<agent_id>` in the PTY process env. This env var persists for the entire process lifetime regardless of session ID changes.
 
 **Close sequence (App.tsx)**
 
