@@ -1,12 +1,12 @@
 import { useState, useRef } from "react";
 import { useStore } from "../../store/useStore";
-import { readFileText, deletePath, renamePath, revealInFinder } from "../../lib/tauri";
+import { readFileText, deletePath, renamePath, revealInFinder, copyPath } from "../../lib/tauri";
 import type { FileEntry } from "../../lib/tauri";
 import { ContextMenu, type ContextMenuItem } from "./ContextMenu";
 import { ConfirmModal } from "../shared/ConfirmModal";
 import { detectLanguage } from "../../lib/languageDetect";
 import { startFileDrag } from "../../lib/fileDrag";
-import { ChevronRight, ChevronDown, Folder, FolderOpen, Pencil, Copy, Trash2, ScanSearch } from "lucide-react";
+import { ChevronRight, ChevronDown, Folder, FolderOpen, Pencil, Copy, Trash2, ScanSearch, CopyPlus } from "lucide-react";
 import { FileIcon } from "../../lib/fileIcons";
 
 interface Props {
@@ -74,6 +74,22 @@ export function FileTreeNode({ entry, depth, projectId, onRefresh, renderChildre
     }
   };
 
+  // ── Duplicate ─────────────────────────────────────────────────────────────
+  const handleDuplicate = async () => {
+    const lastSlash = entry.path.lastIndexOf("/");
+    const parent = entry.path.slice(0, lastSlash);
+    const dot = entry.name.lastIndexOf(".");
+    const base = dot > 0 ? entry.name.slice(0, dot) : entry.name;
+    const ext = dot > 0 ? entry.name.slice(dot) : "";
+    const copyPath_ = `${parent}/${base} copy${ext}`;
+    try {
+      await copyPath(entry.path, copyPath_);
+      onRefresh();
+    } catch (e) {
+      console.error("duplicate failed", e);
+    }
+  };
+
   // ── Context menu ─────────────────────────────────────────────────────────
   const handleContextMenu = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -86,6 +102,11 @@ export function FileTreeNode({ entry, depth, projectId, onRefresh, renderChildre
       icon: Pencil,
       onClick: startRename,
     },
+    ...(!entry.is_dir ? [{
+      label: "Duplicate",
+      icon: CopyPlus,
+      onClick: handleDuplicate,
+    }] : []),
     {
       label: "Reveal in Finder",
       icon: ScanSearch,
