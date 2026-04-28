@@ -29,5 +29,6 @@ serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 anyhow = "1"
 dirs-next = "2"
+axum = { version = "0.8", default-features = false, features = ["http1", "tokio", "json", "macros"] }
 git2 = { version = "0.19", default-features = false, features = ["vendored-libgit2"] }
 

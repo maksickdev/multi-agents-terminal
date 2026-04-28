@@ -1,4 +1,5 @@
 mod commands;
+mod hook_server;
 mod pty;
 mod state;
 
@@ -34,11 +35,16 @@ pub fn run() {
         .unwrap_or_else(|| std::path::PathBuf::from("."))
         .join("multi-agents-terminal");
 
+    let hook_server_path = config_path.clone();
+
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
         .manage(AppState::new(config_path))
-        .setup(|app| {
+        .setup(move |app| {
+            // Start the hook receiver HTTP server embedded in the app process.
+            tokio::spawn(hook_server::start(hook_server_path));
+
             // Intercept window X-button close → prevent and let frontend handle it,
             // unless exit_app already set confirmed_exit (then allow the close through).
             let confirmed_exit = app.state::<AppState>().confirmed_exit.clone();
