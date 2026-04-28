@@ -19,7 +19,7 @@ A macOS desktop app built with Tauri 2 + React + TypeScript for running and mana
 - **Confirmation modals** — shown before killing an agent, closing an unsaved file, removing a project, moving or deleting a file, renaming a file tab
 - **Usage monitor** — Claude Code usage limits panel accessible from the ActivityBar (icon-only button above Settings)
 - **Themed scrollbars** — Tokyo Night styled scrollbars everywhere; custom scrollbar in xterm terminals (native one hidden)
-- **Hook event system** — automatically patches every project's `.claude/settings.json` to forward all 29 Claude Code hook events to a local server (`npm run server`); each hook is tagged with the originating agent ID via `MAT_AGENT_ID` env var injected at spawn time
+- **Hook event system** — automatically patches every project's `.claude/settings.json` to forward all 29 Claude Code hook events to an embedded axum HTTP server (port 27123, started inside the Tauri process); each hook is tagged with the originating agent ID via `MAT_AGENT_ID` env var injected at spawn time
 
 ## Tech stack
 
@@ -34,10 +34,6 @@ npm install
 npm run tauri dev   # Rust + frontend together (recommended)
 # or
 npm run dev         # Frontend only (Vite HMR, no Tauri backend)
-```
-
-```bash
-npm run server      # Hook event server (port 27123) — run alongside the app
 ```
 
 ```bash
@@ -74,13 +70,10 @@ src/
     externalDrop.ts   — shared state for active external drop target
   store/
     useStore.ts       — Zustand store (projects, agents, editor, file explorer state)
-server/
-  index.js            — HTTP server on port 27123 (hook receiver)
-  routes/
-    hooks.js          — POST /hook handler: agent lookup, logging, JSONL append
 src-tauri/
   src/
     commands/         — pty_commands, project_commands, file_commands
+    hook_server.rs    — embedded axum HTTP server (port 27123, POST /hook)
     pty/              — session, manager, reader
     state/            — app_state
 ```
@@ -90,6 +83,6 @@ src-tauri/
 Runtime config is stored at `~/Library/Application Support/multi-agents-terminal/`:
 - `projects.json` — saved projects
 - `agents.json` — saved agents (tab order + Claude `session_id` per agent)
-- `hook-events.jsonl` — append-only log of all received Claude Code hook events (written by the server, polled by the frontend)
+- `hook-events.jsonl` — append-only log of all received Claude Code hook events (written by the embedded Rust server, polled by the frontend)
 
 Hook dispatch script is auto-created at `~/.claude/hooks/mat-dispatch.sh` on first app launch.

@@ -43,11 +43,11 @@ const REQUIRED_EVENTS = [
 
 const DISPATCH_SCRIPT = `#!/usr/bin/env bash
 INPUT=$(cat)
-PAYLOAD=$(node -e "
-const d = JSON.parse(process.argv[1]);
-if (process.env.MAT_AGENT_ID) d.mat_agent_id = process.env.MAT_AGENT_ID;
-console.log(JSON.stringify(d));
-" "$INPUT" 2>/dev/null || echo "$INPUT")
+if [ -n "$MAT_AGENT_ID" ]; then
+  PAYLOAD=$(printf '%s' "$INPUT" | sed 's/^{/{"mat_agent_id":"'"$MAT_AGENT_ID"'",/')
+else
+  PAYLOAD="$INPUT"
+fi
 curl -s --max-time 3 -X POST \\
   -H "Content-Type: application/json" \\
   -d "$PAYLOAD" \\

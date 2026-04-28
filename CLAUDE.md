@@ -59,9 +59,6 @@ npm run dev
 # Full Tauri app (Rust + frontend together)
 npm run tauri dev
 
-# Hook event server (receives Claude Code hook callbacks)
-npm run server
-
 # Type-check TypeScript
 npx tsc --noEmit
 
@@ -212,13 +209,13 @@ xterm cannot be re-opened once closed. Two patterns used:
 
 On mount: loads projects + agents.json → respawns each agent PTY reusing the saved `agent_id`; if `session_id` is present spawns as `claude -r <session_id>` so Claude itself restores the conversation → adds to store. Also calls `ensureDispatchScript()` (creates `~/.claude/hooks/mat-dispatch.sh`) and `ensureProjectHooks()` for every project (patches `.claude/settings.json` with all 29 hook events). On change: saves projects and agents (in tab order, excluding `exited`) to disk. Accepts a `pausedRef: MutableRefObject<boolean>` — when true, skips auto-save (used during the close sequence to prevent race conditions).
 
-**Claude Code hook system (`src/lib/claudeHooks.ts`, `src/hooks/useHookEvents.ts`, `server/`)**
+**Claude Code hook system (`src/lib/claudeHooks.ts`, `src/hooks/useHookEvents.ts`, `src-tauri/src/hook_server.rs`)**
 
-All Claude Code hook events are forwarded to a local Node.js server (`server/index.js`) running on `127.0.0.1:27123`.
+All Claude Code hook events are forwarded to an axum HTTP server embedded in the Tauri process, listening on `127.0.0.1:27123`. It starts automatically in `setup()` — no separate process or `npm run server` needed.
 
 - `ensureProjectHooks(projectPath)` — non-destructively patches `<project>/.claude/settings.json` to register `~/.claude/hooks/mat-dispatch.sh` for all 29 hook event types. Called on startup (for every loaded project) and when a project is added or created.
-- `ensureDispatchScript()` — writes `~/.claude/hooks/mat-dispatch.sh` with `chmod 755` on startup. The script reads hook JSON from stdin, injects `mat_agent_id` (from `$MAT_AGENT_ID` env var set by `spawn_agent`), then POSTs to the server non-blocking (`--max-time 3 &`).
-- `server/index.js` — standalone HTTP server. Start with `npm run server`. Receives `POST /hook`, resolves the agent by `mat_agent_id` (exact match) with fallback to `session_id`/`cwd` lookup in `agents.json`, logs to console, appends to `hook-events.jsonl`.
+- `ensureDispatchScript()` — writes `~/.claude/hooks/mat-dispatch.sh` with `chmod 755` on startup. The script reads hook JSON from stdin, injects `mat_agent_id` via `sed` (from `$MAT_AGENT_ID` env var set by `spawn_agent`), then POSTs to the server non-blocking (`--max-time 3 &`). Pure bash — no Node.js dependency.
+- `hook_server.rs` — embedded axum server. Receives `POST /hook`, resolves the agent by `mat_agent_id` (exact match) with fallback to `session_id`/`cwd` lookup in `agents.json`, appends enriched event to `hook-events.jsonl`.
 - `useHookEvents(onEvent)` — React hook that polls `hook-events.jsonl` every 2 s via `readFileText` and calls `onEvent` for each new line. Mounted in `App.tsx`.
 - **Agent identification**: `spawn_agent` sets `MAT_AGENT_ID=<agent_id>` in the PTY process env. This env var persists for the entire process lifetime regardless of session ID changes.
 
