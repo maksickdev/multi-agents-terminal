@@ -37,6 +37,17 @@ pub fn run() {
 
     let hook_server_path = config_path.clone();
 
+    // Truncate the hook events log on startup. The file is only used at runtime
+    // (LogsPanel + agent attention badges) and does not need to persist across
+    // sessions. Without this, the file grows unbounded and useHookEvents reads
+    // the entire blob on every poll, freezing the main thread once it crosses
+    // tens of MB. Truncating on startup also covers the post-crash case where
+    // a clean shutdown didn't run.
+    let events_file = config_path.join("hook-events.jsonl");
+    if events_file.exists() {
+        let _ = std::fs::write(&events_file, b"");
+    }
+
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
