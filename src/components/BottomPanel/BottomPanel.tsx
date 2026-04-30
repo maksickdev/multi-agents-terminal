@@ -89,6 +89,8 @@ function ShellPane({ agentId, isVisible, height }: {
     if (!isVisible) return;
     requestAnimationFrame(() => {
       ptyManager.fit(agentId);
+      // Rebuild glyph atlas after hidden→visible — see TerminalPane for why.
+      ptyManager.refreshRenderer(agentId);
       const d = ptyManager.getDimensions(agentId);
       if (d) resizeAgent(agentId, d.rows, d.cols).catch(() => {});
       updateScrollbar(agentId);

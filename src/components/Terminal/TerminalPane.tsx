@@ -104,6 +104,11 @@ export function TerminalPane({ agentId, isVisible }: Props) {
     if (!isVisible) return;
     requestAnimationFrame(() => {
       ptyManager.fit(agentId);
+      // Rebuild the glyph atlas after a hidden→visible transition. While the
+      // pane was hidden the renderer may have cached glyphs at stale metrics
+      // (wrong DPR, pre-font-load measurement); without this the user sees
+      // some text rendered at compressed width after switching projects.
+      ptyManager.refreshRenderer(agentId);
       const dims = ptyManager.getDimensions(agentId);
       if (dims) sendResizeIfChanged(dims.rows, dims.cols);
       updateScrollbar(agentId);

@@ -1,15 +1,41 @@
 import { Terminal } from "@xterm/xterm";
 import { FitAddon } from "@xterm/addon-fit";
 import { WebLinksAddon } from "@xterm/addon-web-links";
+import { WebglAddon } from "@xterm/addon-webgl";
 import { CanvasAddon } from "@xterm/addon-canvas";
 import type { ThemeId } from "./themes";
 
 interface TerminalEntry {
   terminal: Terminal;
   fitAddon: FitAddon;
+  rendererLoaded: boolean;
 }
 
 const entries = new Map<string, TerminalEntry>();
+
+// One-shot refresh of every terminal's glyph atlas once the webfont finishes
+// loading. xterm measures glyph width at terminal.open(); if JetBrains Mono
+// hasn't loaded yet it caches Menlo metrics, producing the "some chars
+// compressed, some normal" symptom that persists across resize/fit. Awaiting
+// document.fonts.ready then calling clearTextureAtlas + refresh once fixes it
+// without changing the synchronous open() flow (so no perf impact on startup).
+let fontRefreshScheduled = false;
+function scheduleFontReadyRefresh() {
+  if (fontRefreshScheduled) return;
+  fontRefreshScheduled = true;
+  const fonts = (document as Document & { fonts?: FontFaceSet }).fonts;
+  if (!fonts) return;
+  Promise.allSettled([
+    fonts.load('13px "JetBrains Mono"'),
+    fonts.ready,
+  ]).then(() => {
+    for (const { terminal } of entries.values()) {
+      if (!terminal.element) continue;
+      try { terminal.clearTextureAtlas(); } catch { /* ignore */ }
+      try { terminal.refresh(0, terminal.rows - 1); } catch { /* ignore */ }
+    }
+  });
+}
 
 // Buffers PTY chunks that arrive before the terminal component mounts and calls
 // attach(). Drained into the write queue on the first attach() call.
@@ -135,6 +161,9 @@ export function applyTerminalTheme(themeId: ThemeId) {
   const palette = xtermThemes[themeId];
   for (const { terminal } of entries.values()) {
     terminal.options.theme = palette;
+    // Clear cached glyphs — they were rasterized in the previous palette.
+    try { terminal.clearTextureAtlas(); } catch { /* ignore */ }
+    try { terminal.refresh(0, terminal.rows - 1); } catch { /* ignore */ }
   }
 }
 
@@ -152,17 +181,38 @@ export function getOrCreate(agentId: string): TerminalEntry {
     const fitAddon = new FitAddon();
     terminal.loadAddon(fitAddon);
     terminal.loadAddon(new WebLinksAddon());
-    terminal.loadAddon(new CanvasAddon());
 
-    entries.set(agentId, { terminal, fitAddon });
+    entries.set(agentId, { terminal, fitAddon, rendererLoaded: false });
   }
   return entries.get(agentId)!;
+}
+
+// Loads the GPU renderer addon. Must be called AFTER terminal.open() because
+// the addon attaches to the live DOM element. Tries WebGL first (xterm's
+// recommended renderer — 9× faster, actively maintained, exposes
+// clearTextureAtlas) and falls back to Canvas if WebGL2 is unavailable or the
+// GPU context is lost (system sleep, driver reset, too many contexts).
+function loadRenderer(entry: TerminalEntry) {
+  if (entry.rendererLoaded) return;
+  try {
+    const webgl = new WebglAddon();
+    webgl.onContextLoss(() => {
+      webgl.dispose();
+      try { entry.terminal.loadAddon(new CanvasAddon()); } catch { /* ignore */ }
+    });
+    entry.terminal.loadAddon(webgl);
+  } catch {
+    try { entry.terminal.loadAddon(new CanvasAddon()); } catch { /* ignore */ }
+  }
+  entry.rendererLoaded = true;
 }
 
 export function attach(agentId: string, element: HTMLElement) {
   const entry = getOrCreate(agentId);
   if (!entry.terminal.element) {
+    scheduleFontReadyRefresh();
     entry.terminal.open(element);
+    loadRenderer(entry);
 
     // Capture-phase listener on xterm's hidden textarea prevents WKWebView
     // from processing Option+key natively (word-delete, word-nav, etc.)
@@ -187,6 +237,19 @@ export function attach(agentId: string, element: HTMLElement) {
   }
 
   entry.fitAddon.fit();
+}
+
+// Forces the renderer to rebuild its glyph atlas and redraw all visible cells.
+// Call this when the terminal becomes visible after being hidden — fixes the
+// "compressed glyphs" bug where some characters render with stale (wrong-font)
+// width because they were measured before the webfont loaded or while the
+// container was hidden.
+export function refreshRenderer(agentId: string) {
+  const entry = entries.get(agentId);
+  if (!entry || !entry.terminal.element) return;
+  const term = entry.terminal;
+  try { term.clearTextureAtlas(); } catch { /* ignore */ }
+  try { term.refresh(0, term.rows - 1); } catch { /* ignore */ }
 }
 
 export function fit(agentId: string) {
