@@ -117,6 +117,8 @@ interface AppStore {
   setFileExplorerOpen: (open: boolean) => void;
   setFileExplorerWidth: (width: number) => void;
   toggleExpandedDir: (projectId: string, dirPath: string) => void;
+  /** Expand every ancestor directory of `filePath` between `rootPath` (exclusive) and the file (exclusive). */
+  expandPathAncestors: (projectId: string, rootPath: string, filePath: string) => void;
 
   // Editor pane
   editorPanelOpen: boolean;
@@ -334,6 +336,24 @@ export const useStore = create<AppStore>((set, get) => ({
         ? current.filter((p) => p !== dirPath)
         : [...current, dirPath];
       return { expandedDirs: { ...s.expandedDirs, [projectId]: next } };
+    }),
+
+  expandPathAncestors: (projectId, rootPath, filePath) =>
+    set((s) => {
+      if (!filePath.startsWith(rootPath + "/")) return {};
+      const rel = filePath.slice(rootPath.length + 1);
+      const parts = rel.split("/");
+      if (parts.length <= 1) return {};
+      const ancestors: string[] = [];
+      let acc = rootPath;
+      for (let i = 0; i < parts.length - 1; i++) {
+        acc += "/" + parts[i];
+        ancestors.push(acc);
+      }
+      const current = s.expandedDirs[projectId] ?? [];
+      const missing = ancestors.filter((p) => !current.includes(p));
+      if (missing.length === 0) return {};
+      return { expandedDirs: { ...s.expandedDirs, [projectId]: [...current, ...missing] } };
     }),
 
   openFile: (file) =>

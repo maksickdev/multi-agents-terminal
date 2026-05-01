@@ -14,9 +14,17 @@ export function FileExplorer() {
     fileTreeVersion,
     setFileExplorerOpen, setFileExplorerWidth,
     hotkeys,
+    activeFilePath,
+    expandPathAncestors,
   } = useStore();
 
   const selectedProject = projects.find((p) => p.id === selectedProjectId) ?? null;
+
+  // Auto-expand all ancestor folders of the active file so it's revealed in the tree.
+  useEffect(() => {
+    if (!selectedProject || !activeFilePath) return;
+    expandPathAncestors(selectedProject.id, selectedProject.path, activeFilePath);
+  }, [activeFilePath, selectedProject?.id, selectedProject?.path, expandPathAncestors]);
 
   // ── Resize ───────────────────────────────────────────────────────────────
   const panelRef    = useRef<HTMLDivElement>(null);
