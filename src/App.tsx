@@ -23,6 +23,7 @@ import { matchesHotkey, formatHotkey } from "./lib/hotkeys";
 import {
   saveAgents, exitApp, writeToAgent,
   isSessionNonempty,
+  openExternal,
   type AgentMeta,
 } from "./lib/tauri";
 
@@ -147,6 +148,24 @@ export function App() {
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
   }, [sidebarOpen, setSidebarOpen, editorPanelOpen, setEditorPanelOpen, gitPanelOpen, setGitPanelOpen, automationPanelOpen, setAutomationPanelOpen, hotkeys]);
+
+  // ── Intercept clicks on <a href="http(s)://..."> and open in default browser ──
+  // WKWebView has no notion of "new window", so a plain anchor click navigates
+  // the WebView itself and replaces the app. We delegate at document level so
+  // every link (markdown preview, future UI) is covered.
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      const anchor = (e.target as HTMLElement | null)?.closest?.("a");
+      if (!anchor) return;
+      const href = anchor.getAttribute("href");
+      if (!href) return;
+      if (!/^https?:\/\//i.test(href) && !/^mailto:/i.test(href)) return;
+      e.preventDefault();
+      openExternal(href);
+    };
+    document.addEventListener("click", handler);
+    return () => document.removeEventListener("click", handler);
+  }, []);
 
   // ── Listen for OS window-close request (intercepted by Rust) ─────────────
   useEffect(() => {

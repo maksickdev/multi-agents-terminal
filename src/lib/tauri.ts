@@ -1,5 +1,11 @@
 import { invoke } from "@tauri-apps/api/core";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
+import { openUrl } from "@tauri-apps/plugin-opener";
+
+/** Open a URL in the user's default browser instead of navigating the WebView. */
+export function openExternal(url: string): void {
+  openUrl(url).catch((e) => console.error("openUrl failed", url, e));
+}
 
 export interface Project {
   id: string;

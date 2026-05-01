@@ -4,6 +4,7 @@ import { WebLinksAddon } from "@xterm/addon-web-links";
 import { WebglAddon } from "@xterm/addon-webgl";
 import { CanvasAddon } from "@xterm/addon-canvas";
 import type { ThemeId } from "./themes";
+import { openExternal } from "./tauri";
 
 interface TerminalEntry {
   terminal: Terminal;
@@ -180,7 +181,9 @@ export function getOrCreate(agentId: string): TerminalEntry {
     });
     const fitAddon = new FitAddon();
     terminal.loadAddon(fitAddon);
-    terminal.loadAddon(new WebLinksAddon());
+    // Custom handler so links open in the default browser via the opener
+    // plugin instead of navigating the WKWebView (which would replace the app).
+    terminal.loadAddon(new WebLinksAddon((_e, uri) => openExternal(uri)));
 
     entries.set(agentId, { terminal, fitAddon, rendererLoaded: false });
   }
