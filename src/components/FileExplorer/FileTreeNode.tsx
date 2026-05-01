@@ -21,7 +21,8 @@ interface Props {
 interface ContextState { x: number; y: number }
 
 export function FileTreeNode({ entry, depth, projectId, onRefresh, renderChildren }: Props) {
-  const { toggleExpandedDir, openFile, editorPanelOpen, setEditorPanelOpen } = useStore();
+  const { toggleExpandedDir, openFile, editorPanelOpen, setEditorPanelOpen, activeFilePath } = useStore();
+  const isActive = !entry.is_dir && activeFilePath === entry.path;
 
   const [contextMenu, setContextMenu] = useState<ContextState | null>(null);
   const [renaming, setRenaming] = useState(false);
@@ -161,7 +162,9 @@ export function FileTreeNode({ entry, depth, projectId, onRefresh, renderChildre
       )}
 
       <div
-        className="group flex items-center gap-1 py-0.5 rounded cursor-pointer hover:bg-[var(--c-bg-elevated)] select-none text-xs"
+        className={`group flex items-center gap-1 py-0.5 rounded cursor-pointer select-none text-xs ${
+          isActive ? "bg-[var(--c-bg-selected)]" : "hover:bg-[var(--c-bg-elevated)]"
+        }`}
         style={{ paddingLeft: 2 + indent, paddingRight: 0, marginLeft: 4, marginRight: 4 }}
         data-folder-path={entry.is_dir ? entry.path : undefined}
         data-parent-folder={!entry.is_dir ? entry.path.substring(0, entry.path.lastIndexOf("/")) : undefined}
@@ -202,7 +205,9 @@ export function FileTreeNode({ entry, depth, projectId, onRefresh, renderChildre
             autoFocus
           />
         ) : (
-          <span className="truncate flex-1 text-[var(--c-text)] group-hover:text-[var(--c-text-bright)]">
+          <span className={`truncate flex-1 group-hover:text-[var(--c-text-bright)] ${
+            isActive ? "text-[var(--c-text-bright)]" : "text-[var(--c-text)]"
+          }`}>
             {entry.name}
           </span>
         )}
