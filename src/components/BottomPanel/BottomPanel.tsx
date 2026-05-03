@@ -239,11 +239,6 @@ export function BottomPanel() {
       <div className="flex items-center justify-between px-3 h-8 bg-[var(--c-bg)] border-b border-[var(--c-border)] flex-shrink-0 select-none">
         <span className="text-xs font-semibold text-[var(--c-text-dim)] uppercase tracking-widest">
           Terminal
-          {selectedProject && (
-            <span className="ml-2 normal-case font-normal text-[var(--c-muted)]">
-              {selectedProject.name}
-            </span>
-          )}
         </span>
         <button
           onClick={() => setBottomPanelOpen(false)}
