@@ -140,7 +140,7 @@ export function FileExplorer() {
       {/* Header */}
       <div className="flex items-center justify-between px-2 h-8 bg-[var(--c-bg)] border-b border-[var(--c-border)] flex-shrink-0 select-none">
         <span className="text-xs font-semibold text-[var(--c-text-dim)] uppercase tracking-widest truncate">
-          {selectedProject ? selectedProject.name : "Explorer"}
+          Files
         </span>
         <div className="flex items-center gap-0.5">
           <button
