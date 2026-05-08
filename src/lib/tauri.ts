@@ -207,6 +207,14 @@ export const gitPushUpstream  = (cwd: string, remote: string, branch: string) =>
 
 export const gitInit       = (cwd: string) => invoke<void>("git_init", { cwd });
 export const gitLsRemote   = (url: string) => invoke<void>("git_ls_remote", { url });
+export const gitClone      = (url: string, parentDir: string, name: string) =>
+  invoke<string>("git_clone", { url, parentDir, name });
+export const gitCloneWithPassphrase = (
+  url: string,
+  parentDir: string,
+  name: string,
+  passphrase: string,
+) => invoke<string>("git_clone_with_passphrase", { url, parentDir, name, passphrase });
 export const gitPull    = (cwd: string) => invoke<string>("git_pull", { cwd });
 export const gitPush    = (cwd: string) => invoke<string>("git_push", { cwd });
 export const gitPullWithPassphrase = (cwd: string, passphrase: string) =>

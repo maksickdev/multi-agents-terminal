@@ -715,3 +715,48 @@ pub fn git_ls_remote(url: String) -> Result<(), String> {
         Err(stderr)
     }
 }
+
+fn prepare_clone_destination(parent_dir: &str, name: &str) -> Result<std::path::PathBuf, String> {
+    if name.is_empty() || name.contains('/') || name.contains('\\') {
+        return Err("Project name must not be empty or contain slashes".into());
+    }
+    if parent_dir.is_empty() {
+        return Err("Parent folder is not set".into());
+    }
+    std::fs::create_dir_all(parent_dir).map_err(|e| format!("create parent dir: {e}"))?;
+    let dest = std::path::Path::new(parent_dir).join(name);
+    if dest.exists() {
+        return Err(format!("Destination already exists: {}", dest.display()));
+    }
+    Ok(dest)
+}
+
+/// Clone a git repository into `<parent_dir>/<name>`. Returns the absolute path
+/// of the new repository on success. If git asks for credentials, returns
+/// Err("AUTH_REQUIRED: ..."); the frontend should retry via
+/// `git_clone_with_passphrase`.
+#[tauri::command]
+pub fn git_clone(url: String, parent_dir: String, name: String) -> Result<String, String> {
+    let dest = prepare_clone_destination(&parent_dir, &name)?;
+    let esc_url = url.replace('\'', "'\\''");
+    let esc_name = name.replace('\'', "'\\''");
+    let subcmd = format!("clone -- '{esc_url}' '{esc_name}'");
+    shell_git(&parent_dir, &subcmd)?;
+    Ok(dest.to_string_lossy().into_owned())
+}
+
+/// Clone with an explicit passphrase/token (used after AUTH_REQUIRED error).
+#[tauri::command]
+pub fn git_clone_with_passphrase(
+    url: String,
+    parent_dir: String,
+    name: String,
+    passphrase: String,
+) -> Result<String, String> {
+    let dest = prepare_clone_destination(&parent_dir, &name)?;
+    let esc_url = url.replace('\'', "'\\''");
+    let esc_name = name.replace('\'', "'\\''");
+    let subcmd = format!("clone -- '{esc_url}' '{esc_name}'");
+    shell_git_with_askpass(&parent_dir, &subcmd, &passphrase)?;
+    Ok(dest.to_string_lossy().into_owned())
+}
