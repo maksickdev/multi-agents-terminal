@@ -3,10 +3,10 @@ import { useStore } from "../../store/useStore";
 import {
   gitStatus, gitDiff, gitStage, gitStageAll,
   gitUnstage, gitUnstageAll, gitDiscard, gitCommit,
-  gitInit, gitPull, gitPush,
+  gitInit, gitPull, gitPush, gitFetch, gitFetchWithPassphrase,
   gitPullWithPassphrase, gitPushWithPassphrase,
   gitLog, gitCommitFiles, gitCommitFileDiff,
-  gitBranches, gitCheckout, gitCreateBranch,
+  gitBranches, gitCheckout, gitCheckoutRemote, gitCreateBranch,
   gitRemotes, gitAddRemote, gitRemoveRemote, gitPushUpstream,
   readFileText,
   type GitFileStatus, type GitStatus, type GitLogEntry, type GitBranchEntry, type GitRemote,
@@ -22,7 +22,7 @@ import { detectLanguage } from "../../lib/languageDetect";
 import {
   RefreshCw, Plus, Minus, GitCommit, CloudDownload, CloudUpload,
   ChevronDown, ChevronRight, RotateCcw, Trash2, FolderOpen,
-  GitBranch, Check, Globe, X,
+  GitBranch, Check, Globe, X, DownloadCloud,
 } from "lucide-react";
 
 // ── status helpers ────────────────────────────────────────────────────────────
@@ -202,6 +202,12 @@ function BranchRow({
   checkingOut: boolean;
   onCheckout: () => void;
 }) {
+  const isRemote = branch.kind === "remote";
+  const displayName = isRemote ? branch.shortName : branch.name;
+  const tooltip    = isRemote
+    ? `Check out ${branch.name} (creates local tracking branch)`
+    : `Switch to ${branch.name}`;
+
   return (
     <div
       onClick={() => { if (!branch.isCurrent && !checkingOut) onCheckout(); }}
@@ -210,25 +216,37 @@ function BranchRow({
           ? "cursor-default"
           : "cursor-pointer hover:bg-[var(--c-bg-elevated)]"
       }`}
+      title={isRemote ? branch.name : undefined}
     >
-      {/* Current indicator */}
+      {/* Current / kind indicator */}
       <span className="flex-shrink-0 w-3.5 flex items-center justify-center">
         {branch.isCurrent
           ? <Check size={10} className="text-[var(--c-accent)]" />
-          : <GitBranch size={10} className="text-[var(--c-text-dim)]" />
+          : isRemote
+            ? <Globe size={10} className="text-[var(--c-text-dim)]" />
+            : <GitBranch size={10} className="text-[var(--c-text-dim)]" />
         }
       </span>
 
       {/* Name */}
       <span
         className="flex-1 truncate font-mono text-[11px] leading-relaxed"
-        style={{ color: branch.isCurrent ? "var(--c-accent)" : "var(--c-text)" }}
+        style={{
+          color: branch.isCurrent
+            ? "var(--c-accent)"
+            : isRemote
+              ? "var(--c-text-dim)"
+              : "var(--c-text)",
+        }}
       >
-        {branch.name}
+        {isRemote && branch.remote && (
+          <span className="opacity-60">{branch.remote}/</span>
+        )}
+        {displayName}
       </span>
 
-      {/* Ahead/behind */}
-      {(branch.ahead > 0 || branch.behind > 0) && (
+      {/* Ahead/behind — only meaningful for local branches */}
+      {!isRemote && (branch.ahead > 0 || branch.behind > 0) && (
         <span className="text-[10px] text-[var(--c-text-dim)] flex-shrink-0 tabular-nums">
           {branch.ahead > 0 && `↑${branch.ahead}`}
           {branch.behind > 0 && ` ↓${branch.behind}`}
@@ -240,7 +258,7 @@ function BranchRow({
         <button
           onClick={(e) => { e.stopPropagation(); onCheckout(); }}
           disabled={checkingOut}
-          title={`Switch to ${branch.name}`}
+          title={tooltip}
           className="flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity p-0.5 rounded text-[var(--c-text-dim)] hover:text-[var(--c-accent)] disabled:opacity-30"
         >
           {checkingOut
@@ -324,7 +342,8 @@ export function GitPanel() {
   const [committing, setCommitting]   = useState(false);
   const [pulling, setPulling]         = useState(false);
   const [pushing, setPushing]         = useState(false);
-  const [authModal, setAuthModal]     = useState<{ operation: "push" | "pull" } | null>(null);
+  const [fetching, setFetching]       = useState(false);
+  const [authModal, setAuthModal]     = useState<{ operation: "push" | "pull" | "fetch" } | null>(null);
   const [stagedExpanded, setStagedExpanded]   = useState(true);
   const [changesExpanded, setChangesExpanded] = useState(true);
   const [historyExpanded, setHistoryExpanded] = useState(true);
@@ -336,6 +355,7 @@ export function GitPanel() {
   const [graphNonce, setGraphNonce]     = useState(0);
   const [branches, setBranches]               = useState<GitBranchEntry[]>([]);
   const [branchesExpanded, setBranchesExpanded] = useState(true);
+  const [remoteBranchesExpanded, setRemoteBranchesExpanded] = useState(false);
   const [checkingOut, setCheckingOut]           = useState<string | null>(null);
   const [newBranchModal, setNewBranchModal]     = useState<{ fromRef?: string } | null>(null);
   const [creatingBranch, setCreatingBranch]     = useState(false);
@@ -445,15 +465,16 @@ export function GitPanel() {
     return () => { cancelled = true; };
   }, [project?.id, project?.path, status?.isGitRepo, graphNonce]);
 
-  // ── load branches whenever expanded or after any refresh ─────────────────
+  // ── load branches after any refresh (covers both Local and Remote sections) ─
   useEffect(() => {
-    if (!branchesExpanded || !project || !status?.isGitRepo) return;
+    if (!project || !status?.isGitRepo) return;
+    if (!branchesExpanded && !remoteBranchesExpanded) return;
     let cancelled = false;
     gitBranches(project.path)
       .then((b) => { if (!cancelled) setBranches(b); })
       .catch(() => {});
     return () => { cancelled = true; };
-  }, [branchesExpanded, project?.id, project?.path, status?.isGitRepo, graphNonce]);
+  }, [branchesExpanded, remoteBranchesExpanded, project?.id, project?.path, status?.isGitRepo, graphNonce]);
 
   // ── auto-refresh: every 5 s when panel open + on window focus ────────────
   useEffect(() => {
@@ -548,18 +569,50 @@ export function GitPanel() {
     }
   };
 
-  // ── checkout branch ───────────────────────────────────────────────────────
-  const doCheckout = async (branchName: string) => {
+  // ── checkout branch (local or remote-tracking) ────────────────────────────
+  const doCheckout = async (b: GitBranchEntry) => {
     if (!project || checkingOut) return;
-    setCheckingOut(branchName);
+    setCheckingOut(b.name);
     setError(null);
     try {
-      await gitCheckout(project.path, branchName);
+      if (b.kind === "remote") {
+        // If a local branch with the same short name already exists, just switch.
+        const localExists = branches.some(x => x.kind === "local" && x.name === b.shortName);
+        if (localExists) {
+          await gitCheckout(project.path, b.shortName);
+        } else {
+          await gitCheckoutRemote(project.path, b.name, b.shortName);
+        }
+      } else {
+        await gitCheckout(project.path, b.name);
+      }
       refresh();
     } catch (e) {
       setError(String(e));
     } finally {
       setCheckingOut(null);
+    }
+  };
+
+  // ── fetch all remotes ─────────────────────────────────────────────────────
+  const doFetch = async (passphrase?: string) => {
+    if (!project || fetching) return;
+    setFetching(true);
+    setError(null);
+    try {
+      await (passphrase
+        ? gitFetchWithPassphrase(project.path, passphrase)
+        : gitFetch(project.path));
+      refresh();
+    } catch (e) {
+      const msg = String(e);
+      if (msg.startsWith(AUTH_PREFIX)) {
+        setAuthModal({ operation: "fetch" });
+      } else {
+        setError(msg);
+      }
+    } finally {
+      setFetching(false);
     }
   };
 
@@ -669,6 +722,7 @@ export function GitPanel() {
     setAuthModal(null);
     if (op === "push") doPush(passphrase);
     else if (op === "pull") doPull(passphrase);
+    else if (op === "fetch") doFetch(passphrase);
   };
 
   const doDiscard = async (file: GitFileStatus) => {
@@ -823,6 +877,12 @@ export function GitPanel() {
           )}
         </div>
         <div className="flex items-center gap-0.5">
+          {status?.isGitRepo && remotes.length > 0 && (
+            <button onClick={() => doFetch()} title="Fetch from remote" disabled={fetching}
+              className={`p-1 text-[var(--c-text-dim)] hover:text-[var(--c-text-bright)] disabled:opacity-40 rounded transition-colors ${fetching ? "animate-spin" : ""}`}>
+              <DownloadCloud size={13} />
+            </button>
+          )}
           {status?.isGitRepo && (branch.hasRemote || remotes.length > 0) && (
             <>
               <button onClick={() => doPull()} title="Pull" disabled={pulling}
@@ -941,26 +1001,26 @@ export function GitPanel() {
               </div>
             )}
 
-            {/* ── Branches ── */}
+            {/* ── Local branches ── */}
             <div className="border-t border-[var(--c-border)]">
               <SectionHeader
                 label="Branches"
-                count={branches.length}
+                count={branches.filter(b => b.kind === "local").length}
                 expanded={branchesExpanded}
                 onToggle={() => setBranchesExpanded(v => !v)}
                 onAdd={() => setNewBranchModal({})}
               />
               {branchesExpanded && (
                 <div className="pb-1">
-                  {branches.map(b => (
+                  {branches.filter(b => b.kind === "local").map(b => (
                     <BranchRow
-                      key={b.name}
+                      key={`local-${b.name}`}
                       branch={b}
                       checkingOut={checkingOut === b.name}
-                      onCheckout={() => doCheckout(b.name)}
+                      onCheckout={() => doCheckout(b)}
                     />
                   ))}
-                  {branches.length === 0 && (
+                  {branches.filter(b => b.kind === "local").length === 0 && (
                     <div className="text-[var(--c-text-dim)] text-xs px-3 py-1.5 italic">
                       No local branches
                     </div>
@@ -968,6 +1028,45 @@ export function GitPanel() {
                 </div>
               )}
             </div>
+
+            {/* ── Remote branches ── */}
+            {remotes.length > 0 && (
+              <div className="border-t border-[var(--c-border)]">
+                <SectionHeader
+                  label="Remote Branches"
+                  count={branches.filter(b => b.kind === "remote").length}
+                  expanded={remoteBranchesExpanded}
+                  onToggle={() => setRemoteBranchesExpanded(v => !v)}
+                />
+                {remoteBranchesExpanded && (
+                  <div className="pb-1">
+                    {branches.filter(b => b.kind === "remote").map(b => (
+                      <BranchRow
+                        key={`remote-${b.name}`}
+                        branch={b}
+                        checkingOut={checkingOut === b.name}
+                        onCheckout={() => doCheckout(b)}
+                      />
+                    ))}
+                    {branches.filter(b => b.kind === "remote").length === 0 && (
+                      <div className="flex flex-col gap-1.5 px-2 py-2">
+                        <span className="text-[var(--c-text-dim)] text-xs italic">
+                          No remote branches cached. Try Fetch.
+                        </span>
+                        <button
+                          onClick={() => doFetch()}
+                          disabled={fetching}
+                          className="self-start flex items-center gap-1 text-[10px] px-2 py-1 rounded transition-colors text-[var(--c-accent)] bg-[var(--c-accent)]/10 hover:bg-[var(--c-accent)]/20 disabled:opacity-40"
+                        >
+                          <DownloadCloud size={10} />
+                          {fetching ? "Fetching…" : "Fetch now"}
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* ── Remotes ── */}
             <div className="border-t border-[var(--c-border)]">
