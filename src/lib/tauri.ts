@@ -194,10 +194,16 @@ export interface GitBranchEntry {
   ahead: number;
   behind: number;
   upstream: string | null;
+  kind: "local" | "remote";
+  remote: string;
+  shortName: string;
 }
-export const gitBranches      = (cwd: string) => invoke<GitBranchEntry[]>("git_branches", { cwd });
-export const gitCheckout      = (cwd: string, branch: string) => invoke<void>("git_checkout", { cwd, branch });
-export const gitCreateBranch  = (cwd: string, name: string, fromRef?: string) => invoke<void>("git_create_branch", { cwd, name, fromRef });
+export const gitBranches        = (cwd: string) => invoke<GitBranchEntry[]>("git_branches", { cwd });
+export const gitCheckout        = (cwd: string, branch: string) => invoke<void>("git_checkout", { cwd, branch });
+export const gitCheckoutRemote  = (cwd: string, remoteBranch: string, localName?: string) =>
+  invoke<void>("git_checkout_remote", { cwd, remoteBranch, localName });
+export const gitCreateBranch    = (cwd: string, name: string, fromRef?: string) =>
+  invoke<void>("git_create_branch", { cwd, name, fromRef });
 
 export interface GitRemote { name: string; url: string; }
 export const gitRemotes       = (cwd: string) => invoke<GitRemote[]>("git_remotes", { cwd });
@@ -217,6 +223,9 @@ export const gitCloneWithPassphrase = (
 ) => invoke<string>("git_clone_with_passphrase", { url, parentDir, name, passphrase });
 export const gitPull    = (cwd: string) => invoke<string>("git_pull", { cwd });
 export const gitPush    = (cwd: string) => invoke<string>("git_push", { cwd });
+export const gitFetch   = (cwd: string) => invoke<string>("git_fetch", { cwd });
+export const gitFetchWithPassphrase = (cwd: string, passphrase: string) =>
+  invoke<string>("git_fetch_with_passphrase", { cwd, passphrase });
 export const gitPullWithPassphrase = (cwd: string, passphrase: string) =>
   invoke<string>("git_pull_with_passphrase", { cwd, passphrase });
 export const gitPushWithPassphrase = (cwd: string, passphrase: string) =>

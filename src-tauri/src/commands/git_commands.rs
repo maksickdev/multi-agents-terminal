@@ -176,7 +176,7 @@ fn shell_git_with_askpass(cwd: &str, subcmd: &str, secret: &str) -> Result<Strin
     }
 }
 
-/// A local git branch with optional ahead/behind vs its upstream.
+/// A git branch (local or remote-tracking) with optional ahead/behind vs its upstream.
 #[derive(serde::Serialize, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct GitBranchEntry {
@@ -185,6 +185,12 @@ pub struct GitBranchEntry {
     pub ahead: i32,
     pub behind: i32,
     pub upstream: Option<String>,
+    /// "local" or "remote"
+    pub kind: String,
+    /// For remote branches: the remote name (e.g. "origin"); empty for local.
+    pub remote: String,
+    /// For remote branches: name without the leading `<remote>/` prefix; same as `name` for local.
+    pub short_name: String,
 }
 
 // ── commands ──────────────────────────────────────────────────────────────────
@@ -599,7 +605,9 @@ pub fn git_push_upstream(cwd: String, remote: String, branch: String) -> Result<
         .map(|_| ())
 }
 
-/// Returns all local branches sorted current-first then alphabetically.
+/// Returns all local + remote-tracking branches.
+/// Local branches first (current-first, then alphabetical), followed by remote branches
+/// (alphabetical, with HEAD pointers like `origin/HEAD` filtered out).
 #[tauri::command]
 pub fn git_branches(cwd: String) -> Result<Vec<GitBranchEntry>, String> {
     let repo = open_repo(&cwd)?;
@@ -608,10 +616,9 @@ pub fn git_branches(cwd: String) -> Result<Vec<GitBranchEntry>, String> {
         .and_then(|h| h.shorthand().map(|s| s.to_string()))
         .unwrap_or_default();
 
-    let branches_iter = repo.branches(Some(git2::BranchType::Local))
-        .map_err(|e| e.to_string())?;
-
-    let mut result: Vec<GitBranchEntry> = branches_iter
+    // ── Local branches ────────────────────────────────────────────────────────
+    let mut local: Vec<GitBranchEntry> = repo.branches(Some(git2::BranchType::Local))
+        .map_err(|e| e.to_string())?
         .filter_map(|b| b.ok())
         .filter_map(|(branch, _)| {
             let name = branch.name().ok()??.to_string();
@@ -629,12 +636,61 @@ pub fn git_branches(cwd: String) -> Result<Vec<GitBranchEntry>, String> {
                 }
                 Err(_) => (0, 0, None),
             };
-            Some(GitBranchEntry { name, is_current, ahead, behind, upstream })
+            Some(GitBranchEntry {
+                short_name: name.clone(),
+                name,
+                is_current,
+                ahead,
+                behind,
+                upstream,
+                kind: "local".into(),
+                remote: String::new(),
+            })
         })
         .collect();
+    local.sort_by(|a, b| b.is_current.cmp(&a.is_current).then(a.name.cmp(&b.name)));
 
-    result.sort_by(|a, b| b.is_current.cmp(&a.is_current).then(a.name.cmp(&b.name)));
-    Ok(result)
+    // Set of local branches that already track a remote ref — used to hide the
+    // duplicate remote-tracking entry when a local mirror already exists.
+    let tracked_remote_refs: std::collections::HashSet<String> = local
+        .iter()
+        .filter_map(|b| b.upstream.clone())
+        .collect();
+
+    // ── Remote-tracking branches ──────────────────────────────────────────────
+    let mut remote: Vec<GitBranchEntry> = repo.branches(Some(git2::BranchType::Remote))
+        .map_err(|e| e.to_string())?
+        .filter_map(|b| b.ok())
+        .filter_map(|(branch, _)| {
+            let full = branch.name().ok()??.to_string();
+            // Skip symbolic HEAD pointers like "origin/HEAD"
+            if full.ends_with("/HEAD") {
+                return None;
+            }
+            // Hide remote branches whose local mirror is already in the list
+            if tracked_remote_refs.contains(&full) {
+                return None;
+            }
+            let (remote_name, short) = match full.split_once('/') {
+                Some((r, s)) => (r.to_string(), s.to_string()),
+                None         => (String::new(), full.clone()),
+            };
+            Some(GitBranchEntry {
+                name: full,
+                short_name: short,
+                is_current: false,
+                ahead: 0,
+                behind: 0,
+                upstream: None,
+                kind: "remote".into(),
+                remote: remote_name,
+            })
+        })
+        .collect();
+    remote.sort_by(|a, b| a.name.cmp(&b.name));
+
+    local.extend(remote);
+    Ok(local)
 }
 
 /// Switch to an existing local or remote-tracking branch.
@@ -642,6 +698,32 @@ pub fn git_branches(cwd: String) -> Result<Vec<GitBranchEntry>, String> {
 pub fn git_checkout(cwd: String, branch: String) -> Result<(), String> {
     let escaped = branch.replace('\'', "'\\''");
     shell_git(&cwd, &format!("checkout '{escaped}'")).map(|_| ())
+}
+
+/// Create a local branch that tracks a remote branch and switch to it.
+/// `remote_branch` is the full remote name like "origin/feature-x".
+/// `local_name` is the local branch name to create (defaults to the part after the first slash).
+#[tauri::command]
+pub fn git_checkout_remote(cwd: String, remote_branch: String, local_name: Option<String>) -> Result<(), String> {
+    let local = local_name
+        .filter(|s| !s.is_empty())
+        .or_else(|| remote_branch.split_once('/').map(|(_, s)| s.to_string()))
+        .ok_or_else(|| "invalid remote branch name".to_string())?;
+    let esc_local  = local.replace('\'', "'\\''");
+    let esc_remote = remote_branch.replace('\'', "'\\''");
+    shell_git(&cwd, &format!("checkout -b '{esc_local}' --track '{esc_remote}'")).map(|_| ())
+}
+
+/// Fetch updates from all remotes and prune deleted remote-tracking branches.
+#[tauri::command]
+pub fn git_fetch(cwd: String) -> Result<String, String> {
+    shell_git(&cwd, "fetch --all --prune")
+}
+
+/// Same as `git_fetch` but uses an explicit passphrase/token (for AUTH_REQUIRED retry).
+#[tauri::command]
+pub fn git_fetch_with_passphrase(cwd: String, passphrase: String) -> Result<String, String> {
+    shell_git_with_askpass(&cwd, "fetch --all --prune", &passphrase)
 }
 
 /// Create a new branch (optionally from a given ref) and check it out.

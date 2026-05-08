@@ -3,9 +3,17 @@ import ReactDOM from "react-dom";
 import { KeyRound, X } from "lucide-react";
 
 interface Props {
-  operation: "push" | "pull";
+  operation: "push" | "pull" | "fetch";
   onConfirm: (passphrase: string) => void;
   onCancel: () => void;
+}
+
+function operationLabel(op: "push" | "pull" | "fetch"): string {
+  switch (op) {
+    case "push":  return "Push";
+    case "pull":  return "Pull";
+    case "fetch": return "Fetch";
+  }
 }
 
 export function GitAuthModal({ operation, onConfirm, onCancel }: Props) {
@@ -77,7 +85,7 @@ export function GitAuthModal({ operation, onConfirm, onCancel }: Props) {
             disabled={!value.trim()}
             className="flex-1 py-1.5 text-sm rounded font-medium bg-[var(--c-accent)] text-[var(--c-bg-deep)] hover:opacity-90 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed"
           >
-            {operation === "push" ? "Push" : "Pull"}
+            {operationLabel(operation)}
           </button>
         </div>
       </div>
