@@ -878,7 +878,7 @@ export function GitPanel() {
         </div>
         <div className="flex items-center gap-0.5">
           {status?.isGitRepo && remotes.length > 0 && (
-            <button onClick={() => doFetch()} title="Fetch from remote" disabled={fetching}
+            <button onClick={() => doFetch()} title="Fetch from all remotes" disabled={fetching}
               className={`p-1 text-[var(--c-text-dim)] hover:text-[var(--c-text-bright)] disabled:opacity-40 rounded transition-colors ${fetching ? "animate-spin" : ""}`}>
               <DownloadCloud size={13} />
             </button>
