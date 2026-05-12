@@ -22,7 +22,7 @@ import { detectLanguage } from "../../lib/languageDetect";
 import {
   RefreshCw, Plus, Minus, GitCommit, CloudDownload, CloudUpload,
   ChevronDown, ChevronRight, RotateCcw, Trash2, FolderOpen,
-  GitBranch, Check, Globe, X, DownloadCloud,
+  GitBranch, Check, Globe, X, ArrowDownToLine,
 } from "lucide-react";
 
 // ── status helpers ────────────────────────────────────────────────────────────
@@ -880,7 +880,7 @@ export function GitPanel() {
           {status?.isGitRepo && remotes.length > 0 && (
             <button onClick={() => doFetch()} title="Fetch from all remotes" disabled={fetching}
               className={`p-1 text-[var(--c-text-dim)] hover:text-[var(--c-text-bright)] disabled:opacity-40 rounded transition-colors ${fetching ? "animate-spin" : ""}`}>
-              <DownloadCloud size={13} />
+              <ArrowDownToLine size={13} />
             </button>
           )}
           {status?.isGitRepo && (branch.hasRemote || remotes.length > 0) && (
@@ -1058,7 +1058,7 @@ export function GitPanel() {
                           disabled={fetching}
                           className="self-start flex items-center gap-1 text-[10px] px-2 py-1 rounded transition-colors text-[var(--c-accent)] bg-[var(--c-accent)]/10 hover:bg-[var(--c-accent)]/20 disabled:opacity-40"
                         >
-                          <DownloadCloud size={10} />
+                          <ArrowDownToLine size={10} />
                           {fetching ? "Fetching…" : "Fetch now"}
                         </button>
                       </div>
